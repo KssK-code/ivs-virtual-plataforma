@@ -1,0 +1,566 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { ArrowLeft, X, Loader2, CreditCard, Key, Eye, EyeOff } from 'lucide-react'
+
+interface AlumnoDetalle {
+  id: string
+  matricula: string
+  meses_desbloqueados: number
+  created_at: string
+  usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
+  plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
+  pagos: { id: string; monto: number; mes_desbloqueado: number; metodo_pago: string; referencia: string | null; created_at: string }[]
+  calificaciones: { id: string; calificacion_final: number; aprobada: boolean; materias: { nombre: string; codigo: string } }[]
+}
+
+const CARD_STYLE = { background: '#181C26', border: '1px solid #2A2F3E' }
+const INPUT_STYLE = { background: '#0B0D11', border: '1px solid #2A2F3E', color: '#F1F5F9' }
+
+export default function AlumnoDetallePage() {
+  const router = useRouter()
+  const params = useParams()
+  const id = params.id as string
+
+  const [alumno, setAlumno] = useState<AlumnoDetalle | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [modalPago, setModalPago] = useState(false)
+  const [modalReset, setModalReset] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [resettingPass, setResettingPass] = useState(false)
+  const [togglingActivo, setTogglingActivo] = useState(false)
+  const [pagoError, setPagoError] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null)
+  const [resetPass, setResetPass] = useState({ password: '', confirm: '' })
+  const [showResetPass, setShowResetPass] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [pago, setPago] = useState({ monto: '', metodo_pago: 'Efectivo', referencia: '' })
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}`)
+      if (!res.ok) throw new Error('Alumno no encontrado')
+      setAlumno(await res.json())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al cargar el alumno')
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  async function handleDesbloquear(e: React.FormEvent) {
+    e.preventDefault()
+    setPagoError(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}/desbloquear-mes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...pago, monto: Number(pago.monto) }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setPagoError(data.error ?? 'Error al registrar pago'); return }
+      setModalPago(false)
+      setPago({ monto: '', metodo_pago: 'Efectivo', referencia: '' })
+      await cargar()
+    } catch {
+      setPagoError('Error inesperado. Intenta de nuevo.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setResetError(null)
+    setResetSuccess(null)
+    if (resetPass.password.length < 6) {
+      setResetError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    if (resetPass.password !== resetPass.confirm) {
+      setResetError('Las contraseñas no coinciden.')
+      return
+    }
+    setResettingPass(true)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: resetPass.password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setResetError(data.error ?? 'Error al cambiar contraseña'); return }
+      setResetSuccess(resetPass.password)
+      setResetPass({ password: '', confirm: '' })
+    } catch {
+      setResetError('Error inesperado. Intenta de nuevo.')
+    } finally {
+      setResettingPass(false)
+    }
+  }
+
+  async function handleToggleActivo() {
+    if (!alumno) return
+    setTogglingActivo(true)
+    try {
+      await fetch(`/api/admin/alumnos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !alumno.usuario.activo }),
+      })
+      await cargar()
+    } finally {
+      setTogglingActivo(false)
+    }
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#5B6CFF' }} />
+    </div>
+  )
+
+  if (error || !alumno) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+      <p className="text-sm" style={{ color: '#EF4444' }}>{error ?? 'Error al cargar el alumno'}</p>
+      <button onClick={() => router.push('/admin/alumnos')} className="text-sm" style={{ color: '#5B6CFF' }}>
+        Regresar
+      </button>
+    </div>
+  )
+
+  const todosBloqueados = alumno.meses_desbloqueados >= alumno.plan.duracion_meses
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <button
+            onClick={() => router.push('/admin/alumnos')}
+            className="mt-1 p-2 rounded-lg flex-shrink-0 transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{alumno.usuario.nombre_completo}</h2>
+              <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
+                {alumno.matricula}
+              </span>
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium"
+                style={alumno.usuario.activo
+                  ? { background: 'rgba(16,185,129,0.15)', color: '#10B981' }
+                  : { background: 'rgba(239,68,68,0.15)', color: '#EF4444' }
+                }
+              >
+                {alumno.usuario.activo ? 'Activo' : 'Inactivo'}
+              </span>
+            </div>
+            <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>{alumno.usuario.email}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <button
+            onClick={() => { setModalReset(true); setResetError(null); setResetSuccess(null) }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.18)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.1)' }}
+          >
+            <Key className="w-4 h-4" />
+            Resetear contraseña
+          </button>
+          <button
+            onClick={handleToggleActivo}
+            disabled={togglingActivo}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-60"
+            style={alumno.usuario.activo
+              ? { background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }
+              : { background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }
+            }
+          >
+            {togglingActivo ? <Loader2 className="w-4 h-4 animate-spin inline" /> : (alumno.usuario.activo ? 'Desactivar alumno' : 'Activar alumno')}
+          </button>
+        </div>
+      </div>
+
+      {/* Info General */}
+      <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
+        <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información General</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div><p style={{ color: '#94A3B8' }}>Plan de estudio</p><p className="mt-0.5 font-medium" style={{ color: '#F1F5F9' }}>{alumno.plan.nombre}</p></div>
+          <div><p style={{ color: '#94A3B8' }}>Duración total</p><p className="mt-0.5 font-medium" style={{ color: '#F1F5F9' }}>{alumno.plan.duracion_meses} meses</p></div>
+          <div><p style={{ color: '#94A3B8' }}>Fecha de registro</p><p className="mt-0.5 font-medium" style={{ color: '#F1F5F9' }}>{new Date(alumno.created_at).toLocaleDateString('es-MX')}</p></div>
+        </div>
+      </div>
+
+      {/* Progreso de meses */}
+      <div className="rounded-xl p-5 space-y-4" style={CARD_STYLE}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Progreso de Meses</h3>
+            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+              {alumno.meses_desbloqueados} de {alumno.plan.duracion_meses} meses desbloqueados
+            </p>
+          </div>
+          <button
+            onClick={() => setModalPago(true)}
+            disabled={todosBloqueados}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: todosBloqueados ? 'rgba(91,108,255,0.1)' : '#5B6CFF', color: todosBloqueados ? '#7B8AFF' : '#fff' }}
+            onMouseEnter={e => { if (!todosBloqueados) e.currentTarget.style.background = '#7B8AFF' }}
+            onMouseLeave={e => { if (!todosBloqueados) e.currentTarget.style.background = '#5B6CFF' }}
+          >
+            <CreditCard className="w-4 h-4" />
+            {todosBloqueados ? 'Todos los meses desbloqueados' : 'Registrar Pago y Abrir Siguiente Mes'}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: alumno.plan.duracion_meses }, (_, i) => {
+            const mes = i + 1
+            const desbloqueado = mes <= alumno.meses_desbloqueados
+            return (
+              <div
+                key={mes}
+                className="flex items-center justify-center w-10 h-10 rounded-lg text-xs font-bold transition-all"
+                style={desbloqueado
+                  ? { background: 'rgba(16,185,129,0.2)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }
+                  : { background: 'rgba(255,255,255,0.04)', color: '#475569', border: '1px solid #2A2F3E' }
+                }
+              >
+                {mes}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Historial de Pagos */}
+      <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Historial de Pagos</h3>
+        </div>
+        {alumno.pagos.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>Sin pagos registrados</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
+                  {['Fecha', 'Mes', 'Monto', 'Método', 'Referencia'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium" style={{ color: '#94A3B8' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {alumno.pagos.map(p => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(42,47,62,0.5)' }}>
+                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('es-MX')}</td>
+                    <td className="px-4 py-3 font-medium" style={{ color: '#F1F5F9' }}>Mes {p.mes_desbloqueado}</td>
+                    <td className="px-4 py-3 font-medium" style={{ color: '#10B981' }}>${p.monto.toLocaleString('es-MX')}</td>
+                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{p.metodo_pago}</td>
+                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{p.referencia ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Calificaciones */}
+      <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Calificaciones</h3>
+        </div>
+        {alumno.calificaciones.length === 0 ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>Sin calificaciones registradas</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
+                  {['Código', 'Materia', 'Calificación', 'Estado'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium" style={{ color: '#94A3B8' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {alumno.calificaciones.map(c => (
+                  <tr key={c.id} style={{ borderBottom: '1px solid rgba(42,47,62,0.5)' }}>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: '#94A3B8' }}>{c.materias.codigo}</td>
+                    <td className="px-4 py-3 font-medium" style={{ color: '#F1F5F9' }}>{c.materias.nombre}</td>
+                    <td className="px-4 py-3 font-bold" style={{ color: '#F1F5F9' }}>{c.calificacion_final}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={c.aprobada
+                          ? { background: 'rgba(16,185,129,0.15)', color: '#10B981' }
+                          : { background: 'rgba(239,68,68,0.15)', color: '#EF4444' }
+                        }
+                      >
+                        {c.aprobada ? 'Aprobada' : 'Reprobada'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Resetear Contraseña */}
+      {modalReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Resetear Contraseña</h3>
+                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                  Alumno: {alumno.usuario.nombre_completo}
+                </p>
+              </div>
+              <button
+                onClick={() => { setModalReset(false); setResetError(null); setResetSuccess(null); setResetPass({ password: '', confirm: '' }) }}
+                className="p-1.5 rounded-lg"
+                style={{ color: '#94A3B8' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {resetSuccess ? (
+              <div className="space-y-4">
+                <div
+                  className="rounded-xl p-4 space-y-2"
+                  style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: '#10B981' }}>✓ Contraseña actualizada</p>
+                  <p className="text-xs" style={{ color: '#94A3B8' }}>
+                    La nueva contraseña del alumno es:
+                  </p>
+                  <div
+                    className="flex items-center justify-between px-3 py-2 rounded-lg font-mono text-sm"
+                    style={{ background: '#0D1017', border: '1px solid rgba(16,185,129,0.3)', color: '#10B981' }}
+                  >
+                    <span>{resetSuccess}</span>
+                  </div>
+                  <p className="text-xs" style={{ color: '#64748B' }}>
+                    Comunícale esta contraseña al alumno por teléfono o mensaje.
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setModalReset(false); setResetSuccess(null) }}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
+                  style={{ background: '#5B6CFF', color: '#fff' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
+                >
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Nueva contraseña</label>
+                  <div className="relative">
+                    <input
+                      type={showResetPass ? 'text' : 'password'}
+                      required
+                      placeholder="Mínimo 6 caracteres"
+                      value={resetPass.password}
+                      onChange={e => setResetPass(p => ({ ...p, password: e.target.value }))}
+                      className="w-full pl-3 pr-10 py-2.5 rounded-lg text-sm outline-none"
+                      style={INPUT_STYLE}
+                      onFocus={e => { e.currentTarget.style.border = '1px solid #5B6CFF' }}
+                      onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: '#64748B' }}
+                      tabIndex={-1}
+                    >
+                      {showResetPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Confirmar contraseña</label>
+                  <div className="relative">
+                    <input
+                      type={showResetConfirm ? 'text' : 'password'}
+                      required
+                      placeholder="Repite la contraseña"
+                      value={resetPass.confirm}
+                      onChange={e => setResetPass(p => ({ ...p, confirm: e.target.value }))}
+                      className="w-full pl-3 pr-10 py-2.5 rounded-lg text-sm outline-none"
+                      style={INPUT_STYLE}
+                      onFocus={e => { e.currentTarget.style.border = '1px solid #5B6CFF' }}
+                      onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: '#64748B' }}
+                      tabIndex={-1}
+                    >
+                      {showResetConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {resetPass.confirm.length > 0 && (
+                    <p className="text-xs mt-1" style={{ color: resetPass.password === resetPass.confirm ? '#10B981' : '#EF4444' }}>
+                      {resetPass.password === resetPass.confirm ? '✓ Coinciden' : '✗ No coinciden'}
+                    </p>
+                  )}
+                </div>
+
+                {resetError && (
+                  <div className="rounded-lg px-3 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5' }}>
+                    {resetError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setModalReset(false); setResetError(null); setResetPass({ password: '', confirm: '' }) }}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                    style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resettingPass}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
+                    style={{ background: '#F59E0B', color: '#000' }}
+                    onMouseEnter={e => { if (!resettingPass) e.currentTarget.style.background = '#FBB740' }}
+                    onMouseLeave={e => { if (!resettingPass) e.currentTarget.style.background = '#F59E0B' }}
+                  >
+                    {resettingPass ? <><Loader2 className="w-4 h-4 animate-spin" />Cambiando...</> : <><Key className="w-4 h-4" />Cambiar contraseña</>}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Registrar Pago */}
+      {modalPago && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Registrar Pago</h3>
+                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                  Abrirá el mes {alumno.meses_desbloqueados + 1} de {alumno.plan.duracion_meses}
+                </p>
+              </div>
+              <button
+                onClick={() => { setModalPago(false); setPagoError(null) }}
+                className="p-1.5 rounded-lg"
+                style={{ color: '#94A3B8' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDesbloquear} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Monto ($)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  placeholder={String(alumno.plan.precio_mensual)}
+                  value={pago.monto}
+                  onChange={e => setPago(p => ({ ...p, monto: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={INPUT_STYLE}
+                  onFocus={e => { e.currentTarget.style.border = '1px solid #5B6CFF' }}
+                  onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Método de pago</label>
+                <select
+                  required
+                  value={pago.metodo_pago}
+                  onChange={e => setPago(p => ({ ...p, metodo_pago: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={INPUT_STYLE}
+                >
+                  {['Efectivo', 'Transferencia', 'Tarjeta', 'Otro'].map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Referencia <span style={{ color: '#475569' }}>(opcional)</span></label>
+                <input
+                  type="text"
+                  placeholder="Número de transacción, folio..."
+                  value={pago.referencia}
+                  onChange={e => setPago(p => ({ ...p, referencia: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={INPUT_STYLE}
+                  onFocus={e => { e.currentTarget.style.border = '1px solid #5B6CFF' }}
+                  onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+                />
+              </div>
+
+              {pagoError && (
+                <div className="rounded-lg px-3 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#FCA5A5' }}>
+                  {pagoError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setModalPago(false); setPagoError(null) }}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
+                  style={{ background: '#5B6CFF', color: '#fff' }}
+                >
+                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Registrando...</> : 'Confirmar Pago'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
