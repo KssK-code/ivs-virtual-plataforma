@@ -71,7 +71,7 @@ export async function POST(
     // Obtener preguntas CON respuesta_correcta y retroalimentacion (solo en servidor)
     const { data: preguntas, error: pregError } = await supabase
       .from('preguntas')
-      .select('id, numero, texto, tipo, opciones, respuesta_correcta, retroalimentacion, puntos')
+      .select('id, numero, texto, texto_en, tipo, opciones, opciones_en, respuesta_correcta, retroalimentacion, puntos')
       .eq('evaluacion_id', params.id)
       .order('numero')
 
@@ -80,8 +80,8 @@ export async function POST(
     }
 
     type Pregunta = {
-      id: string; numero: number; texto: string; tipo: string
-      opciones: string[]; respuesta_correcta: number; retroalimentacion: string; puntos: number
+      id: string; numero: number; texto: string; texto_en: string; tipo: string
+      opciones: string[]; opciones_en: string[]; respuesta_correcta: number; retroalimentacion: string; puntos: number
     }
 
     const pregs = preguntas as Pregunta[]
@@ -105,8 +105,10 @@ export async function POST(
         pregunta_id: p.id,
         numero: p.numero,
         texto: p.texto,
+        texto_en: p.texto_en,
         tipo: p.tipo,
         opciones: p.opciones,
+        opciones_en: p.opciones_en,
         respuesta_alumno: respuestaAlumno,
         respuesta_correcta: p.respuesta_correcta,
         es_correcta: esCorrecta,

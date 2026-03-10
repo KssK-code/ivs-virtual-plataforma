@@ -62,7 +62,7 @@ export async function GET(
     // Obtener preguntas SIN respuesta_correcta ni retroalimentacion
     const { data: preguntas, error: pregError } = await supabase
       .from('preguntas')
-      .select('id, numero, texto, tipo, opciones, puntos')
+      .select('id, numero, texto, texto_en, tipo, opciones, opciones_en, puntos')
       .eq('evaluacion_id', params.id)
       .order('numero')
 

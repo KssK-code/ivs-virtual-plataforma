@@ -18,7 +18,7 @@ interface Evaluacion {
 interface BibItem { titulo: string; url?: string; tipo?: string }
 interface Materia {
   id: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
-  descripcion: string; descripcion_en: string; objetivo: string; temario: string[]
+  descripcion: string; descripcion_en: string; objetivo: string; objetivo_en: string; temario: string[]
   bibliografia: BibItem[]
   semanas: Semana[]
   evaluaciones: Evaluacion[]
@@ -310,7 +310,7 @@ export default function MateriaPage() {
           {materia.objetivo && materia.objetivo !== materia.descripcion && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
               <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{lang === 'en' ? 'Objective' : 'Objetivo'}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{materia.objetivo}</p>
+              <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{loc(materia.objetivo, materia.objetivo_en)}</p>
             </div>
           )}
 

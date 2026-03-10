@@ -4,13 +4,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface Pregunta {
   id: string
   numero: number
   texto: string
+  texto_en: string
   tipo: 'OPCION_MULTIPLE' | 'VERDADERO_FALSO'
   opciones: string[]
+  opciones_en: string[]
   puntos: number
 }
 
@@ -25,8 +28,10 @@ interface DetalleRespuesta {
   pregunta_id: string
   numero: number
   texto: string
+  texto_en: string
   tipo: string
   opciones: string[]
+  opciones_en: string[]
   respuesta_alumno: number
   respuesta_correcta: number
   es_correcta: boolean
@@ -50,6 +55,9 @@ export default function EvaluacionPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
+  const { lang } = useLanguage()
+  const loc    = (es: string,    en: string)    => lang === 'en' && en    ? en    : es
+  const locArr = (es: string[], en: string[]) => lang === 'en' && en?.length ? en : es
 
   const { toasts, showToast, removeToast } = useToast()
 
@@ -225,12 +233,12 @@ export default function EvaluacionPage() {
                     : <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
                   }
                   <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-                    <span style={{ color: '#94A3B8' }}>{i + 1}. </span>{d.texto}
+                    <span style={{ color: '#94A3B8' }}>{i + 1}. </span>{loc(d.texto, d.texto_en)}
                   </p>
                 </div>
               </div>
               <div className="px-5 py-4 space-y-2">
-                {d.opciones.map((op, idx) => {
+                {locArr(d.opciones, d.opciones_en).map((op, idx) => {
                   const esAlumno = idx === d.respuesta_alumno
                   const esCorrecta = idx === d.respuesta_correcta
                   let style = { background: 'transparent', border: '1px solid #2A2F3E', color: '#94A3B8' as string }
@@ -304,11 +312,11 @@ export default function EvaluacionPage() {
       {/* Card pregunta */}
       <div className="rounded-2xl p-4 sm:p-6 space-y-4" style={CARD}>
         <p className="text-sm sm:text-base font-semibold leading-relaxed" style={{ color: '#F1F5F9' }}>
-          {pregunta.texto}
+          {loc(pregunta.texto, pregunta.texto_en)}
         </p>
 
         <div className="space-y-2.5">
-          {pregunta.opciones.map((opcion, idx) => {
+          {locArr(pregunta.opciones, pregunta.opciones_en).map((opcion, idx) => {
             const seleccionada = respuestas[pregunta.id] === idx
             return (
               <button
