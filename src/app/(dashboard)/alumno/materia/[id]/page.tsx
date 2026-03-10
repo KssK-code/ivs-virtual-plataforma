@@ -12,7 +12,7 @@ interface Semana {
   url_en: string; videos: Video[]
 }
 interface Evaluacion {
-  id: string; titulo: string; tipo: string; intentos_max: number
+  id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number
   intentos_usados: number; aprobada: boolean; calificacion_aprobatoria: number | null
 }
 interface BibItem { titulo: string; url?: string; tipo?: string }
@@ -255,7 +255,7 @@ export default function MateriaPage() {
               return (
                 <div key={ev.id} className="rounded-xl p-5 space-y-4" style={CARD}>
                   <div>
-                    <h3 className="text-base font-semibold" style={{ color: '#F1F5F9' }}>{ev.titulo}</h3>
+                    <h3 className="text-base font-semibold" style={{ color: '#F1F5F9' }}>{loc(ev.titulo, ev.titulo_en)}</h3>
                     <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: '#94A3B8' }}>
                       <span>{t('subjects.attemptsLabel')} {ev.intentos_usados}/{ev.intentos_max}</span>
                     </div>

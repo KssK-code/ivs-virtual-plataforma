@@ -24,7 +24,7 @@ export async function GET(
     // Obtener evaluación
     const { data: evaluacion, error: evalError } = await supabase
       .from('evaluaciones')
-      .select('id, titulo, tipo, intentos_max, activa, materia_id')
+      .select('id, titulo, titulo_en, tipo, intentos_max, activa, materia_id')
       .eq('id', params.id)
       .single()
 
@@ -33,7 +33,7 @@ export async function GET(
     }
 
     const ev = evaluacion as {
-      id: string; titulo: string; tipo: string; intentos_max: number; activa: boolean; materia_id: string
+      id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number; activa: boolean; materia_id: string
     }
 
     if (!ev.activa) {
@@ -72,6 +72,7 @@ export async function GET(
       evaluacion: {
         id: ev.id,
         titulo: ev.titulo,
+        titulo_en: ev.titulo_en,
         tipo: ev.tipo,
         intentos_max: ev.intentos_max,
       },

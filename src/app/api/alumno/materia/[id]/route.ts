@@ -43,7 +43,7 @@ export async function GET(
     // Obtener materia completa con semanas y evaluaciones
     const { data: materia, error } = await supabase
       .from('materias')
-      .select('*, semanas(*), evaluaciones(id, titulo, tipo, intentos_max, activa)')
+      .select('*, semanas(*), evaluaciones(id, titulo, titulo_en, tipo, intentos_max, activa)')
       .eq('id', params.id)
       .single()
 
@@ -61,7 +61,7 @@ export async function GET(
       temario: string[]
       bibliografia: Record<string, string>[]
       semanas: { id: string; numero: number; titulo: string; contenido: string; contenido_en: string; url_en: string; videos: { titulo: string; url: string; duracion: string }[] }[]
-      evaluaciones: { id: string; titulo: string; tipo: string; intentos_max: number; activa: boolean }[]
+      evaluaciones: { id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number; activa: boolean }[]
     }
 
     // Ordenar semanas por número

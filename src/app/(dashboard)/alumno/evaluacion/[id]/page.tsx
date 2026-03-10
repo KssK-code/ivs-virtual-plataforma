@@ -20,6 +20,7 @@ interface Pregunta {
 interface EvaluacionInfo {
   id: string
   titulo: string
+  titulo_en: string
   tipo: string
   intentos_max: number
 }
@@ -146,7 +147,7 @@ export default function EvaluacionPage() {
         {/* Card calificación */}
         <div className="rounded-2xl p-5 sm:p-8 text-center" style={CARD}>
           <p className="text-sm font-medium mb-3" style={{ color: '#94A3B8' }}>
-            {evaluacion?.titulo}
+            {evaluacion ? loc(evaluacion.titulo, evaluacion.titulo_en) : ''}
           </p>
           <div
             className="text-6xl sm:text-7xl font-black mb-3"
@@ -290,7 +291,7 @@ export default function EvaluacionPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>{evaluacion?.titulo}</p>
+            <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>{evaluacion ? loc(evaluacion.titulo, evaluacion.titulo_en) : ''}</p>
             <p className="text-xs" style={{ color: '#94A3B8' }}>
               {preguntaActual + 1} / {preguntas.length}
             </p>
