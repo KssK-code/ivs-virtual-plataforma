@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Loader2, PlayCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
 
-interface Video { titulo: string; url: string; duracion: string }
+interface Video { titulo: string; titulo_en: string; url: string; duracion: string }
 interface Semana {
   id: string; numero: number; titulo: string
   contenido: string; contenido_en: string
@@ -59,7 +59,7 @@ export default function MateriaPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-  const { lang } = useLanguage()
+  const { lang, t } = useLanguage()
   const loc = (es: string, en: string) => lang === 'en' && en ? en : es
 
   const [materia, setMateria] = useState<Materia | null>(null)
@@ -96,9 +96,9 @@ export default function MateriaPage() {
   )
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'contenido', label: 'Contenido' },
-    { key: 'examen', label: 'Examen' },
-    { key: 'informacion', label: 'Información' },
+    { key: 'contenido', label: t('subjects.tabContent') },
+    { key: 'examen', label: t('subjects.tabExam') },
+    { key: 'informacion', label: t('subjects.tabInfo') },
   ]
 
   return (
@@ -152,7 +152,7 @@ export default function MateriaPage() {
         <div className="space-y-2">
           {materia.semanas.length === 0 ? (
             <div className="flex items-center justify-center py-12 rounded-xl" style={CARD}>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>No hay semanas disponibles</p>
+              <p className="text-sm" style={{ color: '#94A3B8' }}>{t('subjects.noWeeks')}</p>
             </div>
           ) : (
             materia.semanas.map(semana => {
@@ -192,7 +192,7 @@ export default function MateriaPage() {
                       {/* Videos */}
                       {(semana.videos?.length > 0 || (lang === 'en' && semana.url_en)) && (
                         <div className="space-y-2 pt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Videos</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>{t('subjects.videos')}</p>
 
                           {/* Recurso en inglés (solo cuando lang === 'en' y url_en existe) */}
                           {lang === 'en' && semana.url_en && (
@@ -226,7 +226,7 @@ export default function MateriaPage() {
                             >
                               <PlayCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#5B6CFF' }} />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>{v.titulo}</p>
+                                <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>{loc(v.titulo, v.titulo_en)}</p>
                                 {v.duracion && <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{v.duracion}</p>}
                               </div>
                             </a>
@@ -247,7 +247,7 @@ export default function MateriaPage() {
         <div className="space-y-4">
           {materia.evaluaciones.length === 0 ? (
             <div className="flex items-center justify-center py-12 rounded-xl" style={CARD}>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>No hay evaluaciones disponibles</p>
+              <p className="text-sm" style={{ color: '#94A3B8' }}>{t('subjects.noExams')}</p>
             </div>
           ) : (
             materia.evaluaciones.map(ev => {
@@ -257,7 +257,7 @@ export default function MateriaPage() {
                   <div>
                     <h3 className="text-base font-semibold" style={{ color: '#F1F5F9' }}>{ev.titulo}</h3>
                     <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: '#94A3B8' }}>
-                      <span>Intentos: {ev.intentos_usados}/{ev.intentos_max}</span>
+                      <span>{t('subjects.attemptsLabel')} {ev.intentos_usados}/{ev.intentos_max}</span>
                     </div>
                   </div>
 
@@ -265,16 +265,16 @@ export default function MateriaPage() {
                     <div className="flex items-center gap-3 px-4 py-3 rounded-lg" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <span className="text-lg">✓</span>
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#10B981' }}>Ya aprobaste este examen</p>
+                        <p className="text-sm font-semibold" style={{ color: '#10B981' }}>{t('subjects.alreadyPassed')}</p>
                         <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                          Calificación: <strong style={{ color: '#10B981' }}>{ev.calificacion_aprobatoria}</strong>
+                          {t('subjects.gradeLabel')} <strong style={{ color: '#10B981' }}>{ev.calificacion_aprobatoria}</strong>
                         </p>
                       </div>
                     </div>
                   ) : intentosRestantes <= 0 ? (
                     <div className="flex items-center gap-3 px-4 py-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                       <span className="text-lg">✗</span>
-                      <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>Agotaste tus intentos</p>
+                      <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>{t('subjects.noAttemptsLeft')}</p>
                     </div>
                   ) : (
                     <button
@@ -284,7 +284,7 @@ export default function MateriaPage() {
                       onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
                       onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
                     >
-                      Presentar Examen ({intentosRestantes} intento{intentosRestantes !== 1 ? 's' : ''} disponible{intentosRestantes !== 1 ? 's' : ''})
+                      {t('subjects.takeExam')} ({intentosRestantes} {intentosRestantes !== 1 ? t('subjects.attemptPlural') : t('subjects.attemptSingular')} {intentosRestantes !== 1 ? t('subjects.availablePlural') : t('subjects.availableSingular')})
                     </button>
                   )}
                 </div>
@@ -300,7 +300,7 @@ export default function MateriaPage() {
           {/* Descripción / Objetivo */}
           {(materia.descripcion || materia.objetivo) && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{lang === 'en' ? 'Description' : 'Descripción'}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.descriptionLabel')}</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>
                 {loc(materia.descripcion || materia.objetivo, materia.descripcion_en)}
               </p>
@@ -309,7 +309,7 @@ export default function MateriaPage() {
           {/* Objetivo (solo si es distinto de descripción) */}
           {materia.objetivo && materia.objetivo !== materia.descripcion && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{lang === 'en' ? 'Objective' : 'Objetivo'}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.objectiveLabel')}</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{loc(materia.objetivo, materia.objetivo_en)}</p>
             </div>
           )}
@@ -317,7 +317,7 @@ export default function MateriaPage() {
           {/* Temario */}
           {materia.temario?.length > 0 && (
             <div className="rounded-xl p-5 space-y-3" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Temario</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.syllabus')}</h3>
               <ol className="space-y-2">
                 {materia.temario.map((tema, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm">
@@ -334,7 +334,7 @@ export default function MateriaPage() {
           {/* Bibliografía */}
           {materia.bibliografia?.length > 0 && (
             <div className="rounded-xl p-5 space-y-3" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Bibliografía</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.bibliography')}</h3>
               <ul className="space-y-2">
                 {materia.bibliografia.map((bib, i) => {
                   const etiqueta = bib.tipo ? `${bib.titulo} (${bib.tipo})` : bib.titulo
