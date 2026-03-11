@@ -19,6 +19,7 @@ interface BibItem { titulo: string; url?: string; tipo?: string }
 interface Materia {
   id: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
   descripcion: string; descripcion_en: string; objetivo: string; objetivo_en: string; temario: string[]
+  temario_en?: string[]
   bibliografia: BibItem[]
   bibliografia_en?: BibItem[]
   semanas: Semana[]
@@ -315,36 +316,42 @@ export default function MateriaPage() {
             </div>
           )}
 
-          {/* Syllabus: títulos de semanas + temario */}
-          {(materia.semanas?.length > 0 || materia.temario?.length > 0) && (
-            <div className="rounded-xl p-5 space-y-3" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.syllabus')}</h3>
-              {materia.semanas?.length > 0 && (
-                <ol className="space-y-2">
-                  {materia.semanas.map(semana => (
-                    <li key={semana.id} className="flex items-start gap-3 text-sm">
-                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold" style={{ background: 'rgba(91,108,255,0.15)', color: '#5B6CFF' }}>
-                        {semana.numero}
-                      </span>
-                      <span style={{ color: '#94A3B8' }}>{loc(semana.titulo, semana.titulo_en)}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {materia.temario?.length > 0 && (
-                <ol className="space-y-2">
-                  {materia.temario.map((tema, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm">
-                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold" style={{ background: 'rgba(91,108,255,0.15)', color: '#5B6CFF' }}>
-                        {i + 1}
-                      </span>
-                      <span style={{ color: '#94A3B8' }}>{tema}</span>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          )}
+          {/* Syllabus: títulos de semanas + un solo temario (ES o EN según idioma) */}
+          {(() => {
+            const temas = (lang === 'en' && materia.temario_en?.length) ? materia.temario_en : (materia.temario ?? [])
+            const haySemanas = materia.semanas?.length > 0
+            const hayTemas = temas.length > 0
+            if (!haySemanas && !hayTemas) return null
+            return (
+              <div className="rounded-xl p-5 space-y-3" style={CARD}>
+                <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.syllabus')}</h3>
+                {haySemanas && (
+                  <ol className="space-y-2">
+                    {materia.semanas!.map(semana => (
+                      <li key={semana.id} className="flex items-start gap-3 text-sm">
+                        <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold" style={{ background: 'rgba(91,108,255,0.15)', color: '#5B6CFF' }}>
+                          {semana.numero}
+                        </span>
+                        <span style={{ color: '#94A3B8' }}>{loc(semana.titulo, semana.titulo_en)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {hayTemas && (
+                  <ol className="space-y-2">
+                    {temas.map((tema, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold" style={{ background: 'rgba(91,108,255,0.15)', color: '#5B6CFF' }}>
+                          {i + 1}
+                        </span>
+                        <span style={{ color: '#94A3B8' }}>{tema}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Bibliografía: loc(bibliografia, bibliografia_en) con fallback */}
           {((lang === 'en' && materia.bibliografia_en?.length) ? materia.bibliografia_en : materia.bibliografia)?.length > 0 && (
