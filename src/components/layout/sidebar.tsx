@@ -13,6 +13,7 @@ import {
   Settings,
   X,
   User,
+  CreditCard,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { EdvexLogo } from '@/components/ui/edvex-logo'
@@ -39,6 +40,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { labelKey: 'sidebar.mySubjects',  href: '/alumno/materias',      icon: BookOpen        },
     { labelKey: 'sidebar.grades',      href: '/alumno/calificaciones',icon: Award           },
     { labelKey: 'sidebar.certificate', href: '/alumno/constancia',    icon: FileText        },
+    { labelKey: 'sidebar.payment',     href: '/alumno/pagar',         icon: CreditCard      },
     { labelKey: 'sidebar.myProfile',   href: '/alumno/perfil',        icon: User            },
   ],
 }

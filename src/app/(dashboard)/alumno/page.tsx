@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Loader2, GraduationCap, BookOpen, TrendingUp } from 'lucide-react'
+import { useToast, ToastContainer } from '@/components/ui/toast'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { useLanguage } from '@/context/LanguageContext'
 
@@ -34,11 +35,24 @@ interface Mes {
 
 export default function AlumnoDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { lang, t } = useLanguage()
+  const { toasts, showToast, removeToast } = useToast()
   const loc = (es: string, en: string) => lang === 'en' && en ? en : es
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [meses, setMeses] = useState<Mes[]>([])
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const pago = searchParams.get('pago')
+    if (pago === 'exitoso') {
+      showToast(t('payment.successToast'), 'success')
+      router.replace('/alumno', { scroll: false })
+    } else if (pago === 'cancelado') {
+      showToast(t('payment.cancelToast'), 'info')
+      router.replace('/alumno', { scroll: false })
+    }
+  }, [searchParams, router, showToast, t])
 
   useEffect(() => {
     Promise.all([
@@ -70,6 +84,7 @@ export default function AlumnoDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      <ToastContainer toasts={toasts} onClose={removeToast} />
       {/* Card institucional de bienvenida */}
       <div
         className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"

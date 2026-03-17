@@ -19,6 +19,8 @@ export async function GET() {
       id: string
       matricula: string
       meses_desbloqueados: number
+      inscripcion_pagada?: boolean
+      modulos_desbloqueados?: number[]
       created_at: string
       planes_estudio: { nombre: string; duracion_meses: number } | null
       usuarios: { nombre_completo: string; email: string } | null
@@ -28,6 +30,8 @@ export async function GET() {
       id: a.id,
       matricula: a.matricula,
       meses_desbloqueados: a.meses_desbloqueados,
+      inscripcion_pagada: a.inscripcion_pagada ?? false,
+      modulos_desbloqueados: Array.isArray(a.modulos_desbloqueados) ? a.modulos_desbloqueados : [],
       created_at: a.created_at,
       plan_nombre: a.planes_estudio?.nombre ?? '',
       duracion_meses: a.planes_estudio?.duracion_meses ?? 0,
