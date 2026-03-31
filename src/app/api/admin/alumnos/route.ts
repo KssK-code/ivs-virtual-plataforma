@@ -22,6 +22,8 @@ export async function GET() {
         id,
         matricula,
         meses_desbloqueados,
+        inscripcion_pagada,
+        contactado_whatsapp,
         created_at,
         plan_estudio_id,
         usuario_id,
@@ -37,6 +39,8 @@ export async function GET() {
         id: string
         matricula: string
         meses_desbloqueados: number
+        inscripcion_pagada: boolean
+        contactado_whatsapp: boolean
         created_at: string
         plan_estudio_id: string
         usuario_id: string
@@ -49,6 +53,8 @@ export async function GET() {
         id: a.id,
         matricula: a.matricula,
         meses_desbloqueados: a.meses_desbloqueados,
+        inscripcion_pagada: a.inscripcion_pagada ?? false,
+        contactado_whatsapp: a.contactado_whatsapp ?? false,
         created_at: a.created_at,
         nombre_completo: usuariosData?.nombre_completo ?? '',
         email: usuariosData?.email ?? '',
@@ -59,7 +65,8 @@ export async function GET() {
     })
 
     return NextResponse.json(result)
-  } catch {
+  } catch (err) {
+    console.error('[GET /api/admin/alumnos]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
@@ -137,7 +144,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(alumnoData, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('[POST /api/admin/alumnos]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

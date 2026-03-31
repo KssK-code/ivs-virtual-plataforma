@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, Loader2, GraduationCap, BookOpen, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { Lock, Loader2, GraduationCap, BookOpen, TrendingUp, Bell, CreditCard } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { useLanguage } from '@/context/LanguageContext'
@@ -11,6 +12,7 @@ interface Perfil {
   id: string
   matricula: string
   meses_desbloqueados: number
+  inscripcion_pagada: boolean
   plan_nombre: string
   duracion_meses: number
   nombre_completo: string
@@ -85,6 +87,85 @@ export default function AlumnoDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
+
+      {/* ── BANNER: Inscripción pendiente ── */}
+      {perfil.inscripcion_pagada === false && (
+        <div
+          className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(239,68,68,0.08) 100%)',
+            border: '1px solid rgba(245,158,11,0.35)',
+          }}
+        >
+          <div
+            className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
+            style={{ background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)' }}
+          >
+            <Bell className="w-5 h-5" style={{ color: '#F59E0B' }} />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-snug" style={{ color: '#FCD34D' }}>
+              ¡Bienvenido a EDVEX Academy!
+            </p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
+              Tu siguiente paso es pagar tu inscripción para comenzar. Al confirmar tu pago,{' '}
+              <strong style={{ color: '#CBD5E1' }}>Control Escolar te contactará por WhatsApp</strong>{' '}
+              para darte la bienvenida, solicitarte tus documentos y resolver cualquier duda.
+            </p>
+          </div>
+
+          {/* Acciones: pago + videollamada */}
+          <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
+            <Link
+              href="/alumno/pagar"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: '#F59E0B', color: '#0B0D11' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
+            >
+              <CreditCard className="w-4 h-4" />
+              Pagar inscripción ($50 USD)
+            </Link>
+
+            {/* Separador */}
+            <div className="flex items-center gap-2">
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <span className="text-xs" style={{ color: '#475569', whiteSpace: 'nowrap' }}>— o si prefieres —</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            {/* Botón videollamada */}
+            <div className="flex flex-col items-center gap-1.5">
+              <a
+                href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all w-full sm:w-auto"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(91,108,255,0.4)',
+                  color: '#7B8AFF',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.1)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = '#7B8AFF'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.4)'
+                }}
+              >
+                📅 Hablar con un asesor antes de pagar
+              </a>
+              <p className="text-xs text-center" style={{ color: '#475569' }}>
+                Agenda una videollamada de 30 min gratis con nuestro equipo
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Card institucional de bienvenida */}
       <div
         className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
