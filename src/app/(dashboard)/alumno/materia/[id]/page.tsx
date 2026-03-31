@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Loader2, PlayCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
+import { createClient } from '@/lib/supabase/client'
+import VideoEmbed from '@/components/alumno/VideoEmbed'
+import ReadingProgress from '@/components/alumno/ReadingProgress'
 
 interface Video { titulo: string; titulo_en: string; url: string; url_en: string; duracion: string }
 interface Semana {
@@ -69,6 +72,8 @@ export default function MateriaPage() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('contenido')
   const [semanaAbierta, setSemanaAbierta] = useState<string | null>(null)
+  const [alumnoId, setAlumnoId] = useState<string>('')
+  const [semanasCompletadas, setSemanasCompletadas] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetch(`/api/alumno/materia/${id}`)
@@ -83,6 +88,39 @@ export default function MateriaPage() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [id])
+
+  // Cargar progreso de semanas una vez que la materia está disponible
+  useEffect(() => {
+    if (!materia) return
+    const semanaIds = materia.semanas.map(s => s.id)
+    if (semanaIds.length === 0) return
+
+    const supabase = createClient()
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: alumnoData } = await supabase
+        .from('alumnos')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .single()
+      if (!alumnoData) return
+
+      const { id: aId } = alumnoData as { id: string }
+      setAlumnoId(aId)
+
+      const { data: progreso } = await supabase
+        .from('progreso_semanas')
+        .select('semana_id')
+        .eq('alumno_id', aId)
+        .in('semana_id', semanaIds)
+
+      if (progreso) {
+        setSemanasCompletadas(new Set(progreso.map((r: { semana_id: string }) => r.semana_id)))
+      }
+    })()
+  }, [materia])
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -191,6 +229,15 @@ export default function MateriaPage() {
                         </div>
                       )}
 
+                      {/* Progreso de lectura */}
+                      <ReadingProgress
+                        semanaId={semana.id}
+                        alumnoId={alumnoId}
+                        lang={lang}
+                        yaCompletada={semanasCompletadas.has(semana.id)}
+                        onCompletada={() => setSemanasCompletadas(prev => new Set([...prev, semana.id]))}
+                      />
+
                       {/* Videos */}
                       {(semana.videos?.length > 0 || (lang === 'en' && semana.url_en)) && (
                         <div className="space-y-2 pt-2">
@@ -216,22 +263,13 @@ export default function MateriaPage() {
                           )}
 
                           {semana.videos.map((v, i) => (
-                            <a
+                            <VideoEmbed
                               key={i}
-                              href={loc(v.url, v.url_en)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
-                              style={{ ...INPUT_BG, border: '1px solid #2A2F3E' }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#5B6CFF' }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2A2F3E' }}
-                            >
-                              <PlayCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#5B6CFF' }} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>{loc(v.titulo, v.titulo_en)}</p>
-                                {v.duracion && <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{v.duracion}</p>}
-                              </div>
-                            </a>
+                              url={loc(v.url, v.url_en)}
+                              titulo={loc(v.titulo, v.titulo_en)}
+                              duracion={v.duracion}
+                              lang={lang}
+                            />
                           ))}
                         </div>
                       )}
