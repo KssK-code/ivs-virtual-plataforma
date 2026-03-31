@@ -115,16 +115,54 @@ export default function AlumnoDashboard() {
             </p>
           </div>
 
-          <Link
-            href="/alumno/pagar"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
-            style={{ background: '#F59E0B', color: '#0B0D11' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
-          >
-            <CreditCard className="w-4 h-4" />
-            Pagar inscripción ($50 USD)
-          </Link>
+          {/* Acciones: pago + videollamada */}
+          <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
+            <Link
+              href="/alumno/pagar"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: '#F59E0B', color: '#0B0D11' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
+            >
+              <CreditCard className="w-4 h-4" />
+              Pagar inscripción ($50 USD)
+            </Link>
+
+            {/* Separador */}
+            <div className="flex items-center gap-2">
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <span className="text-xs" style={{ color: '#475569', whiteSpace: 'nowrap' }}>— o si prefieres —</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            {/* Botón videollamada */}
+            <div className="flex flex-col items-center gap-1.5">
+              <a
+                href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all w-full sm:w-auto"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(91,108,255,0.4)',
+                  color: '#7B8AFF',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.1)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = '#7B8AFF'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.4)'
+                }}
+              >
+                📅 Hablar con un asesor antes de pagar
+              </a>
+              <p className="text-xs text-center" style={{ color: '#475569' }}>
+                Agenda una videollamada de 30 min gratis con nuestro equipo
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
