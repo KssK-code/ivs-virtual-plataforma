@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, PlayCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, PlayCircle } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
 import { createClient } from '@/lib/supabase/client'
 import VideoEmbed from '@/components/alumno/VideoEmbed'
 import ReadingProgress from '@/components/alumno/ReadingProgress'
+import WeekRoadmap from '@/components/alumno/WeekRoadmap'
 
 interface Video { titulo: string; titulo_en: string; url: string; url_en: string; duracion: string }
 interface Semana {
@@ -71,7 +72,7 @@ export default function MateriaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('contenido')
-  const [semanaAbierta, setSemanaAbierta] = useState<string | null>(null)
+  const [semanaSeleccionada, setSemanaSeleccionada] = useState<string | null>(null)
   const [alumnoId, setAlumnoId] = useState<string>('')
   const [semanasCompletadas, setSemanasCompletadas] = useState<Set<string>>(new Set())
 
@@ -83,7 +84,8 @@ export default function MateriaPage() {
       })
       .then(data => {
         setMateria(data)
-        if (data.semanas?.length > 0) setSemanaAbierta(data.semanas[0].id)
+        // Default: primera semana hasta que cargue el progreso
+        if (data.semanas?.length > 0) setSemanaSeleccionada(data.semanas[0].id)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -117,7 +119,13 @@ export default function MateriaPage() {
         .in('semana_id', semanaIds)
 
       if (progreso) {
-        setSemanasCompletadas(new Set(progreso.map((r: { semana_id: string }) => r.semana_id)))
+        const completadasSet = new Set(progreso.map((r: { semana_id: string }) => r.semana_id))
+        setSemanasCompletadas(completadasSet)
+
+        // Seleccionar la primera semana no completada, o la última si todas están completas
+        const primeraActiva = materia.semanas.find(s => !completadasSet.has(s.id))
+        const defaultSemana = primeraActiva ?? materia.semanas[materia.semanas.length - 1]
+        if (defaultSemana) setSemanaSeleccionada(defaultSemana.id)
       }
     })()
   }, [materia])
@@ -189,42 +197,50 @@ export default function MateriaPage() {
 
       {/* Tab: Contenido */}
       {tab === 'contenido' && (
-        <div className="space-y-2">
+        <>
           {materia.semanas.length === 0 ? (
             <div className="flex items-center justify-center py-12 rounded-xl" style={CARD}>
               <p className="text-sm" style={{ color: '#94A3B8' }}>{t('subjects.noWeeks')}</p>
             </div>
           ) : (
-            materia.semanas.map(semana => {
-              const abierta = semanaAbierta === semana.id
-              return (
-                <div key={semana.id} className="rounded-xl overflow-hidden" style={CARD}>
-                  <button
-                    onClick={() => setSemanaAbierta(abierta ? null : semana.id)}
-                    className="w-full flex items-center justify-between px-3 sm:px-5 py-3.5 transition-all text-left"
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span
-                        className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0"
-                        style={{ background: abierta ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.06)', color: abierta ? '#5B6CFF' : '#94A3B8' }}
-                      >
-                        {semana.numero}
-                      </span>
-                      <span className="text-sm font-medium" style={{ color: '#F1F5F9' }}>{loc(semana.titulo, semana.titulo_en)}</span>
-                    </div>
-                    {abierta
-                      ? <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
-                      : <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
-                    }
-                  </button>
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Columna izquierda: roadmap */}
+              <div className="w-full md:w-1/3 rounded-xl p-5 flex-shrink-0" style={CARD}>
+                <WeekRoadmap
+                  semanas={materia.semanas}
+                  semanasCompletadas={semanasCompletadas}
+                  semanaActivaId={semanaSeleccionada ?? undefined}
+                  onSemanaClick={setSemanaSeleccionada}
+                  lang={lang}
+                />
+              </div>
 
-                  {abierta && (
-                    <div className="px-3 sm:px-5 pb-4 sm:pb-5 space-y-4" style={{ borderTop: '1px solid #2A2F3E' }}>
+              {/* Columna derecha: contenido de la semana seleccionada */}
+              <div className="flex-1 min-w-0">
+                {(() => {
+                  const semana = materia.semanas.find(s => s.id === semanaSeleccionada)
+                  if (!semana) return (
+                    <div className="flex items-center justify-center py-16 rounded-xl" style={CARD}>
+                      <p className="text-sm" style={{ color: '#94A3B8' }}>
+                        {lang === 'en' ? 'Select a week to get started' : 'Selecciona una semana para comenzar'}
+                      </p>
+                    </div>
+                  )
+                  return (
+                    <div className="rounded-xl p-5 space-y-4" style={CARD}>
+                      {/* Header de la semana */}
+                      <div className="pb-3" style={{ borderBottom: '1px solid #2A2F3E' }}>
+                        <span className="text-xs font-mono" style={{ color: '#6366F1' }}>
+                          {lang === 'en' ? 'Week' : 'Semana'} {semana.numero}
+                        </span>
+                        <h3 className="text-base font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
+                          {loc(semana.titulo, semana.titulo_en)}
+                        </h3>
+                      </div>
+
                       {/* Contenido */}
                       {(lang === 'en' ? (semana.contenido_en || semana.contenido) : semana.contenido) && (
-                        <div className="pt-4 space-y-1">
+                        <div className="space-y-1">
                           {renderTexto(loc(semana.contenido, semana.contenido_en))}
                         </div>
                       )}
@@ -243,7 +259,6 @@ export default function MateriaPage() {
                         <div className="space-y-2 pt-2">
                           <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>{t('subjects.videos')}</p>
 
-                          {/* Recurso en inglés (solo cuando lang === 'en' y url_en existe) */}
                           {lang === 'en' && semana.url_en && (
                             <a
                               href={semana.url_en}
@@ -274,12 +289,12 @@ export default function MateriaPage() {
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )
-            })
+                  )
+                })()}
+              </div>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Tab: Examen */}
