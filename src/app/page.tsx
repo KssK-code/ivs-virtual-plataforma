@@ -19,6 +19,56 @@ function trackContact() {
   }
 }
 
+const PlatformMockup = () => (
+  <div className="mock-browser">
+    <div className="mock-bar">
+      <div className="mock-dots">
+        <span className="mock-dot r" /><span className="mock-dot y" /><span className="mock-dot g" />
+      </div>
+      <div className="mock-url">edvex.academy/alumno</div>
+    </div>
+    <div className="mock-body">
+      <div className="mock-sidebar">
+        <div className="mock-sb-head">
+          <div className="mock-sb-logo" />
+          <span style={{ fontSize: 9, color: '#7B8AFF', fontWeight: 700 }}>EDVEX</span>
+        </div>
+        {['Dashboard', 'Mis Materias', 'Progreso', 'Pagos'].map((item, i) => (
+          <div key={item} className={`mock-nav-item${i === 0 ? ' active' : ''}`}>{item}</div>
+        ))}
+      </div>
+      <div className="mock-main">
+        <div className="mock-welcome-card">
+          <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>Bienvenido 👋</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#F1F5F9' }}>María García</div>
+          <div style={{ fontSize: 9, color: '#64748B', marginTop: 2 }}>Matrícula: EDV-2025-0042</div>
+          <div className="mock-prog-wrap">
+            <div className="mock-prog-fill" style={{ width: '50%' }} />
+          </div>
+          <div style={{ fontSize: 8, color: '#64748B', marginTop: 3 }}>Progreso: 3/6 meses · 50%</div>
+          <div className="mock-ring">
+            <svg viewBox="0 0 36 36" style={{ width: 36, height: 36, transform: 'rotate(-90deg)' }}>
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="#5B6CFF" strokeWidth="2.5"
+                strokeDasharray="48.7 97.4" strokeLinecap="round" />
+            </svg>
+            <span style={{ position: 'absolute', fontSize: 8, fontWeight: 700, color: '#7B8AFF' }}>50%</span>
+          </div>
+        </div>
+        <div style={{ fontSize: 9, color: '#64748B', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Meses del Programa</div>
+        <div className="mock-months-grid">
+          {[1,2,3,4,5,6].map(n => (
+            <div key={n} className={`mock-month ${n <= 3 ? 'open' : 'closed'}`}>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{n}</span>
+              <span style={{ fontSize: 7 }}>{n <= 3 ? 'Abierto' : '🔒'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 const WaIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
@@ -88,85 +138,113 @@ export default function LandingPage() {
         <div className="hero-bg" />
         <div className="hero-grid" />
 
-        <div className="hero-badge">
-          <span className="badge-dot" />
-          <span className="es">🎓 Válida en México y USA · 100% Online</span>
-          <span className="en">🎓 Valid in Mexico &amp; USA · 100% Online</span>
-        </div>
+        <div className="hero-inner">
+          {/* LEFT: text content */}
+          <div className="hero-left">
+            <div className="hero-badge">
+              <span className="badge-dot" />
+              <span className="es">🎓 Válida en México y USA · 100% Online</span>
+              <span className="en">🎓 Valid in Mexico &amp; USA · 100% Online</span>
+            </div>
 
-        <h1 className="hero-title">
-          <span className="es"><span className="grad">Tu Prepa</span><br />en 6 meses</span>
-          <span className="en"><span className="grad">Your Diploma</span><br />in 6 months</span>
-        </h1>
+            <h1 className="hero-title">
+              <span className="es"><span className="grad">Tu Prepa</span><br />en 6 meses</span>
+              <span className="en"><span className="grad">Your Diploma</span><br />in 6 months</span>
+            </h1>
 
-        <p className="hero-sub">
-          <span className="es">
-            Sin ir a la escuela. Sin examen final. Desde tu celular o PC.<br />
-            <strong>Certificado reconocido en universidades de México y USA.</strong>
-          </span>
-          <span className="en">
-            No classroom. No final exam. From your phone or PC.<br />
-            <strong>Certificate recognized at universities in Mexico &amp; USA.</strong>
-          </span>
-        </p>
+            <p className="hero-sub">
+              <span className="es">
+                Sin ir a la escuela. Sin examen final. Desde tu celular o PC.<br />
+                <strong>Certificado reconocido en universidades de México y USA.</strong>
+              </span>
+              <span className="en">
+                No classroom. No final exam. From your phone or PC.<br />
+                <strong>Certificate recognized at universities in Mexico &amp; USA.</strong>
+              </span>
+            </p>
 
-        <div className="hero-btns">
-          <Link href="/register" className="btn-wa" style={{ background: 'linear-gradient(135deg, #0044ee 0%, #1ad9ff 100%)', gap: '10px' }}>
-            <span className="es">Crear mi cuenta gratis →</span>
-            <span className="en">Create my free account →</span>
-          </Link>
-          <a href={WA_INFO} target="_blank" rel="noopener noreferrer" className="btn-sec" onClick={trackContact}>
-            <WaIcon />
-            <span className="es">Quiero más info</span>
-            <span className="en">Get information</span>
-          </a>
-        </div>
+            <div className="hero-btns">
+              <Link href="/register" className="btn-wa" style={{ background: 'linear-gradient(135deg, #0044ee 0%, #1ad9ff 100%)', gap: '10px' }}>
+                <span className="es">Crear mi cuenta gratis →</span>
+                <span className="en">Create my free account →</span>
+              </Link>
+              <a href={WA_INFO} target="_blank" rel="noopener noreferrer" className="btn-sec" onClick={trackContact}>
+                <WaIcon />
+                <span className="es">Quiero más info</span>
+                <span className="en">Get information</span>
+              </a>
+            </div>
 
-        <div className="flags">
-          <div className="flag-pill">
-            🇲🇽{' '}
-            <span className="es">Ciudadanos Mexicanos</span>
-            <span className="en">Mexican Citizens</span>
-          </div>
-          <span className="flag-sep">+</span>
-          <div className="flag-pill">
-            🇺🇸{' '}
-            <span className="es">Ciudadanos Americanos</span>
-            <span className="en">American Citizens</span>
-          </div>
-        </div>
+            <div className="flags">
+              <div className="flag-pill">
+                🇲🇽{' '}
+                <span className="es">Ciudadanos Mexicanos</span>
+                <span className="en">Mexican Citizens</span>
+              </div>
+              <span className="flag-sep">+</span>
+              <div className="flag-pill">
+                🇺🇸{' '}
+                <span className="es">Ciudadanos Americanos</span>
+                <span className="en">American Citizens</span>
+              </div>
+            </div>
 
-        <div className="hero-stats">
-          <div className="stat">
-            <div className="stat-num">6</div>
-            <div className="stat-label">
-              <span className="es">Meses Prepa</span>
-              <span className="en">Months Diploma</span>
+            <div className="hero-stats">
+              <div className="stat">
+                <div className="stat-num">6</div>
+                <div className="stat-label">
+                  <span className="es">Meses Prepa</span>
+                  <span className="en">Months Diploma</span>
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-num">3</div>
+                <div className="stat-label">
+                  <span className="es">Meses Express</span>
+                  <span className="en">Months Express</span>
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-num">$150</div>
+                <div className="stat-label">
+                  <span className="es">USD / Mes</span>
+                  <span className="en">USD / Month</span>
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-num">100%</div>
+                <div className="stat-label">
+                  <span className="es">En Línea</span>
+                  <span className="en">Online</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="stat">
-            <div className="stat-num">3</div>
-            <div className="stat-label">
-              <span className="es">Meses Express</span>
-              <span className="en">Months Express</span>
-            </div>
-          </div>
-          <div className="stat">
-            <div className="stat-num">$150</div>
-            <div className="stat-label">
-              <span className="es">USD / Mes</span>
-              <span className="en">USD / Month</span>
-            </div>
-          </div>
-          <div className="stat">
-            <div className="stat-num">100%</div>
-            <div className="stat-label">
-              <span className="es">En Línea</span>
-              <span className="en">Online</span>
-            </div>
+
+          {/* RIGHT: platform mockup */}
+          <div className="hero-right">
+            <PlatformMockup />
           </div>
         </div>
       </section>
+
+      {/* ── TRUST BAR ── */}
+      <div className="trust-bar">
+        {[
+          { num: '100%', es: 'En línea · sin salón de clases', en: 'Online · no classroom' },
+          { num: '6 / 3', es: 'Meses para terminar', en: 'Months to finish' },
+          { num: '$150', es: 'USD/mes · plan regular', en: 'USD/month · regular plan' },
+          { num: 'MX+USA', es: 'Certificado válido en 2 países', en: 'Certificate valid in 2 countries' },
+        ].map((item, i) => (
+          <div className="trust-item" key={i}>
+            <div className="trust-num">{item.num}</div>
+            <div className="trust-label">
+              <span className="es">{item.es}</span>
+              <span className="en">{item.en}</span>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* ── BENEFICIOS ── */}
       <section className="benefits">
@@ -179,43 +257,55 @@ export default function LandingPage() {
             <span className="es">Todo lo que necesitas,<br />nada de lo que no</span>
             <span className="en">Everything you need,<br />nothing you don&apos;t</span>
           </h2>
+          <p className="sec-sub">
+            <span className="es">Diseñado para que termines. Sin excusas, sin complicaciones.</span>
+            <span className="en">Designed for you to finish. No excuses, no complications.</span>
+          </p>
         </div>
 
         <div className="benefits-grid">
           {[
             {
-              icon: '📱',
+              icon: '📱', color: '#0055ff',
               es: { title: 'Desde tu celular o PC', desc: 'Estudia cuando quieras, donde quieras. Sin horarios fijos, sin trasladarte.' },
               en: { title: 'From your phone or PC', desc: 'Study whenever you want, wherever you are. No fixed schedules, no commuting.' },
             },
             {
-              icon: '🚫',
+              icon: '🚫', color: '#ef4444',
               es: { title: 'Sin examen final', desc: 'Nada de exámenes CENEVAL ni trámites complicados. Tu certificado es por actividades completadas.' },
               en: { title: 'No final exam', desc: 'No CENEVAL exams or complicated paperwork. Your certificate is based on completed activities.' },
             },
             {
-              icon: '⚡',
+              icon: '⚡', color: '#f59e0b',
               es: { title: '6 meses o 3 meses Express', desc: 'Elige tu ritmo. Programa regular en 6 meses o acelera al doble con el track Express en solo 3 meses.' },
               en: { title: '6 months or 3 months Express', desc: 'Choose your pace. Regular 6-month program or double the speed with Express track in just 3 months.' },
             },
             {
-              icon: '🎓',
+              icon: '🎓', color: '#10b981',
               es: { title: 'Certificado reconocido', desc: 'Certificado con validez para continuar en universidades de México y Estados Unidos.' },
               en: { title: 'Recognized certificate', desc: 'Certificate valid to continue at universities in Mexico and the United States.' },
             },
             {
-              icon: '🇲🇽🇺🇸',
+              icon: '🌎', color: '#1ad9ff',
               es: { title: 'Mexicanos y Americanos', desc: 'No importa tu ciudadanía — podemos certificarte si eres ciudadano mexicano o americano.' },
-              en: { title: 'Mexicans & Americans', desc: 'Regardless of your citizenship — we can certify you whether you\'re Mexican or American.' },
+              en: { title: 'Mexicans & Americans', desc: "Regardless of your citizenship — we can certify you whether you're Mexican or American." },
             },
             {
-              icon: '🏛️',
+              icon: '🏛️', color: '#7B8AFF',
               es: { title: 'Continúa en la universidad', desc: 'Tu certificado te abre las puertas a universidades en México y USA. El siguiente paso es tuyo.' },
               en: { title: 'Continue at university', desc: 'Your certificate opens doors to universities in Mexico and the USA. The next step is yours.' },
             },
           ].map((b, i) => (
             <div className="benefit-card" key={i}>
-              <div className="benefit-icon">{b.icon}</div>
+              <div
+                className="benefit-icon"
+                style={{
+                  background: `${b.color}1a`,
+                  border: `1px solid ${b.color}33`,
+                }}
+              >
+                {b.icon}
+              </div>
               <div className="benefit-title">
                 <span className="es">{b.es.title}</span>
                 <span className="en">{b.en.title}</span>
@@ -290,7 +380,7 @@ export default function LandingPage() {
 
       {/* ── PLANES ── */}
       <section className="benefits" id="planes">
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <div className="tag-line">
             <span className="es">Planes y Precios</span>
             <span className="en">Plans &amp; Pricing</span>
@@ -299,10 +389,19 @@ export default function LandingPage() {
             <span className="es">Elige tu camino</span>
             <span className="en">Choose your path</span>
           </h2>
-          <p className="sec-sub">
-            <span className="es">Dos programas diseñados para adaptarse a tu ritmo y tu vida.</span>
-            <span className="en">Two programs designed to fit your pace and your life.</span>
+          <p className="sec-sub" style={{ marginBottom: 0 }}>
+            <span className="es">Dos programas. El mismo certificado. El mismo precio total.</span>
+            <span className="en">Two programs. The same certificate. The same total price.</span>
           </p>
+        </div>
+
+        {/* nota central */}
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <div className="planes-note">
+            <span style={{ fontSize: '1rem' }}>💡</span>
+            <span className="es">Ambos planes incluyen el mismo certificado válido en MX y USA — solo cambia la velocidad</span>
+            <span className="en">Both plans include the same certificate valid in MX and USA — only the speed differs</span>
+          </div>
         </div>
 
         <div className="planes-grid">
@@ -328,7 +427,7 @@ export default function LandingPage() {
               {[
                 { es: '6 meses de acceso completo', en: '6 months full access' },
                 { es: 'Estudia a tu ritmo', en: 'Study at your own pace' },
-                { es: 'Sin examen final', en: 'No final exam' },
+                { es: 'Sin examen final (por actividades)', en: 'No final exam (activity-based)' },
                 { es: 'Plataforma bilingüe ES/EN', en: 'Bilingual platform ES/EN' },
                 { es: 'Soporte por WhatsApp', en: 'WhatsApp support' },
                 { es: 'Certificado válido MX + USA', en: 'Certificate valid MX + USA' },
@@ -340,16 +439,21 @@ export default function LandingPage() {
               ))}
             </ul>
             <a href={WA_REGULAR} target="_blank" rel="noopener noreferrer" className="btn-plan outline" onClick={trackContact}>
-              <span className="es">Empezar Ahora →</span>
-              <span className="en">Start Now →</span>
+              <span className="es">Empezar ahora →</span>
+              <span className="en">Start now →</span>
             </a>
           </div>
 
           {/* Plan Express */}
-          <div className="plan-card express">
+          <div className="plan-card express" style={{ position: 'relative' }}>
+            {/* Floating popular badge */}
+            <div className="plan-popular-tag">
+              <span className="es">🔥 Más popular</span>
+              <span className="en">🔥 Most popular</span>
+            </div>
             <div className="plan-badge">
-              ⚡ <span className="es">Express — Más Popular</span>
-              <span className="en">Express — Most Popular</span>
+              ⚡ <span className="es">Express</span>
+              <span className="en">Express</span>
             </div>
             <div className="plan-name">
               <span className="es">Prepa en 3 Meses</span>
@@ -365,9 +469,9 @@ export default function LandingPage() {
             </div>
             <ul className="plan-features">
               {[
-                { es: '3 meses — terminas más rápido', en: '3 months — finish faster' },
+                { es: '3 meses — terminas 3 meses antes', en: '3 months — finish 3 months sooner' },
                 { es: 'Ritmo intensivo pero manejable', en: 'Intensive but manageable pace' },
-                { es: 'Sin examen final', en: 'No final exam' },
+                { es: 'Sin examen final (por actividades)', en: 'No final exam (activity-based)' },
                 { es: 'Plataforma bilingüe ES/EN', en: 'Bilingual platform ES/EN' },
                 { es: 'Soporte prioritario por WhatsApp', en: 'Priority WhatsApp support' },
                 { es: 'Certificado válido MX + USA', en: 'Certificate valid MX + USA' },
@@ -425,7 +529,7 @@ export default function LandingPage() {
 
       {/* ── PROCESO ── */}
       <section className="proceso" id="como-empezar">
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <div className="tag-line">
             <span className="es">Cómo empezar</span>
             <span className="en">How to start</span>
@@ -443,23 +547,29 @@ export default function LandingPage() {
         <div className="proceso-steps">
           {[
             {
-              num: '1',
-              es: { title: 'Crea tu cuenta gratis', desc: 'Regístrate en la plataforma en menos de 2 minutos. Sin tarjeta de crédito.' },
-              en: { title: 'Create your free account', desc: 'Register on the platform in less than 2 minutes. No credit card required.' },
+              num: '01',
+              icon: '🙋',
+              es: { title: 'Crea tu cuenta gratis', desc: 'Regístrate en menos de 2 minutos. Sin tarjeta de crédito. Tu cuenta queda lista al instante.' },
+              en: { title: 'Create your free account', desc: 'Register in under 2 minutes. No credit card required. Your account is ready instantly.' },
             },
             {
-              num: '2',
-              es: { title: 'Paga tu inscripción ($50 USD)', desc: 'Accede a tu panel y realiza el pago de inscripción para activar tu cuenta.' },
-              en: { title: 'Pay your enrollment ($50 USD)', desc: 'Access your dashboard and make the enrollment payment to activate your account.' },
+              num: '02',
+              icon: '💳',
+              es: { title: 'Paga tu inscripción', desc: '$50 USD únicos para activar tu acceso al programa completo. Pago seguro en línea.' },
+              en: { title: 'Pay your enrollment', desc: '$50 USD one-time to activate full program access. Secure online payment.' },
             },
             {
-              num: '3',
-              es: { title: 'Control Escolar te contacta por WhatsApp', desc: 'Nuestro equipo te da la bienvenida, te pide tus documentos y ¡empiezas a estudiar!' },
-              en: { title: 'School Admin contacts you via WhatsApp', desc: 'Our team welcomes you, requests your documents, and you start studying!' },
+              num: '03',
+              icon: '🎉',
+              es: { title: 'Control Escolar te contacta', desc: 'Nuestro equipo te da la bienvenida por WhatsApp, te pide tus documentos y ¡empiezas a estudiar!' },
+              en: { title: 'School Admin contacts you', desc: 'Our team welcomes you via WhatsApp, requests your documents, and you start studying!' },
             },
           ].map((s, i) => (
             <div className="step" key={i}>
-              <div className="step-num">{s.num}</div>
+              <div className="step-bubble">
+                <span className="step-bubble-num">{s.num}</span>
+                <span className="step-bubble-icon">{s.icon}</span>
+              </div>
               <div className="step-title">
                 <span className="es">{s.es.title}</span>
                 <span className="en">{s.en.title}</span>
@@ -473,30 +583,72 @@ export default function LandingPage() {
         </div>
 
         {/* CTA debajo de los pasos */}
-        <div style={{ textAlign: 'center', marginTop: '48px' }}>
-          <Link href="/register" className="btn-ingresar" style={{ fontSize: '1rem', padding: '14px 36px', display: 'inline-block' }}>
+        <div className="proceso-cta">
+          <Link
+            href="/register"
+            className="btn-wa"
+            style={{ background: 'linear-gradient(135deg, #0044ee 0%, #1ad9ff 100%)', gap: '10px' }}
+          >
             <span className="es">Crear mi cuenta gratis →</span>
             <span className="en">Create my free account →</span>
           </Link>
+
+          <div className="proceso-divider">
+            <span className="es">— o si prefieres —</span>
+            <span className="en">— or if you prefer —</span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <a
+              href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-cal"
+            >
+              <span className="es">📅 Agendar videollamada con un asesor (30 min gratis)</span>
+              <span className="en">📅 Schedule a call with an advisor (30 min free)</span>
+            </a>
+            <p className="proceso-cta-hint">
+              <span className="es">Resuelve tus dudas antes de inscribirte — sin compromiso</span>
+              <span className="en">Resolve your questions before enrolling — no commitment</span>
+            </p>
+          </div>
         </div>
       </section>
 
       {/* ── CTA FINAL ── */}
       <section className="cta-final">
-        <div className="tag-line">
+        {/* Social proof row */}
+        <div className="cta-proof">
+          {[
+            { icon: '🇲🇽', es: 'México', en: 'Mexico' },
+            { icon: '🇺🇸', es: 'USA', en: 'USA' },
+            { icon: '🎓', es: 'Certificado válido', en: 'Valid certificate' },
+            { icon: '⚡', es: 'Desde $150 USD/mes', en: 'From $150 USD/month' },
+            { icon: '✅', es: 'Sin examen final', en: 'No final exam' },
+          ].map((item, i) => (
+            <div className="cta-proof-item" key={i}>
+              <span>{item.icon}</span>
+              <span className="es">{item.es}</span>
+              <span className="en">{item.en}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="tag-line" style={{ marginTop: '48px' }}>
           <span className="es">¿Listo para empezar?</span>
           <span className="en">Ready to start?</span>
         </div>
-        <h2 className="sec-title">
+        <h2 className="sec-title" style={{ marginTop: '16px' }}>
           <span className="es">Tu prepa te espera.<br />Solo falta el primer paso.</span>
           <span className="en">Your diploma is waiting.<br />Just take the first step.</span>
         </h2>
         <p className="cta-final-sub">
-          <span className="es">Miles de personas en México y USA ya terminaron su prepa con nosotros. En 6 meses —o 3— puedes ser el siguiente.</span>
-          <span className="en">Thousands of people in Mexico and the USA have already completed their diploma with us. In 6 months — or 3 — you could be next.</span>
+          <span className="es">Personas en México y USA ya terminaron su prepa con nosotros. En 6 meses —o 3— puedes ser el siguiente.</span>
+          <span className="en">People in Mexico and the USA have already completed their diploma with us. In 6 months — or 3 — you could be next.</span>
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <div className="cta-final-btns">
           <Link
             href="/register"
             className="btn-wa"
@@ -518,6 +670,11 @@ export default function LandingPage() {
             <span className="en">I prefer WhatsApp</span>
           </a>
         </div>
+
+        <p className="cta-final-footnote">
+          <span className="es">Sin tarjeta de crédito · Registro en 2 minutos · Cancela cuando quieras</span>
+          <span className="en">No credit card · 2-minute signup · Cancel anytime</span>
+        </p>
       </section>
 
       {/* ── FOOTER ── */}
