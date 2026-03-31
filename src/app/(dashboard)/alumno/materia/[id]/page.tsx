@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import VideoEmbed from '@/components/alumno/VideoEmbed'
 import ReadingProgress from '@/components/alumno/ReadingProgress'
 import WeekRoadmap from '@/components/alumno/WeekRoadmap'
+import CelebrationBanner from '@/components/alumno/CelebrationBanner'
 
 interface Video { titulo: string; titulo_en: string; url: string; url_en: string; duracion: string }
 interface Semana {
@@ -75,6 +76,7 @@ export default function MateriaPage() {
   const [semanaSeleccionada, setSemanaSeleccionada] = useState<string | null>(null)
   const [alumnoId, setAlumnoId] = useState<string>('')
   const [semanasCompletadas, setSemanasCompletadas] = useState<Set<string>>(new Set())
+  const [materiaAcreditada, setMateriaAcreditada] = useState(false)
 
   useEffect(() => {
     fetch(`/api/alumno/materia/${id}`)
@@ -251,7 +253,13 @@ export default function MateriaPage() {
                         alumnoId={alumnoId}
                         lang={lang}
                         yaCompletada={semanasCompletadas.has(semana.id)}
-                        onCompletada={() => setSemanasCompletadas(prev => new Set([...prev, semana.id]))}
+                        onCompletada={() => {
+                          const nuevas = new Set([...semanasCompletadas, semana.id])
+                          setSemanasCompletadas(nuevas)
+                          if (materia && materia.semanas.every(s => nuevas.has(s.id))) {
+                            setMateriaAcreditada(true)
+                          }
+                        }}
                       />
 
                       {/* Videos */}
@@ -438,6 +446,15 @@ export default function MateriaPage() {
             </div>
           )}
         </div>
+      )}
+
+      {materiaAcreditada && (
+        <CelebrationBanner
+          materiaNombre={materia.nombre}
+          materiaNombre_en={materia.nombre_en}
+          lang={lang}
+          onClose={() => setMateriaAcreditada(false)}
+        />
       )}
     </div>
   )
