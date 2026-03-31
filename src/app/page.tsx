@@ -76,11 +76,18 @@ const LogoSvg = ({ id }: { id: string }) => (
 
 export default function LandingPage() {
   const [lang, setLang] = useState<Lang>('es')
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
 
   useEffect(() => {
     const prev = document.documentElement.style.scrollBehavior
     document.documentElement.style.scrollBehavior = 'smooth'
     return () => { document.documentElement.style.scrollBehavior = prev }
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   return (
@@ -494,7 +501,11 @@ export default function LandingPage() {
         <div className="cert-grid">
           {/* Tarjeta USA */}
           <div className="cert-card">
-            <div className="cert-img-wrap">
+            <div
+              className="cert-img-wrap"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setLightbox({ src: '/images/certiusa.jpeg', alt: 'High School Transcript - Innovative Online Academy' })}
+            >
               <Image
                 src="/images/certiusa.jpeg"
                 alt="High School Transcript - Innovative Online Academy"
@@ -522,7 +533,11 @@ export default function LandingPage() {
 
           {/* Tarjeta México */}
           <div className="cert-card">
-            <div className="cert-img-wrap">
+            <div
+              className="cert-img-wrap"
+              style={{ cursor: 'pointer' }}
+              onClick={() => setLightbox({ src: '/images/ValidacionMEXICO.jpeg', alt: 'Revalidación oficial SEP México' })}
+            >
               <Image
                 src="/images/ValidacionMEXICO.jpeg"
                 alt="Revalidación oficial SEP México"
@@ -559,6 +574,17 @@ export default function LandingPage() {
             <span className="es">Entra al portal oficial de la SEP y escribe el folio de validación. Los documentos de nuestros alumnos aparecen registrados oficialmente.</span>
             <span className="en">Go to the official SEP portal and enter the validation folio number. Our students&apos; documents appear officially registered.</span>
           </p>
+
+          <p className="cert-folio-label">
+            <span className="es">Folio de ejemplo verificable:</span>
+            <span className="en">Example verifiable folio:</span>
+          </p>
+          <div className="cert-folio">CC9R3B3250002927</div>
+          <p className="cert-folio-hint">
+            <span className="es">Escribe este folio en el portal SEP y verás el documento real de una alumna de EDVEX</span>
+            <span className="en">Enter this folio on the SEP portal and you&apos;ll see a real EDVEX student&apos;s document</span>
+          </p>
+
           <a
             href="https://siged.sep.gob.mx/SIGED/revalidaciones.html"
             target="_blank"
@@ -570,6 +596,22 @@ export default function LandingPage() {
           </a>
         </div>
       </section>
+
+      {/* ── LIGHTBOX ── */}
+      {lightbox && (
+        <div className="lb-overlay" onClick={() => setLightbox(null)}>
+          <button className="lb-close" onClick={() => setLightbox(null)}>✕</button>
+          <div className="lb-img-wrap" onClick={e => e.stopPropagation()}>
+            <Image
+              src={lightbox.src}
+              alt={lightbox.alt}
+              fill
+              style={{ objectFit: 'contain' }}
+              sizes="100vw"
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── PARA QUIÉN ── */}
       <section>
