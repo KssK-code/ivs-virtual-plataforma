@@ -1,6 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(useGSAP)
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell, CreditCard } from 'lucide-react'
@@ -48,6 +52,26 @@ export default function AlumnoDashboard() {
   const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
   const [logros, setLogros] = useState<Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>>([])
   const [loading, setLoading] = useState(true)
+  const porcentajeRef = useRef<HTMLSpanElement>(null)
+
+  // Contador animado del porcentaje
+  useGSAP(() => {
+    if (!porcentajeRef.current || !perfil) return
+    const target = perfil.duracion_meses > 0
+      ? Math.round((perfil.meses_desbloqueados / perfil.duracion_meses) * 100)
+      : 0
+    const obj = { val: 0 }
+    gsap.to(obj, {
+      val: target,
+      duration: 1.5,
+      ease: 'power2.out',
+      onUpdate: () => {
+        if (porcentajeRef.current) {
+          porcentajeRef.current.textContent = Math.round(obj.val).toString()
+        }
+      },
+    })
+  }, { dependencies: [perfil] })
 
   useEffect(() => {
     const pago = searchParams.get('pago')
@@ -197,7 +221,7 @@ export default function AlumnoDashboard() {
       {/* SECCIÓN 1 — Header de bienvenida */}
       <FadeIn delay={perfil.inscripcion_pagada === false ? 100 : 0}>
         <div className="space-y-1.5">
-          <h1 className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
+          <h1 className="text-2xl sm:text-4xl font-bold" style={{ color: '#F1F5F9' }}>
             {saludo}, {primerNombre}
           </h1>
           <p className="text-sm" style={{ color: '#475569' }}>
@@ -209,9 +233,9 @@ export default function AlumnoDashboard() {
 
       {/* SECCIÓN 2 — 3 tarjetas de stats */}
       <FadeIn delay={perfil.inscripcion_pagada === false ? 200 : 100}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           {/* Tarjeta 1: Progreso general */}
-          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
                 {lang === 'en' ? 'Overall progress' : 'Avance total'}
@@ -220,7 +244,7 @@ export default function AlumnoDashboard() {
                 <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
               </div>
             </div>
-            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{porcentaje}<span className="text-xl font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
+            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}><span ref={porcentajeRef}>0</span><span className="text-sm font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
             <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
               <div
                 className="h-full rounded-full transition-all duration-700"
@@ -230,7 +254,7 @@ export default function AlumnoDashboard() {
           </div>
 
           {/* Tarjeta 2: Mes en curso */}
-          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
                 {lang === 'en' ? 'Current month' : 'Mes en curso'}
@@ -239,7 +263,7 @@ export default function AlumnoDashboard() {
                 <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
               </div>
             </div>
-            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
+            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>
               {mesActivo}
               <span className="text-sm font-normal ml-1.5" style={{ color: '#475569' }}>
                 / {perfil.duracion_meses}
@@ -251,7 +275,7 @@ export default function AlumnoDashboard() {
           </div>
 
           {/* Tarjeta 3: Materias acreditadas */}
-          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
                 {lang === 'en' ? 'Subjects passed' : 'Materias acreditadas'}
@@ -260,7 +284,7 @@ export default function AlumnoDashboard() {
                 <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
               </div>
             </div>
-            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
+            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
             <p className="text-xs" style={{ color: '#475569' }}>
               {lang === 'en' ? 'subjects approved' : 'materias aprobadas'}
             </p>
@@ -344,15 +368,7 @@ export default function AlumnoDashboard() {
 
       {/* SECCIÓN 5 — Logros */}
       <FadeIn delay={perfil.inscripcion_pagada === false ? 500 : 400}>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
-              {lang === 'en' ? 'My achievements' : 'Mis logros'}
-            </p>
-            <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
-          </div>
-          <BadgesGrid logros={logros} lang={lang} />
-        </div>
+        <BadgesGrid logros={logros} lang={lang} />
       </FadeIn>
     </div>
   )

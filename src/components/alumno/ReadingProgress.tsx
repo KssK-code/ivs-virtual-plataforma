@@ -1,7 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { CheckCircle, Loader2 } from 'lucide-react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(useGSAP)
 
 interface ReadingProgressProps {
   semanaId: string
@@ -20,6 +24,19 @@ export default function ReadingProgress({
   const [scrollPct, setScrollPct] = useState(0)
   const [completada, setCompletada] = useState(yaCompletada)
   const [cargando, setCargando] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const badgeRef = useRef<HTMLDivElement>(null)
+
+  // Badge de "Semana completada" entra con back.out cuando completada cambia a true
+  useGSAP(() => {
+    if (completada && badgeRef.current) {
+      gsap.fromTo(
+        badgeRef.current,
+        { scale: 0 },
+        { scale: 1, duration: 0.4, ease: 'back.out(1.7)' }
+      )
+    }
+  }, { dependencies: [completada] })
 
   const calcularScroll = useCallback(() => {
     const scrollTop = window.scrollY
@@ -48,8 +65,19 @@ export default function ReadingProgress({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana_id: semanaId }),
       })
-      setCompletada(true)
-      onCompletada?.()
+      // Animación del botón: scale 1 → 1.15 → 1
+      if (btnRef.current) {
+        gsap.timeline()
+          .to(btnRef.current, { scale: 1.15, duration: 0.15, ease: 'power2.out' })
+          .to(btnRef.current, { scale: 1, duration: 0.15, ease: 'power2.in' })
+          .then(() => {
+            setCompletada(true)
+            onCompletada?.()
+          })
+      } else {
+        setCompletada(true)
+        onCompletada?.()
+      }
     } catch {
       // silencioso — no bloquear al alumno
     } finally {
@@ -96,6 +124,7 @@ export default function ReadingProgress({
         >
           {completada ? (
             <div
+              ref={badgeRef}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg"
               style={{ background: '#166534', color: '#86EFAC', border: '1px solid #15803D' }}
             >
@@ -104,6 +133,7 @@ export default function ReadingProgress({
             </div>
           ) : scrollPct >= 85 ? (
             <button
+              ref={btnRef}
               onClick={marcarLeido}
               disabled={cargando}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg transition-opacity disabled:opacity-70"

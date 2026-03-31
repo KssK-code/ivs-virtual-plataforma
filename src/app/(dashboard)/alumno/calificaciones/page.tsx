@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
 import FadeIn from '@/components/ui/FadeIn'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(useGSAP)
 
 type Estado = 'Acreditada' | 'No acreditada' | 'Pendiente'
 
@@ -62,6 +66,28 @@ export default function CalificacionesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const refAcreditadas    = useRef<HTMLParagraphElement>(null)
+  const refNoAcreditadas  = useRef<HTMLParagraphElement>(null)
+  const refPendientes     = useRef<HTMLParagraphElement>(null)
+
+  useGSAP(() => {
+    if (!resumen) return
+    const animate = (ref: React.RefObject<HTMLParagraphElement>, target: number) => {
+      const obj = { val: 0 }
+      gsap.to(obj, {
+        val: target,
+        duration: 1,
+        ease: 'power2.out',
+        onUpdate: () => {
+          if (ref.current) ref.current.textContent = Math.round(obj.val).toString()
+        },
+      })
+    }
+    animate(refAcreditadas,   resumen.materias_acreditadas)
+    animate(refNoAcreditadas, resumen.materias_no_acreditadas)
+    animate(refPendientes,    resumen.materias_pendientes)
+  }, { dependencies: [resumen] })
+
   useEffect(() => {
     fetch('/api/alumno/calificaciones')
       .then(r => r.json())
@@ -117,7 +143,7 @@ export default function CalificacionesPage() {
                     <CheckCircle className="w-5 h-5" style={{ color: '#10B981' }} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold" style={{ color: '#10B981' }}>{resumen.materias_acreditadas}</p>
+                    <p ref={refAcreditadas} className="text-xl sm:text-2xl font-bold" style={{ color: '#10B981' }}>0</p>
                     <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.acreditada')}</p>
                   </div>
                 </div>
@@ -128,7 +154,7 @@ export default function CalificacionesPage() {
                     <XCircle className="w-5 h-5" style={{ color: '#EF4444' }} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold" style={{ color: '#EF4444' }}>{resumen.materias_no_acreditadas}</p>
+                    <p ref={refNoAcreditadas} className="text-xl sm:text-2xl font-bold" style={{ color: '#EF4444' }}>0</p>
                     <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.noAcreditada')}</p>
                   </div>
                 </div>
@@ -139,7 +165,7 @@ export default function CalificacionesPage() {
                     <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />
                   </div>
                   <div>
-                    <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F59E0B' }}>{resumen.materias_pendientes}</p>
+                    <p ref={refPendientes} className="text-xl sm:text-2xl font-bold" style={{ color: '#F59E0B' }}>0</p>
                     <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.pendientes')}</p>
                   </div>
                 </div>

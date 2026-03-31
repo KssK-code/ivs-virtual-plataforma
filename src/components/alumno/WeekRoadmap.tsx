@@ -1,6 +1,11 @@
 'use client'
 
+import { useRef } from 'react'
 import { Check, Lock } from 'lucide-react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(useGSAP)
 
 interface WeekRoadmapProps {
   semanas: Array<{
@@ -42,16 +47,29 @@ export default function WeekRoadmap({
   lang,
 }: WeekRoadmapProps) {
   const loc = (es: string, en?: string) => lang === 'en' && en ? en : es
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    if (!containerRef.current) return
+    const nodes = containerRef.current.querySelectorAll('.roadmap-node')
+    gsap.from(nodes, {
+      opacity: 0,
+      x: -20,
+      duration: 0.4,
+      stagger: 0.08,
+      ease: 'power2.out',
+    })
+  }, { scope: containerRef })
 
   return (
-    <div className="flex flex-col">
+    <div ref={containerRef} className="flex flex-col">
       {semanas.map((semana, index) => {
         const estado = getEstado(semana.id, index, semanas, semanasCompletadas)
         const esUltima = index === semanas.length - 1
         const clickable = estado !== 'bloqueado'
 
         return (
-          <div key={semana.id} className="flex gap-4">
+          <div key={semana.id} className="roadmap-node flex gap-4">
             {/* Columna izquierda: nodo + línea conectora */}
             <div className="flex flex-col items-center">
               {/* Nodo */}
