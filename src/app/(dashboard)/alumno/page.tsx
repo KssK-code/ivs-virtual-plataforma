@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Lock, Loader2, GraduationCap, BookOpen, TrendingUp, Bell, CreditCard } from 'lucide-react'
+import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell, CreditCard } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { ESCUELA_CONFIG } from '@/lib/config'
 import { useLanguage } from '@/context/LanguageContext'
 
 interface Perfil {
@@ -43,6 +42,7 @@ export default function AlumnoDashboard() {
   const loc = (es: string, en: string) => lang === 'en' && en ? en : es
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [meses, setMeses] = useState<Mes[]>([])
+  const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -60,9 +60,11 @@ export default function AlumnoDashboard() {
     Promise.all([
       fetch('/api/alumno/perfil').then(r => r.json()),
       fetch('/api/alumno/meses').then(r => r.json()),
-    ]).then(([p, m]) => {
+      fetch('/api/alumno/calificaciones').then(r => r.json()),
+    ]).then(([p, m, c]) => {
       setPerfil(p)
       setMeses(Array.isArray(m) ? m : [])
+      setMateriasAcreditadas(c?.resumen?.materias_acreditadas ?? 0)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -82,13 +84,21 @@ export default function AlumnoDashboard() {
     ? Math.round((perfil.meses_desbloqueados / perfil.duracion_meses) * 100)
     : 0
 
-  const materiasDisponibles = meses.filter(m => m.desbloqueado).reduce((t, m) => t + (m.materias?.length ?? 0), 0)
+  const hora = new Date().getHours()
+  const saludo = hora < 12
+    ? (lang === 'en' ? 'Good morning' : 'Buenos días')
+    : hora < 19
+    ? (lang === 'en' ? 'Good afternoon' : 'Buenas tardes')
+    : (lang === 'en' ? 'Good evening' : 'Buenas noches')
+
+  const primerNombre = perfil.nombre_completo.split(' ')[0]
+  const mesActivo = perfil.meses_desbloqueados
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-8 max-w-5xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* ── BANNER: Inscripción pendiente ── */}
+      {/* Banner: Inscripción pendiente */}
       {perfil.inscripcion_pagada === false && (
         <div
           className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
@@ -115,7 +125,6 @@ export default function AlumnoDashboard() {
             </p>
           </div>
 
-          {/* Acciones: pago + videollamada */}
           <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
             <Link
               href="/alumno/pagar"
@@ -128,14 +137,12 @@ export default function AlumnoDashboard() {
               Pagar inscripción ($50 USD)
             </Link>
 
-            {/* Separador */}
             <div className="flex items-center gap-2">
               <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
               <span className="text-xs" style={{ color: '#475569', whiteSpace: 'nowrap' }}>— o si prefieres —</span>
               <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
             </div>
 
-            {/* Botón videollamada */}
             <div className="flex flex-col items-center gap-1.5">
               <a
                 href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
@@ -166,108 +173,29 @@ export default function AlumnoDashboard() {
         </div>
       )}
 
-      {/* Card institucional de bienvenida */}
-      <div
-        className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #1E2A5E 0%, #181C26 60%, #0D1017 100%)',
-          border: '1px solid rgba(91,108,255,0.3)',
-        }}
-      >
-        {/* Decoración de fondo */}
-        <div
-          className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(91,108,255,0.08) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-48 h-48 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(123,138,255,0.05) 0%, transparent 70%)', transform: 'translate(-30%, 30%)' }}
-        />
+      {/* SECCIÓN 1 — Header de bienvenida */}
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#F1F5F9' }}>
+          {saludo}, {primerNombre}
+        </h1>
+        <p className="text-sm" style={{ color: '#475569' }}>
+          {lang === 'en' ? 'Student ID:' : 'Matrícula:'} {perfil.matricula}
+        </p>
+      </div>
 
-        <div className="relative flex flex-col gap-4">
-          <div
-            className="flex items-center justify-center w-14 h-14 rounded-2xl flex-shrink-0"
-            style={{ background: 'rgba(91,108,255,0.2)', border: '1px solid rgba(91,108,255,0.4)' }}
-          >
-            <GraduationCap className="w-7 h-7" style={{ color: '#7B8AFF' }} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: '#5B6CFF' }}>
-              {ESCUELA_CONFIG.nombre}
+      {/* SECCIÓN 2 — 3 tarjetas de stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Tarjeta 1: Progreso general */}
+        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+              {lang === 'en' ? 'Overall progress' : 'Avance total'}
             </p>
-            <h2 className="text-xl sm:text-2xl font-bold leading-snug" style={{ color: '#F1F5F9' }}>
-              {t('dashboard.welcomeStudent')} {perfil.nombre_completo.split(' ')[0]}
-            </h2>
-            <p className="text-xs font-mono mt-1" style={{ color: '#64748B' }}>{perfil.matricula}</p>
-            <p className="text-sm mt-2 italic" style={{ color: '#94A3B8' }}>
-              {t('dashboard.motivational')}
-            </p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(91,108,255,0.15)' }}>
-                  <GraduationCap className="w-4 h-4" style={{ color: '#7B8AFF' }} />
-                </div>
-                <div>
-                  <p className="text-xs leading-none" style={{ color: '#64748B' }}>{t('dashboard.currentPlan')}</p>
-                  <p className="text-xs font-semibold mt-0.5 truncate max-w-[120px]" style={{ color: '#F1F5F9' }}>
-                    {perfil.plan_nombre}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(16,185,129,0.15)' }}>
-                  <TrendingUp className="w-4 h-4" style={{ color: '#10B981' }} />
-                </div>
-                <div>
-                  <p className="text-xs leading-none" style={{ color: '#64748B' }}>{t('dashboard.monthsCompleted')}</p>
-                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#F1F5F9' }}>
-                    {perfil.meses_desbloqueados} / {perfil.duracion_meses}
-                    <span className="font-normal ml-1" style={{ color: '#64748B' }}>({porcentaje}%)</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(245,158,11,0.15)' }}>
-                  <BookOpen className="w-4 h-4" style={{ color: '#F59E0B' }} />
-                </div>
-                <div>
-                  <p className="text-xs leading-none" style={{ color: '#64748B' }}>{t('dashboard.availableSubjects')}</p>
-                  <p className="text-xs font-semibold mt-0.5" style={{ color: '#F1F5F9' }}>
-                    {materiasDisponibles}
-                  </p>
-                </div>
-              </div>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.12)' }}>
+              <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
             </div>
           </div>
-
-          {/* Porcentaje circular */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center w-14 h-14 flex-shrink-0">
-              <svg className="w-14 h-14 -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
-                <circle
-                  cx="18" cy="18" r="15.5" fill="none"
-                  stroke="#5B6CFF" strokeWidth="2.5"
-                  strokeDasharray={`${porcentaje * 0.974} 97.4`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span className="absolute text-xs font-bold" style={{ color: '#7B8AFF' }}>{porcentaje}%</span>
-            </div>
-            <p className="text-xs" style={{ color: '#64748B' }}>{t('dashboard.totalProgress')}</p>
-          </div>
-        </div>
-
-        {/* Barra de progreso */}
-        <div className="relative mt-5">
+          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{porcentaje}<span className="text-xl font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
             <div
               className="h-full rounded-full transition-all duration-700"
@@ -275,14 +203,67 @@ export default function AlumnoDashboard() {
             />
           </div>
         </div>
+
+        {/* Tarjeta 2: Mes en curso */}
+        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+              {lang === 'en' ? 'Current month' : 'Mes en curso'}
+            </p>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
+              <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
+            </div>
+          </div>
+          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
+            {mesActivo}
+            <span className="text-sm font-normal ml-1.5" style={{ color: '#475569' }}>
+              / {perfil.duracion_meses}
+            </span>
+          </p>
+          <p className="text-xs" style={{ color: '#475569' }}>
+            {perfil.plan_nombre}
+          </p>
+        </div>
+
+        {/* Tarjeta 3: Materias acreditadas */}
+        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+              {lang === 'en' ? 'Subjects passed' : 'Materias acreditadas'}
+            </p>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
+              <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
+            </div>
+          </div>
+          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
+          <p className="text-xs" style={{ color: '#475569' }}>
+            {lang === 'en' ? 'subjects approved' : 'materias aprobadas'}
+          </p>
+        </div>
       </div>
 
-      {/* Grid de meses */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: '#94A3B8' }}>
+      {/* SECCIÓN 3 — Botón continuar estudiando */}
+      {mesActivo > 0 && (
+        <div>
+          <button
+            onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+            style={{ background: '#5B6CFF', color: '#fff' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
+          >
+            {lang === 'en' ? 'Continue studying' : 'Continuar estudiando'}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* SECCIÓN 4 — Grid de meses */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold" style={{ color: '#64748B' }}>
           {t('dashboard.programMonths')}
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {meses.map((mes) => (
             <div
               key={mes.id}
@@ -290,58 +271,39 @@ export default function AlumnoDashboard() {
               className="rounded-xl p-4 transition-all duration-200"
               style={{
                 background: '#181C26',
-                border: mes.desbloqueado ? '1px solid rgba(91,108,255,0.4)' : '1px solid #2A2F3E',
-                borderLeft: mes.desbloqueado ? '3px solid #5B6CFF' : '3px solid #2A2F3E',
+                border: mes.desbloqueado ? '1px solid rgba(91,108,255,0.35)' : '1px solid #2A2F3E',
                 opacity: mes.desbloqueado ? 1 : 0.5,
                 cursor: mes.desbloqueado ? 'pointer' : 'default',
               }}
               onMouseEnter={e => {
-                if (mes.desbloqueado) {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.08)'
-                }
+                if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.07)'
               }}
               onMouseLeave={e => {
-                if (mes.desbloqueado) {
-                  (e.currentTarget as HTMLElement).style.background = '#181C26'
-                }
+                if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = '#181C26'
               }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <span className="text-3xl font-bold" style={{ color: mes.desbloqueado ? '#5B6CFF' : '#475569' }}>
+              <div className="flex items-start justify-between">
+                <div className="space-y-0.5">
+                  <span
+                    className="text-3xl font-bold leading-none"
+                    style={{ color: mes.desbloqueado ? '#5B6CFF' : '#475569' }}
+                  >
                     {mes.numero}
                   </span>
-                  <p className="text-xs font-medium mt-0.5" style={{ color: mes.desbloqueado ? '#F1F5F9' : '#94A3B8' }}>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: mes.desbloqueado ? '#F1F5F9' : '#64748B' }}
+                  >
                     {mes.titulo || `Mes ${mes.numero}`}
+                  </p>
+                  <p className="text-xs" style={{ color: '#475569' }}>
+                    {(mes.materias ?? []).length} {lang === 'en' ? 'subjects' : 'materias'}
                   </p>
                 </div>
                 {!mes.desbloqueado && (
-                  <Lock className="w-4 h-4 mt-1" style={{ color: '#475569' }} />
+                  <Lock className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: '#475569' }} />
                 )}
               </div>
-
-              <div className="space-y-1">
-                {(mes.materias ?? []).slice(0, 2).map(mat => (
-                  <div key={mat.id} className="flex items-center gap-2">
-                    <div
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: mes.desbloqueado ? (mat.color_hex || '#5B6CFF') : '#475569' }}
-                    />
-                    <p className="text-xs truncate" style={{ color: '#94A3B8' }}>
-                      <span className="font-mono">{mat.codigo}</span> — {loc(mat.nombre, mat.nombre_en)}
-                    </p>
-                  </div>
-                ))}
-                {(mes.materias ?? []).length > 2 && (
-                  <p className="text-xs" style={{ color: '#475569' }}>
-                    +{mes.materias.length - 2} {t('dashboard.moreSubjects')}
-                  </p>
-                )}
-              </div>
-
-              {!mes.desbloqueado && (
-                <p className="text-xs mt-3 font-medium" style={{ color: '#475569' }}>{t('dashboard.blocked')}</p>
-              )}
             </div>
           ))}
         </div>
