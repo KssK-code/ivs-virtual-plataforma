@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard,
   Users,
@@ -62,6 +63,28 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
   const router    = useRouter()
   const { t }     = useLanguage()
   const navItems  = NAV_ITEMS[role]
+  const [pendientesCount, setPendientesCount] = useState(0)
+
+  // Fetch badge de alumnos pendientes solo para admins
+  useEffect(() => {
+    if (role !== 'ADMIN') return
+    let cancelled = false
+
+    async function fetchCount() {
+      try {
+        const res = await fetch('/api/admin/alumnos/pendientes-count')
+        if (!res.ok || cancelled) return
+        const json = await res.json()
+        if (!cancelled) setPendientesCount(json.count ?? 0)
+      } catch {
+        // silencioso — el badge no es crítico
+      }
+    }
+
+    fetchCount()
+    const interval = setInterval(fetchCount, 60_000) // refresca cada minuto
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [role])
 
   const initials = userName
     .split(' ')
@@ -140,6 +163,8 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
           {navItems.map((item) => {
             const Icon   = item.icon
             const active = isActive(item.href)
+            const isAlumnos = item.href === '/admin/alumnos'
+            const showBadge = isAlumnos && pendientesCount > 0
             return (
               <Link
                 key={item.href}
@@ -165,7 +190,15 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
                 }}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                {t(item.labelKey)}
+                <span className="flex-1">{t(item.labelKey)}</span>
+                {showBadge && (
+                  <span
+                    className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
+                    style={{ background: '#EF4444', color: '#fff' }}
+                  >
+                    {pendientesCount > 99 ? '99+' : pendientesCount}
+                  </span>
+                )}
               </Link>
             )
           })}

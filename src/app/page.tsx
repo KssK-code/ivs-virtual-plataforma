@@ -111,14 +111,14 @@ export default function LandingPage() {
         </p>
 
         <div className="hero-btns">
-          <a href={WA_INFO} target="_blank" rel="noopener noreferrer" className="btn-wa" onClick={trackContact}>
+          <Link href="/register" className="btn-wa" style={{ background: 'linear-gradient(135deg, #0044ee 0%, #1ad9ff 100%)', gap: '10px' }}>
+            <span className="es">Crear mi cuenta gratis →</span>
+            <span className="en">Create my free account →</span>
+          </Link>
+          <a href={WA_INFO} target="_blank" rel="noopener noreferrer" className="btn-sec" onClick={trackContact}>
             <WaIcon />
-            <span className="es">Quiero Información</span>
-            <span className="en">Get Information</span>
-          </a>
-          <a href="#planes" className="btn-sec">
-            <span className="es">Ver Planes y Precios →</span>
-            <span className="en">View Plans &amp; Pricing →</span>
+            <span className="es">Quiero más info</span>
+            <span className="en">Get information</span>
           </a>
         </div>
 
@@ -424,24 +424,39 @@ export default function LandingPage() {
       </section>
 
       {/* ── PROCESO ── */}
-      <section className="proceso">
+      <section className="proceso" id="como-empezar">
         <div style={{ textAlign: 'center', marginBottom: '56px' }}>
           <div className="tag-line">
-            <span className="es">Cómo funciona</span>
-            <span className="en">How it works</span>
+            <span className="es">Cómo empezar</span>
+            <span className="en">How to start</span>
           </div>
           <h2 className="sec-title">
-            <span className="es">4 pasos para tu certificado</span>
-            <span className="en">4 steps to your certificate</span>
+            <span className="es">3 pasos y ya estás adentro</span>
+            <span className="en">3 steps and you&apos;re in</span>
           </h2>
+          <p className="sec-sub">
+            <span className="es">Sin filas, sin trámites complicados. Todo desde tu celular.</span>
+            <span className="en">No lines, no complicated paperwork. Everything from your phone.</span>
+          </p>
         </div>
 
         <div className="proceso-steps">
           {[
-            { num: '1', es: { title: 'Te inscribes', desc: 'Pago de $50 USD de inscripción y eliges tu plan.' }, en: { title: 'You enroll', desc: 'Pay $50 USD enrollment fee and choose your plan.' } },
-            { num: '2', es: { title: 'Accedes a la plataforma', desc: 'Tu acceso llega por WhatsApp. Estudia desde cualquier dispositivo.' }, en: { title: 'Access the platform', desc: 'Your access arrives via WhatsApp. Study from any device.' } },
-            { num: '3', es: { title: 'Completas las materias', desc: 'Sin examen final. Solo completa las actividades de cada materia.' }, en: { title: 'Complete your courses', desc: 'No final exam. Just complete the activities for each subject.' } },
-            { num: '4', es: { title: 'Recibes tu certificado', desc: 'Titulación por $450 USD. Certificado válido en México y USA.' }, en: { title: 'Receive your certificate', desc: 'Certification for $450 USD. Valid in Mexico and USA.' } },
+            {
+              num: '1',
+              es: { title: 'Crea tu cuenta gratis', desc: 'Regístrate en la plataforma en menos de 2 minutos. Sin tarjeta de crédito.' },
+              en: { title: 'Create your free account', desc: 'Register on the platform in less than 2 minutes. No credit card required.' },
+            },
+            {
+              num: '2',
+              es: { title: 'Paga tu inscripción ($50 USD)', desc: 'Accede a tu panel y realiza el pago de inscripción para activar tu cuenta.' },
+              en: { title: 'Pay your enrollment ($50 USD)', desc: 'Access your dashboard and make the enrollment payment to activate your account.' },
+            },
+            {
+              num: '3',
+              es: { title: 'Control Escolar te contacta por WhatsApp', desc: 'Nuestro equipo te da la bienvenida, te pide tus documentos y ¡empiezas a estudiar!' },
+              en: { title: 'School Admin contacts you via WhatsApp', desc: 'Our team welcomes you, requests your documents, and you start studying!' },
+            },
           ].map((s, i) => (
             <div className="step" key={i}>
               <div className="step-num">{s.num}</div>
@@ -455,6 +470,14 @@ export default function LandingPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* CTA debajo de los pasos */}
+        <div style={{ textAlign: 'center', marginTop: '48px' }}>
+          <Link href="/register" className="btn-ingresar" style={{ fontSize: '1rem', padding: '14px 36px', display: 'inline-block' }}>
+            <span className="es">Crear mi cuenta gratis →</span>
+            <span className="en">Create my free account →</span>
+          </Link>
         </div>
       </section>
 
@@ -472,18 +495,29 @@ export default function LandingPage() {
           <span className="es">Miles de personas en México y USA ya terminaron su prepa con nosotros. En 6 meses —o 3— puedes ser el siguiente.</span>
           <span className="en">Thousands of people in Mexico and the USA have already completed their diploma with us. In 6 months — or 3 — you could be next.</span>
         </p>
-        <a
-          href={WA_INFO}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-wa"
-          style={{ display: 'inline-flex', margin: '0 auto' }}
-          onClick={trackContact}
-        >
-          <WaIcon />
-          <span className="es">Quiero Empezar Ahora</span>
-          <span className="en">I Want to Start Now</span>
-        </a>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <Link
+            href="/register"
+            className="btn-wa"
+            style={{ display: 'inline-flex', background: 'linear-gradient(135deg, #0044ee 0%, #1ad9ff 100%)' }}
+          >
+            <span className="es">Crear mi cuenta gratis →</span>
+            <span className="en">Create my free account →</span>
+          </Link>
+          <a
+            href={WA_INFO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-sec"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            onClick={trackContact}
+          >
+            <WaIcon />
+            <span className="es">Prefiero hablar por WhatsApp</span>
+            <span className="en">I prefer WhatsApp</span>
+          </a>
+        </div>
       </section>
 
       {/* ── FOOTER ── */}
