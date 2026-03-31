@@ -591,6 +591,45 @@
   font-size: .88rem; color: var(--gris); line-height: 1.7;
   max-width: 520px; margin: 0 auto 24px;
 }
+/* Folio */
+.edvex-landing .cert-folio-label {
+  font-size: .8rem; color: #64748B; margin: 20px 0 8px;
+}
+.edvex-landing .cert-folio {
+  font-family: 'Courier New', monospace; font-size: 1.6rem; font-weight: 800;
+  color: #34d399; letter-spacing: 4px;
+  background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.25);
+  border-radius: 10px; padding: 10px 28px;
+  display: inline-block; margin-bottom: 10px;
+  user-select: all;
+}
+.edvex-landing .cert-folio-hint {
+  font-size: .78rem; color: #475569;
+  max-width: 420px; margin: 0 auto 24px; line-height: 1.6;
+}
+
+/* Lightbox */
+.edvex-landing .lb-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.9); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.edvex-landing .lb-close {
+  position: fixed; top: 20px; right: 24px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; z-index: 10000; line-height: 1;
+}
+.edvex-landing .lb-close:hover { background: rgba(255,255,255,.25); }
+.edvex-landing .lb-img-wrap {
+  position: relative;
+  width: min(92vw, 880px);
+  height: min(88vh, 680px);
+}
+
 .edvex-landing .btn-verify {
   display: inline-flex; align-items: center; gap: 8px;
   background: linear-gradient(135deg, rgba(16,185,129,.25), rgba(26,217,255,.15));
