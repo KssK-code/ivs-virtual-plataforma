@@ -9,6 +9,7 @@ import VideoEmbed from '@/components/alumno/VideoEmbed'
 import ReadingProgress from '@/components/alumno/ReadingProgress'
 import WeekRoadmap from '@/components/alumno/WeekRoadmap'
 import CelebrationBanner from '@/components/alumno/CelebrationBanner'
+import FadeIn from '@/components/ui/FadeIn'
 
 interface Video { titulo: string; titulo_en: string; url: string; url_en: string; duracion: string }
 interface Semana {
@@ -154,6 +155,7 @@ export default function MateriaPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
+      <FadeIn delay={0}>
       <div className="flex items-start gap-4">
         <button
           onClick={() => router.back()}
@@ -174,8 +176,10 @@ export default function MateriaPage() {
           <h2 className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }}>{loc(materia.nombre, materia.nombre_en)}</h2>
         </div>
       </div>
+      </FadeIn>
 
       {/* Tabs */}
+      <FadeIn delay={100}>
       <div className="overflow-x-auto" style={{ borderBottom: '1px solid #2A2F3E' }}>
         <div className="flex min-w-max">
           {tabs.map(t => (
@@ -196,8 +200,10 @@ export default function MateriaPage() {
           ))}
         </div>
       </div>
+      </FadeIn>
 
       {/* Tab: Contenido */}
+      <FadeIn delay={200}>
       {tab === 'contenido' && (
         <>
           {materia.semanas.length === 0 ? (
@@ -447,6 +453,8 @@ export default function MateriaPage() {
           )}
         </div>
       )}
+
+      </FadeIn>
 
       {materiaAcreditada && (
         <CelebrationBanner

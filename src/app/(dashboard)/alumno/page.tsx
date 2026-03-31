@@ -2,17 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap } from 'lucide-react'
+import Link from 'next/link'
+import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell, CreditCard } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 import { useLanguage } from '@/context/LanguageContext'
 import { createClient } from '@/lib/supabase/client'
 import BadgesGrid from '@/components/alumno/BadgesGrid'
 import StreakTracker from '@/components/alumno/StreakTracker'
+import FadeIn from '@/components/ui/FadeIn'
 
 interface Perfil {
   id: string
   matricula: string
   meses_desbloqueados: number
+  inscripcion_pagada: boolean
   plan_nombre: string
   duracion_meses: number
   nombre_completo: string
@@ -40,7 +43,6 @@ export default function AlumnoDashboard() {
   const searchParams = useSearchParams()
   const { lang, t } = useLanguage()
   const { toasts, showToast, removeToast } = useToast()
-  const loc = (es: string, en: string) => lang === 'en' && en ? en : es
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [meses, setMeses] = useState<Mes[]>([])
   const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
@@ -77,7 +79,7 @@ export default function AlumnoDashboard() {
     ;(async () => {
       const { data } = await supabase
         .from('logros_alumno')
-        .select('tipo, obtenido_en')
+        .select('tipo, obtenido_en, metadata')
         .eq('alumno_id', perfil.id)
       if (data) setLogros(data as Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>)
     })()
@@ -115,145 +117,243 @@ export default function AlumnoDashboard() {
     <div className="space-y-8 max-w-5xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* SECCIÓN 1 — Header de bienvenida */}
-      <div className="space-y-1">
-        <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#F1F5F9' }}>
-          {saludo}, {primerNombre}
-        </h1>
-        <p className="text-sm" style={{ color: '#475569' }}>
-          {lang === 'en' ? 'Student ID:' : 'Matrícula:'} {perfil.matricula}
-        </p>
-        <StreakTracker diasRacha={diasRacha} lang={lang} />
-      </div>
-
-      {/* SECCIÓN 2 — 3 tarjetas de stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Tarjeta 1: Progreso general */}
-        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-              {lang === 'en' ? 'Overall progress' : 'Avance total'}
-            </p>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.12)' }}>
-              <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
-            </div>
-          </div>
-          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{porcentaje}<span className="text-xl font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${porcentaje}%`, background: 'linear-gradient(90deg, #5B6CFF, #7B8AFF)' }}
-            />
-          </div>
-        </div>
-
-        {/* Tarjeta 2: Mes en curso */}
-        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-              {lang === 'en' ? 'Current month' : 'Mes en curso'}
-            </p>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
-              <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
-            </div>
-          </div>
-          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
-            {mesActivo}
-            <span className="text-sm font-normal ml-1.5" style={{ color: '#475569' }}>
-              / {perfil.duracion_meses}
-            </span>
-          </p>
-          <p className="text-xs" style={{ color: '#475569' }}>
-            {perfil.plan_nombre}
-          </p>
-        </div>
-
-        {/* Tarjeta 3: Materias acreditadas */}
-        <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-              {lang === 'en' ? 'Subjects passed' : 'Materias acreditadas'}
-            </p>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
-              <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
-            </div>
-          </div>
-          <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
-          <p className="text-xs" style={{ color: '#475569' }}>
-            {lang === 'en' ? 'subjects approved' : 'materias aprobadas'}
-          </p>
-        </div>
-      </div>
-
-      {/* SECCIÓN 3 — Botón continuar estudiando */}
-      {mesActivo > 0 && (
-        <div>
-          <button
-            onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
-            style={{ background: '#5B6CFF', color: '#fff' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
+      {/* Banner: Inscripción pendiente */}
+      {perfil.inscripcion_pagada === false && (
+        <FadeIn delay={0}>
+          <div
+            className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(239,68,68,0.08) 100%)',
+              border: '1px solid rgba(245,158,11,0.35)',
+            }}
           >
-            {lang === 'en' ? 'Continue studying' : 'Continuar estudiando'}
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* SECCIÓN 4 — Grid de meses */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold" style={{ color: '#64748B' }}>
-          {t('dashboard.programMonths')}
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {meses.map((mes) => (
             <div
-              key={mes.id}
-              onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
-              className="rounded-xl p-4 transition-all duration-200"
-              style={{
-                background: '#181C26',
-                border: mes.desbloqueado ? '1px solid rgba(91,108,255,0.35)' : '1px solid #2A2F3E',
-                opacity: mes.desbloqueado ? 1 : 0.5,
-                cursor: mes.desbloqueado ? 'pointer' : 'default',
-              }}
-              onMouseEnter={e => {
-                if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.07)'
-              }}
-              onMouseLeave={e => {
-                if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = '#181C26'
-              }}
+              className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
+              style={{ background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)' }}
             >
-              <div className="flex items-start justify-between">
-                <div className="space-y-0.5">
-                  <span
-                    className="text-3xl font-bold leading-none"
-                    style={{ color: mes.desbloqueado ? '#5B6CFF' : '#475569' }}
-                  >
-                    {mes.numero}
-                  </span>
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: mes.desbloqueado ? '#F1F5F9' : '#64748B' }}
-                  >
-                    {mes.titulo || `Mes ${mes.numero}`}
-                  </p>
-                  <p className="text-xs" style={{ color: '#475569' }}>
-                    {(mes.materias ?? []).length} {lang === 'en' ? 'subjects' : 'materias'}
-                  </p>
-                </div>
-                {!mes.desbloqueado && (
-                  <Lock className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: '#475569' }} />
-                )}
+              <Bell className="w-5 h-5" style={{ color: '#F59E0B' }} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-snug" style={{ color: '#FCD34D' }}>
+                ¡Bienvenido a EDVEX Academy!
+              </p>
+              <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
+                Tu siguiente paso es pagar tu inscripción para comenzar. Al confirmar tu pago,{' '}
+                <strong style={{ color: '#CBD5E1' }}>Control Escolar te contactará por WhatsApp</strong>{' '}
+                para darte la bienvenida, solicitarte tus documentos y resolver cualquier duda.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
+              <Link
+                href="/alumno/pagar"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: '#F59E0B', color: '#0B0D11' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
+              >
+                <CreditCard className="w-4 h-4" />
+                Pagar inscripción ($50 USD)
+              </Link>
+
+              <div className="flex items-center gap-2">
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                <span className="text-xs" style={{ color: '#475569', whiteSpace: 'nowrap' }}>— o si prefieres —</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              </div>
+
+              <div className="flex flex-col items-center gap-1.5">
+                <a
+                  href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all w-full sm:w-auto"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(91,108,255,0.4)',
+                    color: '#7B8AFF',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.1)'
+                    ;(e.currentTarget as HTMLElement).style.borderColor = '#7B8AFF'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'transparent'
+                    ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.4)'
+                  }}
+                >
+                  📅 Hablar con un asesor antes de pagar
+                </a>
+                <p className="text-xs text-center" style={{ color: '#475569' }}>
+                  Agenda una videollamada de 30 min gratis con nuestro equipo
+                </p>
               </div>
             </div>
-          ))}
+          </div>
+        </FadeIn>
+      )}
+
+      {/* SECCIÓN 1 — Header de bienvenida */}
+      <FadeIn delay={perfil.inscripcion_pagada === false ? 100 : 0}>
+        <div className="space-y-1.5">
+          <h1 className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
+            {saludo}, {primerNombre}
+          </h1>
+          <p className="text-sm" style={{ color: '#475569' }}>
+            {lang === 'en' ? 'Student ID:' : 'Matrícula:'} {perfil.matricula}
+          </p>
+          <StreakTracker diasRacha={diasRacha} lang={lang} />
         </div>
-      </div>
+      </FadeIn>
+
+      {/* SECCIÓN 2 — 3 tarjetas de stats */}
+      <FadeIn delay={perfil.inscripcion_pagada === false ? 200 : 100}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Tarjeta 1: Progreso general */}
+          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+                {lang === 'en' ? 'Overall progress' : 'Avance total'}
+              </p>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.12)' }}>
+                <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
+              </div>
+            </div>
+            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{porcentaje}<span className="text-xl font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${porcentaje}%`, background: 'linear-gradient(90deg, #5B6CFF, #7B8AFF)' }}
+              />
+            </div>
+          </div>
+
+          {/* Tarjeta 2: Mes en curso */}
+          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+                {lang === 'en' ? 'Current month' : 'Mes en curso'}
+              </p>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
+                <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
+              </div>
+            </div>
+            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>
+              {mesActivo}
+              <span className="text-sm font-normal ml-1.5" style={{ color: '#475569' }}>
+                / {perfil.duracion_meses}
+              </span>
+            </p>
+            <p className="text-xs" style={{ color: '#475569' }}>
+              {perfil.plan_nombre}
+            </p>
+          </div>
+
+          {/* Tarjeta 3: Materias acreditadas */}
+          <div className="rounded-xl p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
+                {lang === 'en' ? 'Subjects passed' : 'Materias acreditadas'}
+              </p>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
+                <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
+              </div>
+            </div>
+            <p className="text-4xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
+            <p className="text-xs" style={{ color: '#475569' }}>
+              {lang === 'en' ? 'subjects approved' : 'materias aprobadas'}
+            </p>
+          </div>
+        </div>
+      </FadeIn>
+
+      {/* SECCIÓN 3 — Botón continuar estudiando */}
+      <FadeIn delay={perfil.inscripcion_pagada === false ? 300 : 200}>
+        <div>
+          {mesActivo > 0 && (
+            <button
+              onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+              style={{ background: '#5B6CFF', color: '#fff' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
+            >
+              {lang === 'en' ? 'Continue studying' : 'Continuar estudiando'}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </FadeIn>
+
+      {/* SECCIÓN 4 — Grid de meses */}
+      <FadeIn delay={perfil.inscripcion_pagada === false ? 400 : 300}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
+              {t('dashboard.programMonths')}
+            </p>
+            <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {meses.map((mes) => (
+              <div
+                key={mes.id}
+                onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
+                className="rounded-xl p-4 transition-all duration-200"
+                style={{
+                  background: '#181C26',
+                  border: mes.desbloqueado ? '1px solid rgba(91,108,255,0.35)' : '1px solid #2A2F3E',
+                  opacity: mes.desbloqueado ? 1 : 0.5,
+                  cursor: mes.desbloqueado ? 'pointer' : 'default',
+                }}
+                onMouseEnter={e => {
+                  if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.07)'
+                }}
+                onMouseLeave={e => {
+                  if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = '#181C26'
+                }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-0.5">
+                    <span
+                      className="text-3xl font-bold leading-none"
+                      style={{ color: mes.desbloqueado ? '#5B6CFF' : '#475569' }}
+                    >
+                      {mes.numero}
+                    </span>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: mes.desbloqueado ? '#F1F5F9' : '#64748B' }}
+                    >
+                      {mes.titulo || `Mes ${mes.numero}`}
+                    </p>
+                    <p className="text-xs" style={{ color: '#475569' }}>
+                      {(mes.materias ?? []).length} {lang === 'en' ? 'subjects' : 'materias'}
+                    </p>
+                  </div>
+                  {!mes.desbloqueado && (
+                    <Lock className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: '#475569' }} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </FadeIn>
 
       {/* SECCIÓN 5 — Logros */}
-      <BadgesGrid logros={logros} lang={lang} />
+      <FadeIn delay={perfil.inscripcion_pagada === false ? 500 : 400}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
+              {lang === 'en' ? 'My achievements' : 'Mis logros'}
+            </p>
+            <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
+          </div>
+          <BadgesGrid logros={logros} lang={lang} />
+        </div>
+      </FadeIn>
     </div>
   )
 }
