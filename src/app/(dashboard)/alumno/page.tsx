@@ -1,11 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useGSAP } from '@gsap/react'
-
-gsap.registerPlugin(useGSAP, ScrollTrigger)
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell, CreditCard } from 'lucide-react'
@@ -15,6 +10,11 @@ import { createClient } from '@/lib/supabase/client'
 import BadgesGrid from '@/components/alumno/BadgesGrid'
 import StreakTracker from '@/components/alumno/StreakTracker'
 import FadeIn from '@/components/ui/FadeIn'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(useGSAP, ScrollTrigger)
 
 interface Perfil {
   id: string
