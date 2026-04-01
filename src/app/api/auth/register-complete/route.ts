@@ -1,21 +1,16 @@
 /**
  * POST /api/auth/register-complete
- * Tras signUp en el cliente: crea usuario en public.usuarios y alumno en public.alumnos.
- * Debe llamarse con la sesión ya iniciada (justo después de signUp).
+ * Llamar justo después de supabase.auth.signUp().
+ * Crea las filas en public.usuarios y public.alumnos.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-function matriculaUnica(): string {
-  const year = new Date().getFullYear()
-  const rand = Math.floor(1000 + Math.random() * 9000)
-  return `ALU-${year}-${rand}`
-}
-
 export async function POST(req: NextRequest) {
   try {
+    // Verificar sesión activa
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user?.email) {
@@ -23,76 +18,74 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const nombre_completo = (body.nombre_completo ?? '').trim()
-    if (!nombre_completo) {
-      return NextResponse.json({ error: 'nombre_completo es requerido' }, { status: 400 })
+
+    const nombre         = (body.nombre         ?? '').trim()
+    const apellidos      = (body.apellidos       ?? '').trim()
+    const telefono       = (body.telefono        ?? '').trim()
+    const nivel          = body.nivel            ?? null   // 'secundaria' | 'preparatoria'
+    const modalidad      = body.modalidad        ?? null   // '6_meses' | '3_meses'
+    const es_sindicalizado = Boolean(body.es_sindicalizado)
+    const sindicato      = body.sindicato        ?? null
+
+    if (!nombre) {
+      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 })
     }
 
     const admin = createAdminClient()
 
-    const { data: planes } = await admin
-      .from('planes_estudio')
-      .select('id')
-      .eq('activo', true)
-      .limit(1)
-
-    const planId = planes?.[0]?.id
-    if (!planId) {
-      return NextResponse.json({ error: 'No hay plan de estudio activo' }, { status: 500 })
-    }
-
+    // ── 1. Crear / actualizar fila en public.usuarios ──────────────────
     const { error: usuarioError } = await admin
       .from('usuarios')
-      .insert({
-        id: user.id,
-        email: user.email,
-        nombre_completo,
-        rol: 'ALUMNO',
-        activo: true,
-      })
+      .upsert({
+        id:       user.id,
+        email:    user.email,
+        nombre,
+        apellidos,
+        telefono,
+        rol:      'alumno',
+      }, { onConflict: 'id' })
 
     if (usuarioError) {
-      if (usuarioError.code === '23505') {
-        return NextResponse.json({ error: 'Usuario ya completó el registro' }, { status: 409 })
-      }
+      console.error('[register-complete] usuarios upsert:', usuarioError)
       return NextResponse.json({ error: usuarioError.message }, { status: 500 })
     }
 
-    let matricula = matriculaUnica()
-    const maxAttempts = 10
-    for (let i = 0; i < maxAttempts; i++) {
-      const { error: alumnoError } = await admin
-        .from('alumnos')
-        .insert({
-          usuario_id: user.id,
-          matricula,
-          plan_estudio_id: planId,
-          meses_desbloqueados: 0,
-          inscripcion_pagada: false,
-          modulos_desbloqueados: [],
-        })
+    // ── 2. Crear fila en public.alumnos ────────────────────────────────
+    // La matrícula la genera el trigger trg_asignar_matricula automáticamente
+    const { error: alumnoError } = await admin
+      .from('alumnos')
+      .insert({
+        id:                user.id,
+        nivel,
+        modalidad,
+        es_sindicalizado,
+        sindicato:         es_sindicalizado ? sindicato : null,
+        inscripcion_pagada: false,
+        meses_desbloqueados: 0,
+        activo:            true,
+        fecha_inscripcion: new Date().toISOString(),
+      })
 
-      if (!alumnoError) break
+    if (alumnoError) {
+      // Conflicto → alumno ya existe, no es un error fatal
       if (alumnoError.code === '23505') {
-        matricula = matriculaUnica()
-        continue
+        return NextResponse.json({ ok: true, nota: 'alumno ya existía' })
       }
+      console.error('[register-complete] alumnos insert:', alumnoError)
       return NextResponse.json({ error: alumnoError.message }, { status: 500 })
     }
 
+    // Leer la matrícula asignada por el trigger
     const { data: alumno } = await admin
       .from('alumnos')
-      .select('id')
-      .eq('usuario_id', user.id)
+      .select('matricula')
+      .eq('id', user.id)
       .single()
 
-    if (!alumno) {
-      return NextResponse.json({ error: 'Error al crear alumno' }, { status: 500 })
-    }
+    return NextResponse.json({ ok: true, matricula: alumno?.matricula })
 
-    return NextResponse.json({ ok: true, alumno_id: alumno.id })
   } catch (e) {
-    console.error('[register-complete]', e)
+    console.error('[register-complete] error inesperado:', e)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

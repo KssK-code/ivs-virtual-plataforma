@@ -22,56 +22,6 @@ const WaButton = ({ className = '' }: { className?: string }) => (
   </a>
 )
 
-const PlatformMockup = () => (
-  <div className="mock-browser">
-    <div className="mock-bar">
-      <div className="mock-dots">
-        <span className="mock-dot r" /><span className="mock-dot y" /><span className="mock-dot g" />
-      </div>
-      <div className="mock-url">ivsvirtual.com/alumno</div>
-    </div>
-    <div className="mock-body">
-      <div className="mock-sidebar">
-        <div className="mock-sb-head">
-          <div className="mock-sb-logo" />
-          <span style={{ fontSize: 9, color: '#3AAFA9', fontWeight: 700 }}>IVS</span>
-        </div>
-        {['Dashboard', 'Mis Materias', 'Progreso', 'Documentos'].map((item, i) => (
-          <div key={item} className={`mock-nav-item${i === 0 ? ' active' : ''}`}>{item}</div>
-        ))}
-      </div>
-      <div className="mock-main">
-        <div className="mock-welcome-card">
-          <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>Bienvenido 👋</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#F1F5F9' }}>María García</div>
-          <div style={{ fontSize: 9, color: '#64748B', marginTop: 2 }}>Matrícula: IVS-2025-0042</div>
-          <div className="mock-prog-wrap">
-            <div className="mock-prog-fill" style={{ width: '50%' }} />
-          </div>
-          <div style={{ fontSize: 8, color: '#64748B', marginTop: 3 }}>Progreso: 3/6 meses · 50%</div>
-          <div className="mock-ring">
-            <svg viewBox="0 0 36 36" style={{ width: 36, height: 36, transform: 'rotate(-90deg)' }}>
-              <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
-              <circle cx="18" cy="18" r="15.5" fill="none" stroke="#3AAFA9" strokeWidth="2.5"
-                strokeDasharray="48.7 97.4" strokeLinecap="round" />
-            </svg>
-            <span style={{ position: 'absolute', fontSize: 8, fontWeight: 700, color: '#3AAFA9' }}>50%</span>
-          </div>
-        </div>
-        <div style={{ fontSize: 9, color: '#64748B', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Meses del Programa</div>
-        <div className="mock-months-grid">
-          {[1,2,3,4,5,6].map(n => (
-            <div key={n} className={`mock-month ${n <= 3 ? 'open' : 'closed'}`}>
-              <span style={{ fontSize: 13, fontWeight: 800 }}>{n}</span>
-              <span style={{ fontSize: 7 }}>{n <= 3 ? 'Abierto' : '🔒'}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-)
-
 
 export default function LandingPage() {
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
