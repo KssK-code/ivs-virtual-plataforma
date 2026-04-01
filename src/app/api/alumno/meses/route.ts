@@ -9,52 +9,97 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Obtener datos del alumno (incluye inscripcion_pagada para modo demo)
-    const { data: alumnoData, error: alumnoError } = await supabase
+    // ── Resolver datos del alumno (schema antiguo o nuevo) ────────────────────
+    let mesesDesbloqueados = 0
+    let inscripcionPagada  = false
+    let duracionMeses      = 0
+    let alumnoEncontrado   = false
+
+    // Intento 1: schema antiguo (alumnos.usuario_id)
+    const { data: a1 } = await supabase
       .from('alumnos')
       .select('meses_desbloqueados, inscripcion_pagada, planes_estudio(duracion_meses)')
       .eq('usuario_id', user.id)
       .single()
 
-    if (alumnoError || !alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
-
-    const alumno = alumnoData as unknown as {
-      meses_desbloqueados: number
-      inscripcion_pagada: boolean
-      planes_estudio: { duracion_meses: number } | null
+    if (a1) {
+      alumnoEncontrado  = true
+      const row = a1 as unknown as {
+        meses_desbloqueados: number
+        inscripcion_pagada: boolean
+        planes_estudio: { duracion_meses: number } | null
+      }
+      mesesDesbloqueados = row.meses_desbloqueados ?? 0
+      inscripcionPagada  = row.inscripcion_pagada  ?? false
+      duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
     }
 
-    // Modo demo: alumno sin pago de inscripción y sin meses desbloqueados
-    if (!alumno.inscripcion_pagada && alumno.meses_desbloqueados === 0) {
+    // Intento 2: schema nuevo (alumnos.id = user.id)
+    if (!alumnoEncontrado) {
+      const { data: a2 } = await supabase
+        .from('alumnos')
+        .select('meses_desbloqueados, inscripcion_pagada, modalidad')
+        .eq('id', user.id)
+        .single()
+
+      if (a2) {
+        alumnoEncontrado = true
+        const row = a2 as unknown as {
+          meses_desbloqueados: number
+          inscripcion_pagada: boolean
+          modalidad?: string
+        }
+        mesesDesbloqueados = row.meses_desbloqueados ?? 0
+        inscripcionPagada  = row.inscripcion_pagada  ?? false
+        duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
+      }
+    }
+
+    // Sin perfil → modo demo
+    if (!alumnoEncontrado) {
       return NextResponse.json({ demo: true, materia_demo_id: DEMO_MATERIA_ID })
     }
 
-    const duracionMeses = alumno.planes_estudio?.duracion_meses ?? 0
+    // Sin pago y sin meses → modo demo
+    if (!inscripcionPagada && mesesDesbloqueados === 0) {
+      return NextResponse.json({ demo: true, materia_demo_id: DEMO_MATERIA_ID })
+    }
 
-    // Obtener meses con sus materias
+    // ── Obtener meses del contenido ───────────────────────────────────────────
     const { data: meses, error: mesesError } = await supabase
       .from('meses_contenido')
-      .select('*, materias(id, codigo, nombre, nombre_en, color_hex, descripcion, descripcion_en)')
+      .select('*, materias(id, codigo, nombre, nombre_en, color_hex)')
       .order('numero')
       .lte('numero', duracionMeses)
 
-    if (mesesError) return NextResponse.json({ error: mesesError.message }, { status: 500 })
+    // Si la tabla no existe o no tiene datos → generar meses ficticios
+    if (mesesError || !meses || meses.length === 0) {
+      const mesesFicticios = Array.from({ length: duracionMeses || 6 }, (_, i) => ({
+        id:          `mes-ficticio-${i + 1}`,
+        numero:      i + 1,
+        titulo:      `Mes ${i + 1}`,
+        materias:    [],
+        desbloqueado: (i + 1) <= mesesDesbloqueados,
+      }))
+      return NextResponse.json(mesesFicticios)
+    }
 
-    const result = (meses ?? []).map((mes: unknown) => {
+    const result = meses.map((mes: unknown) => {
       const m = mes as {
         id: string
         numero: number
         titulo: string
-        materias: { id: string; codigo: string; nombre: string; nombre_en: string; color_hex: string; descripcion: string; descripcion_en: string }[]
+        materias: { id: string; codigo: string; nombre: string; color_hex: string }[]
       }
       return {
         ...m,
-        desbloqueado: m.numero <= alumno.meses_desbloqueados,
+        desbloqueado: m.numero <= mesesDesbloqueados,
       }
     })
 
     return NextResponse.json(result)
-  } catch {
+  } catch (err) {
+    console.error('[api/alumno/meses] error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
