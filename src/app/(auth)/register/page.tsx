@@ -8,8 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import { APP_NAME } from '@/lib/constants'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { EdvexLogo } from '@/components/ui/edvex-logo'
-import { LangToggle } from '@/components/ui/lang-toggle'
-import { useLanguage } from '@/context/LanguageContext'
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.04)',
@@ -17,8 +15,8 @@ const inputStyle = {
   color: '#F1F5F9',
 }
 const focusStyle = {
-  border: '1px solid rgba(0,85,255,0.6)',
-  boxShadow: '0 0 0 3px rgba(0,85,255,0.1)',
+  border: '1px solid rgba(58,175,169,0.6)',
+  boxShadow: '0 0 0 3px rgba(58,175,169,0.1)',
 }
 const blurStyle = {
   border: '1px solid rgba(255,255,255,0.1)',
@@ -27,7 +25,6 @@ const blurStyle = {
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { t } = useLanguage()
 
   const [nombreCompleto, setNombreCompleto] = useState('')
   const [email, setEmail] = useState('')
@@ -41,11 +38,11 @@ export default function RegisterPage() {
     setError(null)
 
     if (password.length < 6) {
-      setError(t('register.errShortPassword'))
+      setError('La contraseña debe tener al menos 6 caracteres.')
       return
     }
     if (password !== confirmPassword) {
-      setError(t('register.errPasswordMismatch'))
+      setError('Las contraseñas no coinciden.')
       return
     }
 
@@ -60,7 +57,7 @@ export default function RegisterPage() {
 
       if (signUpError) {
         if (signUpError.message.includes('already') || signUpError.message.includes('registered')) {
-          setError(t('register.errEmailExists'))
+          setError('Ya existe una cuenta con ese correo.')
         } else {
           setError(signUpError.message)
         }
@@ -75,13 +72,13 @@ export default function RegisterPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || t('register.errRegister'))
+        setError(data.error || 'Error al crear la cuenta. Intenta de nuevo.')
         return
       }
 
       router.push('/alumno')
     } catch {
-      setError(t('register.errRegister'))
+      setError('Error al crear la cuenta. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -93,10 +90,6 @@ export default function RegisterPage() {
         className="w-full rounded-2xl p-6 sm:p-8 shadow-2xl"
         style={{ background: '#181C26', border: '1px solid rgba(255,255,255,0.06)' }}
       >
-        <div className="flex justify-end mb-4">
-          <LangToggle />
-        </div>
-
         <div className="flex flex-col items-center mb-8">
           <div className="mb-4">
             <EdvexLogo size={56} innerFill="#181C26" />
@@ -104,22 +97,22 @@ export default function RegisterPage() {
           <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: '#F1F5F9' }}>
             {APP_NAME}
           </h1>
-          <p className="text-sm font-medium mt-1 text-center" style={{ color: '#1ad9ff' }}>
+          <p className="text-sm font-medium mt-1 text-center" style={{ color: '#3AAFA9' }}>
             {ESCUELA_CONFIG.nombre}
           </p>
           <p className="text-xs mt-1.5 text-center italic" style={{ color: '#64748B' }}>
-            {t('register.subtitle')}
+            Regístrate en IVS Virtual
           </p>
-          <div className="w-10 h-px mt-4" style={{ background: 'rgba(0,85,255,0.4)' }} />
+          <div className="w-10 h-px mt-4" style={{ background: 'rgba(58,175,169,0.4)' }} />
           <p className="text-sm mt-4" style={{ color: '#94A3B8' }}>
-            {t('register.title')}
+            Crear cuenta
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
             <label htmlFor="nombre" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('register.fullName')}
+              Nombre completo
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -130,7 +123,7 @@ export default function RegisterPage() {
                 autoComplete="name"
                 value={nombreCompleto}
                 onChange={(e) => setNombreCompleto(e.target.value)}
-                placeholder={t('register.fullNamePlaceholder')}
+                placeholder="Tu nombre y apellidos"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={inputStyle}
                 onFocus={(e) => Object.assign(e.currentTarget.style, focusStyle)}
@@ -141,7 +134,7 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('register.email')}
+              Correo electrónico
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -152,7 +145,7 @@ export default function RegisterPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('register.emailPlaceholder')}
+                placeholder="correo@ejemplo.com"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={inputStyle}
                 onFocus={(e) => Object.assign(e.currentTarget.style, focusStyle)}
@@ -163,7 +156,7 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="password" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('register.password')}
+              Contraseña
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -174,7 +167,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('register.passwordPlaceholder')}
+                placeholder="Mínimo 6 caracteres"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={inputStyle}
                 onFocus={(e) => Object.assign(e.currentTarget.style, focusStyle)}
@@ -185,7 +178,7 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('register.confirmPassword')}
+              Confirmar contraseña
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -196,7 +189,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t('register.confirmPlaceholder')}
+                placeholder="Repite tu contraseña"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={inputStyle}
                 onFocus={(e) => Object.assign(e.currentTarget.style, focusStyle)}
@@ -223,40 +216,40 @@ export default function RegisterPage() {
             type="submit"
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#0055ff', color: '#ffffff' }}
-            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#1ad9ff' }}
-            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#0055ff' }}
+            style={{ background: '#3AAFA9', color: '#ffffff' }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#4ECDC4' }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {t('register.submitting')}
+                Creando cuenta...
               </>
             ) : (
-              t('register.submit')
+              'Registrarme'
             )}
           </button>
 
           <div className="text-center pt-1">
-            <span className="text-sm" style={{ color: '#94A3B8' }}>{t('register.haveAccount')} </span>
+            <span className="text-sm" style={{ color: '#94A3B8' }}>¿Ya tienes cuenta? </span>
             <Link
               href="/login"
               className="text-sm font-medium transition-colors"
-              style={{ color: '#0055ff' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#1ad9ff' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#0055ff' }}
+              style={{ color: '#3AAFA9' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#4ECDC4' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#3AAFA9' }}
             >
-              {t('register.signInLink')}
+              Inicia sesión
             </Link>
           </div>
         </form>
 
         <div className="mt-6 space-y-2 text-center">
           <p className="text-xs" style={{ color: '#475569' }}>
-            {t('auth.contactAdmin')}
+            ¿Problemas para acceder? Contacta a tu administrador.
           </p>
           <p className="text-xs" style={{ color: '#374151' }}>
-            {t('auth.platformDesc')}
+            Plataforma de educación 100% en línea
           </p>
         </div>
       </div>
@@ -269,7 +262,7 @@ export default function RegisterPage() {
           href={`mailto:${ESCUELA_CONFIG.contactoEmail}`}
           className="text-xs transition-colors"
           style={{ color: '#475569' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#1ad9ff' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#3AAFA9' }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#475569' }}
         >
           {ESCUELA_CONFIG.contactoEmail}

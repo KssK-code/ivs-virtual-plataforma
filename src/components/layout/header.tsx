@@ -2,8 +2,6 @@
 
 import { Menu } from 'lucide-react'
 import Image from 'next/image'
-import { LangToggle } from '@/components/ui/lang-toggle'
-import { useLanguage } from '@/context/LanguageContext'
 
 interface HeaderProps {
   pageTitle: string
@@ -13,8 +11,6 @@ interface HeaderProps {
 }
 
 export function Header({ pageTitle, userName, avatarUrl, onMenuToggle }: HeaderProps) {
-  const { t } = useLanguage()
-
   const initials = userName
     .split(' ')
     .slice(0, 2)
@@ -46,7 +42,7 @@ export function Header({ pageTitle, userName, avatarUrl, onMenuToggle }: HeaderP
             e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.color      = '#94A3B8'
           }}
-          aria-label={t('header.openMenu')}
+          aria-label="Abrir menú"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -58,9 +54,8 @@ export function Header({ pageTitle, userName, avatarUrl, onMenuToggle }: HeaderP
         </h1>
       </div>
 
-      {/* Derecha: toggle idioma + nombre + avatar */}
+      {/* Derecha: nombre + avatar */}
       <div className="flex items-center gap-3 flex-shrink-0">
-        <LangToggle />
         <span className="hidden sm:block text-sm" style={{ color: '#94A3B8' }}>
           {userName}
         </span>
@@ -76,7 +71,7 @@ export function Header({ pageTitle, userName, avatarUrl, onMenuToggle }: HeaderP
         ) : (
           <div
             className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold flex-shrink-0"
-            style={{ background: '#0055ff', color: '#fff' }}
+            style={{ background: '#3AAFA9', color: '#fff' }}
           >
             {initials}
           </div>

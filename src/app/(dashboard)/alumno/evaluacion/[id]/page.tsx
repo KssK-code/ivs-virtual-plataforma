@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { useLanguage } from '@/context/LanguageContext'
 
 interface Pregunta {
   id: string
@@ -56,9 +55,6 @@ export default function EvaluacionPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-  const { lang, t } = useLanguage()
-  const loc    = (es: string,   en: string)   => lang === 'en' && en          ? en : es
-  const locArr = (es: string[], en: string[]) => lang === 'en' && en?.length  ? en : es
 
   const { toasts, showToast, removeToast } = useToast()
 
@@ -122,7 +118,7 @@ export default function EvaluacionPage() {
     <div className="flex flex-col items-center justify-center min-h-[500px] gap-4">
       <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#5B6CFF' }} />
       <p className="text-sm" style={{ color: '#94A3B8' }}>
-        {estado === 'enviando' ? t('exam.grading') : t('exam.loading')}
+        {estado === 'enviando' ? 'Calificando...' : 'Cargando examen...'}
       </p>
     </div>
   )
@@ -147,7 +143,7 @@ export default function EvaluacionPage() {
         {/* Card calificación */}
         <div className="rounded-2xl p-5 sm:p-8 text-center" style={CARD}>
           <p className="text-sm font-medium mb-3" style={{ color: '#94A3B8' }}>
-            {evaluacion ? loc(evaluacion.titulo, evaluacion.titulo_en) : ''}
+            {evaluacion ? evaluacion.titulo : ''}
           </p>
           <div
             className="text-6xl sm:text-7xl font-black mb-3"
@@ -163,7 +159,7 @@ export default function EvaluacionPage() {
             }
           >
             {resultado.aprobado ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-            {resultado.aprobado ? t('exam.passed') : t('exam.failed')}
+            {resultado.aprobado ? 'Aprobado' : 'No aprobado'}
           </span>
 
           <div className="flex items-center justify-center gap-4 sm:gap-8 mt-5 pt-5" style={{ borderTop: '1px solid #2A2F3E' }}>
@@ -171,17 +167,17 @@ export default function EvaluacionPage() {
               <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>
                 {resultado.correctas}/{resultado.total_preguntas}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{t('exam.correct')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Correctas</p>
             </div>
             <div>
               <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>{pct}%</p>
-              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{t('exam.percentage')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Porcentaje</p>
             </div>
             <div>
               <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>
                 {resultado.intento_numero}/{evaluacion?.intentos_max}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{t('exam.attemptBadge')}</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Intento</p>
             </div>
           </div>
 
@@ -210,7 +206,7 @@ export default function EvaluacionPage() {
               onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
             >
-              {t('exam.retryBtn')} ({intentosRestantes} {intentosRestantes !== 1 ? t('exam.remainingPlural') : t('exam.remaining')})
+              Reintentar ({intentosRestantes} {intentosRestantes !== 1 ? 'restantes' : 'restante'})
             </button>
           ) : null}
           <button
@@ -218,13 +214,13 @@ export default function EvaluacionPage() {
             className="w-full sm:flex-1 py-3 rounded-lg text-sm font-semibold transition-all"
             style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
           >
-            {t('exam.backToSubject')}
+            Volver a la materia
           </button>
         </div>
 
         {/* Detalle por pregunta */}
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold" style={{ color: '#94A3B8' }}>{t('exam.reviewTitle')}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: '#94A3B8' }}>Revisión de respuestas</h3>
           {resultado.detalle.map((d, i) => (
             <div key={d.pregunta_id} className="rounded-xl overflow-hidden" style={CARD}>
               <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
@@ -234,12 +230,12 @@ export default function EvaluacionPage() {
                     : <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
                   }
                   <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-                    <span style={{ color: '#94A3B8' }}>{i + 1}. </span>{loc(d.texto, d.texto_en)}
+                    <span style={{ color: '#94A3B8' }}>{i + 1}. </span>{d.texto}
                   </p>
                 </div>
               </div>
               <div className="px-5 py-4 space-y-2">
-                {locArr(d.opciones, d.opciones_en).map((op, idx) => {
+                {d.opciones.map((op, idx) => {
                   const esAlumno = idx === d.respuesta_alumno
                   const esCorrecta = idx === d.respuesta_correcta
                   let style = { background: 'transparent', border: '1px solid #2A2F3E', color: '#94A3B8' as string }
@@ -253,15 +249,15 @@ export default function EvaluacionPage() {
                         {String.fromCharCode(65 + idx)}
                       </span>
                       <span className="flex-1">{op}</span>
-                      {esCorrecta && <span className="text-xs font-semibold">{t('exam.correctAnswer')}</span>}
-                      {esAlumno && !d.es_correcta && <span className="text-xs font-semibold">{t('exam.yourAnswer')}</span>}
+                      {esCorrecta && <span className="text-xs font-semibold">Correcta</span>}
+                      {esAlumno && !d.es_correcta && <span className="text-xs font-semibold">Tu respuesta</span>}
                     </div>
                   )
                 })}
 
                 {d.retroalimentacion && (
                   <div className="mt-2 px-3 py-2.5 rounded-lg text-xs" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #2A2F3E', color: '#94A3B8' }}>
-                    <span className="font-semibold" style={{ color: '#5B6CFF' }}>{t('exam.feedback')} </span>
+                    <span className="font-semibold" style={{ color: '#5B6CFF' }}>Retroalimentación: </span>
                     {d.retroalimentacion}
                   </div>
                 )}
@@ -291,14 +287,14 @@ export default function EvaluacionPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>{evaluacion ? loc(evaluacion.titulo, evaluacion.titulo_en) : ''}</p>
+            <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>{evaluacion ? evaluacion.titulo : ''}</p>
             <p className="text-xs" style={{ color: '#94A3B8' }}>
               {preguntaActual + 1} / {preguntas.length}
             </p>
           </div>
         </div>
         <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
-          {t('exam.attemptBadge')} {intentosUsados + 1}/{evaluacion?.intentos_max}
+          Intento {intentosUsados + 1}/{evaluacion?.intentos_max}
         </span>
       </div>
 
@@ -313,11 +309,11 @@ export default function EvaluacionPage() {
       {/* Card pregunta */}
       <div className="rounded-2xl p-4 sm:p-6 space-y-4" style={CARD}>
         <p className="text-sm sm:text-base font-semibold leading-relaxed" style={{ color: '#F1F5F9' }}>
-          {loc(pregunta.texto, pregunta.texto_en)}
+          {pregunta.texto}
         </p>
 
         <div className="space-y-2.5">
-          {locArr(pregunta.opciones, pregunta.opciones_en).map((opcion, idx) => {
+          {pregunta.opciones.map((opcion, idx) => {
             const seleccionada = respuestas[pregunta.id] === idx
             return (
               <button
@@ -347,7 +343,7 @@ export default function EvaluacionPage() {
         </div>
       </div>
 
-      {/* Indicador de preguntas — scroll horizontal si hay muchas */}
+      {/* Indicador de preguntas */}
       <div className="overflow-x-auto pb-1">
         <div className="flex gap-1.5 min-w-max px-0.5">
           {preguntas.map((p, idx) => {
@@ -371,7 +367,7 @@ export default function EvaluacionPage() {
         </div>
       </div>
 
-      {/* Navegación — full width en móvil */}
+      {/* Navegación */}
       <div className="flex gap-3">
         <button
           onClick={() => setPreguntaActual(p => p - 1)}
@@ -380,7 +376,7 @@ export default function EvaluacionPage() {
           style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
         >
           <ArrowLeft className="w-4 h-4" />
-          {t('exam.previous')}
+          Anterior
         </button>
 
         {preguntaActual < preguntas.length - 1 ? (
@@ -389,7 +385,7 @@ export default function EvaluacionPage() {
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all"
             style={{ background: '#5B6CFF', color: '#fff' }}
           >
-            {t('exam.next')}
+            Siguiente
             <ArrowRight className="w-4 h-4" />
           </button>
         ) : todasContestadas ? (
@@ -398,12 +394,12 @@ export default function EvaluacionPage() {
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all"
             style={{ background: '#10B981', color: '#fff' }}
           >
-            {t('exam.submit')}
+            Enviar examen
           </button>
         ) : (
           <div className="flex-1 flex items-center justify-center">
-              <span className="text-xs text-center" style={{ color: '#94A3B8' }}>
-              {preguntas.length - totalContestadas} {t('exam.unanswered')}
+            <span className="text-xs text-center" style={{ color: '#94A3B8' }}>
+              {preguntas.length - totalContestadas} sin responder
             </span>
           </div>
         )}
@@ -415,13 +411,14 @@ export default function EvaluacionPage() {
           <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={CARD}>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-6 h-6 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <h3 className="text-base font-bold" style={{ color: '#F1F5F9' }}>{t('exam.confirmTitle')}</h3>
+              <h3 className="text-base font-bold" style={{ color: '#F1F5F9' }}>¿Enviar examen?</h3>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>
-              {t('exam.confirmQuestion')} <strong style={{ color: '#F1F5F9' }}>{t('exam.confirmWarning')}</strong>
+              ¿Estás seguro de que deseas enviar?{' '}
+              <strong style={{ color: '#F1F5F9' }}>Esta acción no se puede deshacer.</strong>
             </p>
             <p className="text-xs" style={{ color: '#94A3B8' }}>
-              {t('exam.answered')} <strong style={{ color: '#F1F5F9' }}>{totalContestadas}/{preguntas.length}</strong>
+              Respondidas: <strong style={{ color: '#F1F5F9' }}>{totalContestadas}/{preguntas.length}</strong>
             </p>
             <div className="flex gap-3">
               <button
@@ -429,14 +426,14 @@ export default function EvaluacionPage() {
                 className="flex-1 py-3 rounded-lg text-sm font-medium"
                 style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
               >
-                {t('common.cancel')}
+                Cancelar
               </button>
               <button
                 onClick={enviarExamen}
                 className="flex-1 py-3 rounded-lg text-sm font-semibold"
                 style={{ background: '#10B981', color: '#fff' }}
               >
-                {t('exam.submitYes')}
+                Sí, enviar
               </button>
             </div>
           </div>

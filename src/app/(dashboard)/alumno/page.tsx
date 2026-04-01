@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell, CreditCard } from 'lucide-react'
+import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { useLanguage } from '@/context/LanguageContext'
 import { createClient } from '@/lib/supabase/client'
 import BadgesGrid from '@/components/alumno/BadgesGrid'
 import StreakTracker from '@/components/alumno/StreakTracker'
@@ -47,7 +46,6 @@ interface Mes {
 export default function AlumnoDashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { lang, t } = useLanguage()
   const { toasts, showToast, removeToast } = useToast()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [meses, setMeses] = useState<Mes[]>([])
@@ -138,13 +136,13 @@ export default function AlumnoDashboard() {
   useEffect(() => {
     const pago = searchParams.get('pago')
     if (pago === 'exitoso') {
-      showToast(t('payment.successToast'), 'success')
+      showToast('Pago procesado correctamente', 'success')
       router.replace('/alumno', { scroll: false })
     } else if (pago === 'cancelado') {
-      showToast(t('payment.cancelToast'), 'info')
+      showToast('Pago cancelado', 'info')
       router.replace('/alumno', { scroll: false })
     }
-  }, [searchParams, router, showToast, t])
+  }, [searchParams, router, showToast])
 
   useEffect(() => {
     Promise.all([
@@ -194,11 +192,7 @@ export default function AlumnoDashboard() {
     : 0
 
   const hora = new Date().getHours()
-  const saludo = hora < 12
-    ? (lang === 'en' ? 'Good morning' : 'Buenos días')
-    : hora < 19
-    ? (lang === 'en' ? 'Good afternoon' : 'Buenas tardes')
-    : (lang === 'en' ? 'Good evening' : 'Buenas noches')
+  const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
 
   const primerNombre = perfil.nombre_completo.split(' ')[0]
   const mesActivo = perfil.meses_desbloqueados
@@ -209,62 +203,50 @@ export default function AlumnoDashboard() {
     <div className="space-y-8 max-w-5xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* Banner: Modo DEMO — alumno sin pago y sin meses */}
+      {/* Banner: Modo DEMO */}
       {demo && (
         <FadeIn delay={0}>
           <div
             className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
             style={{
-              background: 'linear-gradient(135deg, rgba(91,108,255,0.14) 0%, rgba(99,102,241,0.08) 100%)',
-              border: '1px solid rgba(91,108,255,0.4)',
+              background: 'linear-gradient(135deg, rgba(58,175,169,0.14) 0%, rgba(43,122,119,0.08) 100%)',
+              border: '1px solid rgba(58,175,169,0.4)',
             }}
           >
             <div
               className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
-              style={{ background: 'rgba(91,108,255,0.18)', border: '1px solid rgba(91,108,255,0.45)' }}
+              style={{ background: 'rgba(58,175,169,0.18)', border: '1px solid rgba(58,175,169,0.45)' }}
             >
-              <GraduationCap className="w-5 h-5" style={{ color: '#7B8AFF' }} />
+              <GraduationCap className="w-5 h-5" style={{ color: '#3AAFA9' }} />
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-snug" style={{ color: '#A5B4FC' }}>
-                {lang === 'en' ? '🎓 Welcome to EDVEX Academy' : '🎓 Bienvenido a EDVEX Academy'}
+              <p className="font-semibold text-sm leading-snug" style={{ color: '#4ECDC4' }}>
+                🎓 Bienvenido a IVS Virtual
               </p>
               <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
-                {lang === 'en'
-                  ? "You're in demo mode — explore the platform for free"
-                  : 'Estás en modo demo — explora la plataforma gratis'}
+                Estás en modo demo — explora la plataforma gratis
               </p>
             </div>
 
             <div className="flex-shrink-0 flex flex-col items-center gap-2">
-              <Link
-                href="/alumno/pagar"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
-                style={{ background: '#5B6CFF', color: '#fff' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#7B8AFF' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#5B6CFF' }}
-              >
-                <CreditCard className="w-4 h-4" />
-                {lang === 'en' ? 'Activate my account — $50 enrollment →' : 'Activar mi cuenta — $50 inscripción →'}
-              </Link>
               <a
-                href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
+                href="https://wa.me/523328381405"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs transition-colors whitespace-nowrap"
-                style={{ color: '#7B8AFF' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#A5B4FC' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#7B8AFF' }}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
+                style={{ background: '#3AAFA9', color: '#fff' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#4ECDC4' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}
               >
-                {lang === 'en' ? 'or schedule a free video call →' : 'o agenda una videollamada gratis →'}
+                💬 Activar mi cuenta — contacta a tu asesor →
               </a>
             </div>
           </div>
         </FadeIn>
       )}
 
-      {/* Banner: Inscripción pendiente (alumno con meses pero sin pagar) */}
+      {/* Banner: Inscripción pendiente */}
       {!demo && perfil.inscripcion_pagada === false && (
         <FadeIn delay={0}>
           <div
@@ -283,59 +265,27 @@ export default function AlumnoDashboard() {
 
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm leading-snug" style={{ color: '#FCD34D' }}>
-                ¡Bienvenido a EDVEX Academy!
+                ¡Bienvenido a IVS Virtual!
               </p>
               <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
-                Tu siguiente paso es pagar tu inscripción para comenzar. Al confirmar tu pago,{' '}
+                Para comenzar, contacta a tu asesor y realiza el pago de inscripción.{' '}
                 <strong style={{ color: '#CBD5E1' }}>Control Escolar te contactará por WhatsApp</strong>{' '}
-                para darte la bienvenida, solicitarte tus documentos y resolver cualquier duda.
+                para darte la bienvenida y solicitarte tus documentos.
               </p>
             </div>
 
             <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
-              <Link
-                href="/alumno/pagar"
+              <a
+                href="https://wa.me/523328381405"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
                 style={{ background: '#F59E0B', color: '#0B0D11' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
               >
-                <CreditCard className="w-4 h-4" />
-                Pagar inscripción ($50 USD)
-              </Link>
-
-              <div className="flex items-center gap-2">
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-                <span className="text-xs" style={{ color: '#475569', whiteSpace: 'nowrap' }}>— o si prefieres —</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-              </div>
-
-              <div className="flex flex-col items-center gap-1.5">
-                <a
-                  href="https://cal.com/soluciones-academicas/asesoria-edvex-academy-30-min"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all w-full sm:w-auto"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid rgba(91,108,255,0.4)',
-                    color: '#7B8AFF',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.1)'
-                    ;(e.currentTarget as HTMLElement).style.borderColor = '#7B8AFF'
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.background = 'transparent'
-                    ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.4)'
-                  }}
-                >
-                  📅 Hablar con un asesor antes de pagar
-                </a>
-                <p className="text-xs text-center" style={{ color: '#475569' }}>
-                  Agenda una videollamada de 30 min gratis con nuestro equipo
-                </p>
-              </div>
+                💬 WhatsApp 33 2838 1405
+              </a>
             </div>
           </div>
         </FadeIn>
@@ -350,12 +300,12 @@ export default function AlumnoDashboard() {
             style={{ color: '#F1F5F9' }}
           />
           <p className="text-sm font-mono" style={{ color: '#475569' }}>
-            {lang === 'en' ? 'Student ID:' : 'Matrícula:'}{' '}
+            Matrícula:{' '}
             <span style={{ color: '#64748B', letterSpacing: '0.05em' }}>
               {matriculaDisplay ?? perfil.matricula}
             </span>
           </p>
-          <StreakTracker diasRacha={diasRacha} lang={lang} />
+          <StreakTracker diasRacha={diasRacha} lang="es" />
         </div>
       </FadeIn>
 
@@ -366,7 +316,7 @@ export default function AlumnoDashboard() {
           <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                {lang === 'en' ? 'Overall progress' : 'Avance total'}
+                Avance total
               </p>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.12)' }}>
                 <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
@@ -385,7 +335,7 @@ export default function AlumnoDashboard() {
           <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                {lang === 'en' ? 'Current month' : 'Mes en curso'}
+                Mes en curso
               </p>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
                 <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
@@ -406,7 +356,7 @@ export default function AlumnoDashboard() {
           <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                {lang === 'en' ? 'Subjects passed' : 'Materias acreditadas'}
+                Materias acreditadas
               </p>
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
                 <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
@@ -414,7 +364,7 @@ export default function AlumnoDashboard() {
             </div>
             <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
             <p className="text-xs" style={{ color: '#475569' }}>
-              {lang === 'en' ? 'subjects approved' : 'materias aprobadas'}
+              materias aprobadas
             </p>
           </div>
         </div>
@@ -434,7 +384,7 @@ export default function AlumnoDashboard() {
                 onMouseMove={handleMagneticMove}
                 onMouseLeave={handleMagneticLeave}
               >
-                {lang === 'en' ? 'Continue studying' : 'Continuar estudiando'}
+                Continuar estudiando
                 <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -448,39 +398,37 @@ export default function AlumnoDashboard() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
-                {lang === 'en' ? 'Demo subject' : 'Materia de demostración'}
+                Materia de demostración
               </p>
               <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
             </div>
             <div
               className="rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-              style={{ background: '#181C26', border: '1px solid rgba(91,108,255,0.3)' }}
+              style={{ background: '#181C26', border: '1px solid rgba(58,175,169,0.3)' }}
             >
               <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-xs font-mono" style={{ color: '#5B6CFF' }}>TUT101</p>
+                <p className="text-xs font-mono" style={{ color: '#3AAFA9' }}>TUT101</p>
                 <p className="text-base font-bold" style={{ color: '#F1F5F9' }}>
-                  {lang === 'en' ? 'University Entry Tutoring I' : 'Tutoría de ingreso I'}
+                  Tutoría de ingreso I
                 </p>
                 <p className="text-sm" style={{ color: '#64748B' }}>
-                  {lang === 'en'
-                    ? 'Get familiar with the platform, your study plan and virtual high school methodology.'
-                    : 'Familiarízate con la plataforma, tu plan de estudio y la metodología del bachillerato virtual.'}
+                  Familiarízate con la plataforma, tu plan de estudio y la metodología del bachillerato virtual.
                 </p>
               </div>
               <Link
                 href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
-                style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF', border: '1px solid rgba(91,108,255,0.35)' }}
+                style={{ background: 'rgba(58,175,169,0.15)', color: '#3AAFA9', border: '1px solid rgba(58,175,169,0.35)' }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.25)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = '#7B8AFF'
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(58,175,169,0.25)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = '#3AAFA9'
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.15)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.35)'
+                  (e.currentTarget as HTMLElement).style.background = 'rgba(58,175,169,0.15)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(58,175,169,0.35)'
                 }}
               >
-                {lang === 'en' ? 'Explore subject →' : 'Explorar materia →'}
+                Explorar materia →
               </Link>
             </div>
           </div>
@@ -493,7 +441,7 @@ export default function AlumnoDashboard() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
-                {t('dashboard.programMonths')}
+                Meses del programa
               </p>
               <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
             </div>
@@ -531,7 +479,7 @@ export default function AlumnoDashboard() {
                         {mes.titulo || `Mes ${mes.numero}`}
                       </p>
                       <p className="text-xs" style={{ color: '#475569' }}>
-                        {(mes.materias ?? []).length} {lang === 'en' ? 'subjects' : 'materias'}
+                        {(mes.materias ?? []).length} materias
                       </p>
                     </div>
                     {!mes.desbloqueado && (
@@ -547,7 +495,7 @@ export default function AlumnoDashboard() {
 
       {/* SECCIÓN 5 — Logros */}
       <FadeIn delay={perfil.inscripcion_pagada === false ? 500 : 400}>
-        <BadgesGrid logros={logros} lang={lang} />
+        <BadgesGrid logros={logros} lang="es" />
       </FadeIn>
     </div>
   )

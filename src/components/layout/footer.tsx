@@ -15,26 +15,26 @@ export function Footer() {
         {ESCUELA_CONFIG.nombre}
       </p>
       <p className="text-xs" style={{ color: '#374151' }}>
-        Preparatoria · Secundaria · Diplomados · 100% en línea
+        Preparatoria · Secundaria · 100% en línea
       </p>
       <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1">
         <a
-          href="https://edvexacademy.online"
+          href="https://ivsvirtual.com"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs transition-colors"
           style={{ color: '#374151' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#1ad9ff' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
           onMouseLeave={e => { e.currentTarget.style.color = '#374151' }}
         >
-          edvexacademy.online
+          ivsvirtual.com
         </a>
         <span style={{ color: '#2A2F3E' }}>·</span>
         <a
           href={`mailto:${ESCUELA_CONFIG.contactoEmail}`}
           className="text-xs transition-colors"
           style={{ color: '#374151' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#1ad9ff' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
           onMouseLeave={e => { e.currentTarget.style.color = '#374151' }}
         >
           {ESCUELA_CONFIG.contactoEmail}
@@ -43,10 +43,10 @@ export function Footer() {
           <>
             <span style={{ color: '#2A2F3E' }}>·</span>
             <a
-              href={`tel:${ESCUELA_CONFIG.contactoTelefono}`}
+              href={`https://wa.me/${ESCUELA_CONFIG.contactoTelefono}`}
               className="text-xs transition-colors"
               style={{ color: '#374151' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#1ad9ff' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
               onMouseLeave={e => { e.currentTarget.style.color = '#374151' }}
             >
               {ESCUELA_CONFIG.contactoTelefono}

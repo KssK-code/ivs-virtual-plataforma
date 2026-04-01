@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, Printer, Download } from 'lucide-react'
-import { useLanguage } from '@/context/LanguageContext'
 
 type Estado = 'Acreditada' | 'No acreditada' | 'Pendiente'
 
@@ -37,8 +36,13 @@ const BADGE: Record<Estado, React.CSSProperties> = {
   Pendiente:       { background: '#fef9ec', color: '#b45309', border: '1px solid #fde68a' },
 }
 
+const estadoLabel: Record<Estado, string> = {
+  Acreditada:      'Acreditada',
+  'No acreditada': 'No acreditada',
+  Pendiente:       'Pendiente',
+}
+
 export default function ConstanciaPage() {
-  const { t, lang } = useLanguage()
   const [datos, setDatos] = useState<DatosConstancia | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -58,26 +62,17 @@ export default function ConstanciaPage() {
 
   const folio = folioRef.current
 
-  const fecha = new Date().toLocaleDateString(
-    lang === 'en' ? 'en-US' : 'es-MX',
-    { day: 'numeric', month: 'long', year: 'numeric' }
-  )
+  const fecha = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 
   const porcentaje = datos
     ? Math.round((datos.meses_desbloqueados / datos.duracion_meses) * 100)
     : 0
 
-  const estadoLabel: Record<Estado, string> = {
-    Acreditada:      t('certificate.badgePassed'),
-    'No acreditada': t('certificate.badgeFailed'),
-    Pendiente:       t('certificate.badgePending'),
-  }
-
-  const disclaimerParts = t('certificate.disclaimer').split('{folio}')
+  const disclaimerParts = `Este documento es un comprobante académico interno con folio {folio} generado digitalmente por IVS Virtual. Para verificar su autenticidad, contacte a administración.`.split('{folio}')
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#2563eb' }} />
+      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#3AAFA9' }} />
     </div>
   )
 
@@ -106,7 +101,7 @@ export default function ConstanciaPage() {
             }}
           >
             <Printer className="w-4 h-4" />
-            {t('certificate.printBtn')}
+            Imprimir
           </button>
           <button
             onClick={() => window.print()}
@@ -114,11 +109,11 @@ export default function ConstanciaPage() {
               padding: '10px 22px', borderRadius: 6, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', fontFamily: '"DM Sans", sans-serif',
               display: 'flex', alignItems: 'center', gap: 7,
-              background: '#2563eb', color: '#fff', border: 'none',
+              background: '#2B7A77', color: '#fff', border: 'none',
             }}
           >
             <Download className="w-4 h-4" />
-            {t('certificate.downloadBtn')}
+            Descargar PDF
           </button>
         </div>
 
@@ -132,7 +127,7 @@ export default function ConstanciaPage() {
           }}
         >
           {/* Barra superior */}
-          <div style={{ height: 5, background: 'linear-gradient(90deg, #0f2d82, #2563eb 55%, #60a5fa)' }} />
+          <div style={{ height: 5, background: 'linear-gradient(90deg, #1B3A57, #3AAFA9 55%, #4ECDC4)' }} />
 
           {/* ── Encabezado ── */}
           <div style={{
@@ -145,30 +140,30 @@ export default function ConstanciaPage() {
               <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="cert-hg" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#1a3a8f" />
-                    <stop offset="100%" stopColor="#2563eb" />
+                    <stop offset="0%" stopColor="#1B3A57" />
+                    <stop offset="100%" stopColor="#3AAFA9" />
                   </linearGradient>
                 </defs>
                 <polygon points="26,3 48,15 48,37 26,49 4,37 4,15" fill="#0f172a" stroke="url(#cert-hg)" strokeWidth="1.5" />
-                <polygon points="26,10 41,18.5 41,33.5 26,42 11,33.5 11,18.5" fill="none" stroke="#3b82f6" strokeWidth="0.8" opacity="0.45" />
-                <line x1="26" y1="10" x2="26" y2="26" stroke="#3b82f6" strokeWidth="0.6" opacity="0.35" />
-                <line x1="11" y1="18.5" x2="26" y2="26" stroke="#3b82f6" strokeWidth="0.6" opacity="0.35" />
-                <line x1="41" y1="18.5" x2="26" y2="26" stroke="#3b82f6" strokeWidth="0.6" opacity="0.35" />
-                <circle cx="26" cy="26" r="4.5" fill="none" stroke="#60a5fa" strokeWidth="1.2" />
-                <circle cx="26" cy="26" r="1.5" fill="#93c5fd" />
+                <polygon points="26,10 41,18.5 41,33.5 26,42 11,33.5 11,18.5" fill="none" stroke="#3AAFA9" strokeWidth="0.8" opacity="0.45" />
+                <line x1="26" y1="10" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
+                <line x1="11" y1="18.5" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
+                <line x1="41" y1="18.5" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
+                <circle cx="26" cy="26" r="4.5" fill="none" stroke="#4ECDC4" strokeWidth="1.2" />
+                <circle cx="26" cy="26" r="1.5" fill="#4ECDC4" />
               </svg>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{
-                  fontWeight: 800, fontSize: 22, letterSpacing: '0.12em',
-                  background: 'linear-gradient(135deg, #1a3a8f, #2563eb, #60a5fa)',
+                  fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
+                  background: 'linear-gradient(135deg, #1B3A57, #3AAFA9, #4ECDC4)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text', lineHeight: 1,
-                }}>EDVEX</span>
-                <span style={{ fontSize: 9, letterSpacing: '0.3em', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', marginTop: 3 }}>
-                  Academy
+                  backgroundClip: 'text', lineHeight: 1.1,
+                }}>IVS Instituto Virtual Superior</span>
+                <span style={{ fontSize: 9, letterSpacing: '0.2em', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', marginTop: 4 }}>
+                  Incorporado a la SEP &nbsp;·&nbsp; CCT: 09GBD0002D
                 </span>
                 <span style={{
-                  fontSize: 8, letterSpacing: '0.2em', color: '#94a3b8', fontWeight: 400,
+                  fontSize: 8, letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 400,
                   borderTop: '1px solid #e2e8f0', paddingTop: 4, marginTop: 5,
                 }}>
                   Preparatoria &nbsp;•&nbsp; Secundaria
@@ -179,13 +174,13 @@ export default function ConstanciaPage() {
             {/* Meta folio / fecha */}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9, letterSpacing: '0.18em', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 600 }}>
-                {t('certificate.folioLabel')}
+                Folio
               </div>
-              <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, marginTop: 2 }}>
+              <div style={{ fontSize: 13, color: '#3AAFA9', fontWeight: 700, marginTop: 2 }}>
                 {folio}
               </div>
               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 5 }}>
-                {t('certificate.issueDate')} {fecha}
+                Fecha de emisión: {fecha}
               </div>
             </div>
           </div>
@@ -207,9 +202,9 @@ export default function ConstanciaPage() {
               }}>
                 <span style={{
                   display: 'inline-block', width: 4, height: 28, flexShrink: 0,
-                  background: 'linear-gradient(180deg, #2563eb, #93c5fd)', borderRadius: 2,
+                  background: 'linear-gradient(180deg, #3AAFA9, #4ECDC4)', borderRadius: 2,
                 }} />
-                {t('certificate.title')}
+                Constancia de Estudios
               </div>
 
               {/* Foto del alumno */}
@@ -219,12 +214,12 @@ export default function ConstanciaPage() {
                   <img
                     src={datos.avatar_url}
                     alt={datos.nombre_completo}
-                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb' }}
+                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3AAFA9' }}
                   />
                 ) : (
                   <div style={{
                     width: 90, height: 90, borderRadius: '50%',
-                    background: '#0055ff', color: '#fff',
+                    background: '#3AAFA9', color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 28, fontWeight: 700,
                   }}>
@@ -239,52 +234,68 @@ export default function ConstanciaPage() {
 
             {/* Párrafo 1 */}
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.9, marginBottom: 6 }}>
-              {t('certificate.intro')}{' '}
+              Se certifica que el alumno{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.nombre_completo}</strong>,{' '}
-              {t('certificate.withId')}{' '}
+              con matrícula{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.matricula}</strong>,{' '}
-              {t('certificate.enrolledIn')}{' '}
+              está inscrito en el programa{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.plan_nombre}</strong>{' '}
-              {t('certificate.ofEdvex')}.
+              de IVS Virtual.
             </p>
 
             {/* Párrafo 2 */}
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.9, marginTop: 6 }}>
-              {t('certificate.completed')}{' '}
-              <span style={{ color: '#1d4ed8', fontWeight: 600 }}>
-                {datos.meses_desbloqueados} {t('certificate.of')} {datos.duracion_meses} {t('certificate.monthsOfProgram')}
+              Ha completado{' '}
+              <span style={{ color: '#2B7A77', fontWeight: 600 }}>
+                {datos.meses_desbloqueados} de {datos.duracion_meses} meses del programa
               </span>.
             </p>
 
+            {/* Datos institucionales */}
+            <div style={{
+              marginTop: 14, padding: '10px 16px', borderRadius: 8,
+              background: '#f0fdf9', border: '1px solid #a7f3d0',
+              display: 'flex', flexWrap: 'wrap', gap: '6px 24px',
+            }}>
+              {[
+                { label: 'Institución', value: 'IVS Instituto Virtual Superior' },
+                { label: 'CCT', value: '09GBD0002D' },
+                { label: 'Autoridad educativa', value: 'Incorporado a la SEP' },
+                { label: 'Sistema', value: datos.duracion_meses <= 6 && datos.plan_nombre?.toLowerCase().includes('prepa')
+                    ? 'Sistema Nacional de Educación Media Superior'
+                    : 'Sistema Educativo Nacional' },
+              ].map(item => (
+                <div key={item.label} style={{ fontSize: 11, color: '#475569' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>{item.label}: </span>
+                  <span style={{ color: '#0f172a' }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+
             {/* Barra de progreso */}
             <div style={{ margin: '20px 0 4px' }}>
-              <div style={{ background: '#eef2ff', borderRadius: 3, height: 5, overflow: 'hidden' }}>
+              <div style={{ background: '#e6f7f6', borderRadius: 3, height: 5, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', width: `${porcentaje}%`,
-                  background: 'linear-gradient(90deg, #1d4ed8, #60a5fa)', borderRadius: 3,
+                  background: 'linear-gradient(90deg, #2B7A77, #4ECDC4)', borderRadius: 3,
                 }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 6, fontWeight: 500 }}>
-                <span>{t('certificate.totalProgress')}</span>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>{porcentaje}%</span>
+                <span>Avance total</span>
+                <span style={{ color: '#3AAFA9', fontWeight: 700 }}>{porcentaje}%</span>
               </div>
             </div>
 
             {/* Etiqueta sección */}
             <div style={{ fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, margin: '26px 0 10px' }}>
-              {t('certificate.coursesTaken')}
+              Materias cursadas
             </div>
 
             {/* Tabla de materias */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f8fafd' }}>
-                  {[
-                    t('certificate.colMonth'),
-                    t('certificate.colCode'),
-                    t('certificate.colSubject'),
-                    t('certificate.colStatus'),
-                  ].map(h => (
+                  {['Mes', 'Código', 'Materia', 'Estado'].map(h => (
                     <th key={h} style={{
                       textAlign: 'left', padding: '9px 14px',
                       fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -299,9 +310,9 @@ export default function ConstanciaPage() {
                   .map(m => (
                     <tr key={m.materia_id}>
                       <td style={{ padding: '12px 14px', color: '#64748b', fontSize: 12, borderBottom: '1px solid #f4f6fb' }}>
-                        {t('certificate.monthPrefix')} {m.mes_numero}
+                        Mes {m.mes_numero}
                       </td>
-                      <td style={{ padding: '12px 14px', fontSize: 12, color: '#2563eb', fontWeight: 700, letterSpacing: '0.06em', borderBottom: '1px solid #f4f6fb' }}>
+                      <td style={{ padding: '12px 14px', fontSize: 12, color: '#3AAFA9', fontWeight: 700, letterSpacing: '0.06em', borderBottom: '1px solid #f4f6fb' }}>
                         {m.codigo}
                       </td>
                       <td style={{ padding: '12px 14px', color: '#334155', borderBottom: '1px solid #f4f6fb' }}>
@@ -329,8 +340,8 @@ export default function ConstanciaPage() {
             style={{ position: 'absolute', bottom: 50, right: 40, opacity: 0.028, pointerEvents: 'none' }}
             width="220" height="220" viewBox="0 0 100 100"
           >
-            <polygon points="50,4 93,28 93,72 50,96 7,72 7,28" fill="none" stroke="#2563eb" strokeWidth="2.5" />
-            <polygon points="50,14 83,33 83,67 50,86 17,67 17,33" fill="none" stroke="#2563eb" strokeWidth="1.2" />
+            <polygon points="50,4 93,28 93,72 50,96 7,72 7,28" fill="none" stroke="#3AAFA9" strokeWidth="2.5" />
+            <polygon points="50,14 83,33 83,67 50,86 17,67 17,33" fill="none" stroke="#3AAFA9" strokeWidth="1.2" />
           </svg>
 
           {/* ── Pie del certificado ── */}
@@ -356,16 +367,16 @@ export default function ConstanciaPage() {
               />
               <div style={{ width: 180, height: 1, background: '#cbd5e1', margin: '0 auto 8px' }} />
               <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', letterSpacing: '0.05em' }}>
-                {t('certificate.academicDir')}
+                Dirección Académica
               </div>
               <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>
-                EDVEX Academy
+                IVS Virtual
               </div>
             </div>
           </div>
 
           {/* Barra inferior */}
-          <div style={{ height: 3, background: 'linear-gradient(90deg, #60a5fa, #2563eb 50%, #0f2d82)' }} />
+          <div style={{ height: 3, background: 'linear-gradient(90deg, #4ECDC4, #3AAFA9 50%, #1B3A57)' }} />
         </div>
       </div>
 

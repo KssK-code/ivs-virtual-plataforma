@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Loader2, PlayCircle } from 'lucide-react'
-import { useLanguage } from '@/context/LanguageContext'
 import { createClient } from '@/lib/supabase/client'
 import VideoEmbed from '@/components/alumno/VideoEmbed'
 import ReadingProgress from '@/components/alumno/ReadingProgress'
@@ -74,8 +73,6 @@ export default function MateriaPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-  const { lang, t } = useLanguage()
-  const loc = (es: string, en: string) => lang === 'en' && en ? en : es
 
   const [materia, setMateria] = useState<Materia | null>(null)
   const [loading, setLoading] = useState(true)
@@ -90,7 +87,6 @@ export default function MateriaPage() {
   const [mostrarGuia, setMostrarGuia] = useState(true)
   const guiaRef = useRef<HTMLDivElement>(null)
 
-  // Resetear guía cada vez que el alumno entra al tab examen
   useEffect(() => {
     if (tab === 'examen') setMostrarGuia(true)
   }, [tab])
@@ -131,9 +127,7 @@ export default function MateriaPage() {
       })
       .then(data => {
         setMateria(data)
-        // Default: primera semana hasta que cargue el progreso
         if (data.semanas?.length > 0) setSemanaSeleccionada(data.semanas[0].id)
-        // Cargar glosario en paralelo (data.id = materia.id, no el id del mes)
         fetch(`/api/alumno/glosario/${data.id}`)
           .then(r => r.json())
           .then(g => { if (g.terminos) setGlosario(g.terminos) })
@@ -143,7 +137,6 @@ export default function MateriaPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  // Cargar progreso de semanas una vez que la materia está disponible
   useEffect(() => {
     if (!materia) return
     const semanaIds = materia.semanas.map(s => s.id)
@@ -174,7 +167,6 @@ export default function MateriaPage() {
         const completadasSet = new Set(progreso.map((r: { semana_id: string }) => r.semana_id))
         setSemanasCompletadas(completadasSet)
 
-        // Seleccionar la primera semana no completada, o la última si todas están completas
         const primeraActiva = materia.semanas.find(s => !completadasSet.has(s.id))
         const defaultSemana = primeraActiva ?? materia.semanas[materia.semanas.length - 1]
         if (defaultSemana) setSemanaSeleccionada(defaultSemana.id)
@@ -196,9 +188,9 @@ export default function MateriaPage() {
   )
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'contenido', label: t('subjects.tabContent') },
-    { key: 'examen', label: t('subjects.tabExam') },
-    { key: 'informacion', label: t('subjects.tabInfo') },
+    { key: 'contenido', label: 'Contenido' },
+    { key: 'examen', label: 'Examen' },
+    { key: 'informacion', label: 'Información' },
   ]
 
   return (
@@ -222,7 +214,7 @@ export default function MateriaPage() {
             </span>
             <div className="w-2 h-2 rounded-full" style={{ background: materia.color_hex || '#5B6CFF' }} />
           </div>
-          <SplitTitle text={loc(materia.nombre, materia.nombre_en)} className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }} />
+          <SplitTitle text={materia.nombre} className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }} />
         </div>
       </div>
       </FadeIn>
@@ -231,15 +223,15 @@ export default function MateriaPage() {
       <FadeIn delay={100}>
       <div className="overflow-x-auto" style={{ borderBottom: '1px solid #2A2F3E' }}>
         <div className="flex min-w-max">
-          {tabs.map(t => (
+          {tabs.map(tab_ => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tab_.key}
+              onClick={() => setTab(tab_.key)}
               className="px-4 py-2.5 text-sm font-medium transition-all relative whitespace-nowrap"
-              style={{ color: tab === t.key ? '#F1F5F9' : '#94A3B8' }}
+              style={{ color: tab === tab_.key ? '#F1F5F9' : '#94A3B8' }}
             >
-              {t.label}
-              {tab === t.key && (
+              {tab_.label}
+              {tab === tab_.key && (
                 <span
                   className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                   style={{ background: '#5B6CFF' }}
@@ -257,7 +249,7 @@ export default function MateriaPage() {
         <>
           {materia.semanas.length === 0 ? (
             <div className="flex items-center justify-center py-12 rounded-xl" style={CARD}>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>{t('subjects.noWeeks')}</p>
+              <p className="text-sm" style={{ color: '#94A3B8' }}>No hay semanas disponibles</p>
             </div>
           ) : (
             <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -269,7 +261,7 @@ export default function MateriaPage() {
                     semanasCompletadas={semanasCompletadas}
                     semanaActivaId={semanaSeleccionada ?? undefined}
                     onSemanaClick={setSemanaSeleccionada}
-                    lang={lang}
+                    lang="es"
                   />
                 </div>
               </div>
@@ -281,7 +273,7 @@ export default function MateriaPage() {
                   if (!semana) return (
                     <div className="flex items-center justify-center py-16 rounded-xl" style={CARD}>
                       <p className="text-sm" style={{ color: '#94A3B8' }}>
-                        {lang === 'en' ? 'Select a week to get started' : 'Selecciona una semana para comenzar'}
+                        Selecciona una semana para comenzar
                       </p>
                     </div>
                   )
@@ -290,23 +282,21 @@ export default function MateriaPage() {
                       {/* Header de la semana */}
                       <div className="pb-3" style={{ borderBottom: '1px solid #2A2F3E' }}>
                         <span className="text-xs font-mono" style={{ color: '#6366F1' }}>
-                          {lang === 'en' ? 'Week' : 'Semana'} {semana.numero}
+                          Semana {semana.numero}
                         </span>
                         <h3 className="text-base font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
-                          {loc(semana.titulo, semana.titulo_en)}
+                          {semana.titulo}
                         </h3>
-                        {/* Tiempo estimado de lectura y videos */}
                         {(() => {
-                          const contenidoActual = loc(semana.contenido, semana.contenido_en) || ''
-                          const palabras = contenidoActual.trim() ? contenidoActual.trim().split(/\s+/).length : 0
+                          const palabras = semana.contenido?.trim() ? semana.contenido.trim().split(/\s+/).length : 0
                           const minLectura = palabras > 0 ? Math.ceil(palabras / 200) : 0
                           const minVideos = (semana.videos ?? []).reduce((acc, v) => {
                             const match = v.duracion?.match(/(\d+)/)
                             return acc + (match ? parseInt(match[1]) : 0)
                           }, 0)
                           const partes = []
-                          if (minLectura > 0) partes.push(`📖 ${minLectura} min ${lang === 'en' ? 'reading' : 'lectura'}`)
-                          if (minVideos > 0) partes.push(`🎬 ${minVideos} min ${lang === 'en' ? 'of videos' : 'de videos'}`)
+                          if (minLectura > 0) partes.push(`📖 ${minLectura} min lectura`)
+                          if (minVideos > 0) partes.push(`🎬 ${minVideos} min de videos`)
                           if (partes.length === 0) return null
                           return (
                             <p className="text-xs mt-1.5" style={{ color: '#64748B' }}>
@@ -317,9 +307,9 @@ export default function MateriaPage() {
                       </div>
 
                       {/* Contenido */}
-                      {(lang === 'en' ? (semana.contenido_en || semana.contenido) : semana.contenido) && (
+                      {semana.contenido && (
                         <div className="space-y-1">
-                          {renderTexto(loc(semana.contenido, semana.contenido_en))}
+                          {renderTexto(semana.contenido)}
                         </div>
                       )}
 
@@ -327,7 +317,7 @@ export default function MateriaPage() {
                       <ReadingProgress
                         semanaId={semana.id}
                         alumnoId={alumnoId}
-                        lang={lang}
+                        lang="es"
                         yaCompletada={semanasCompletadas.has(semana.id)}
                         onCompletada={() => {
                           const nuevas = new Set([...semanasCompletadas, semana.id])
@@ -343,40 +333,22 @@ export default function MateriaPage() {
                         <SemanaQuiz
                           semanaId={semana.id}
                           alumnoId={alumnoId}
-                          lang={lang}
+                          lang="es"
                         />
                       )}
 
                       {/* Videos */}
-                      {(semana.videos?.length > 0 || (lang === 'en' && semana.url_en)) && (
+                      {semana.videos?.length > 0 && (
                         <div className="space-y-2 pt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>{t('subjects.videos')}</p>
-
-                          {lang === 'en' && semana.url_en && (
-                            <a
-                              href={semana.url_en}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
-                              style={{ ...INPUT_BG, border: '1px solid rgba(91,108,255,0.3)' }}
-                              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#5B6CFF' }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(91,108,255,0.3)' }}
-                            >
-                              <PlayCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#7B8AFF' }} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>{loc(semana.titulo, semana.titulo_en)} — English Version</p>
-                                <p className="text-xs mt-0.5" style={{ color: '#7B8AFF' }}>EN</p>
-                              </div>
-                            </a>
-                          )}
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Videos</p>
 
                           {semana.videos.map((v, i) => (
                             <VideoEmbed
                               key={i}
-                              url={loc(v.url, v.url_en)}
-                              titulo={loc(v.titulo, v.titulo_en)}
+                              url={v.url}
+                              titulo={v.titulo}
                               duracion={v.duracion}
-                              lang={lang}
+                              lang="es"
                             />
                           ))}
                         </div>
@@ -387,14 +359,14 @@ export default function MateriaPage() {
                         <NotasPersonales
                           semanaId={semana.id}
                           alumnoId={alumnoId}
-                          lang={lang}
+                          lang="es"
                         />
                       )}
                     </div>
                   )
                 })()}
 
-                {/* Card ¿Qué sigue? — aparece cuando todas las semanas están completadas */}
+                {/* Card ¿Qué sigue? */}
                 {todasCompletas && (
                   <div
                     ref={cardSigueRef}
@@ -405,22 +377,15 @@ export default function MateriaPage() {
                       boxShadow: '0 0 24px rgba(99,102,241,0.08)',
                     }}
                   >
-                    {/* Ícono */}
                     <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>🎯</span>
-
-                    {/* Título */}
                     <div className="space-y-1">
                       <h3 className="text-base font-bold" style={{ color: '#F1F5F9' }}>
-                        {lang === 'en' ? 'Subject completed!' : '¡Materia completada!'}
+                        ¡Materia completada!
                       </h3>
                       <p className="text-sm" style={{ color: '#94A3B8' }}>
-                        {lang === 'en'
-                          ? 'You can now take your final exam'
-                          : 'Ya puedes presentar tu examen final'}
+                        Ya puedes presentar tu examen final
                       </p>
                     </div>
-
-                    {/* Botón primario */}
                     <button
                       onClick={() => setTab('examen')}
                       className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
@@ -428,17 +393,11 @@ export default function MateriaPage() {
                       onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
                       onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
                     >
-                      {lang === 'en' ? 'Go to exam →' : 'Ir al examen →'}
+                      Ir al examen →
                     </button>
-
-                    {/* Separador */}
-                    <p className="text-xs" style={{ color: '#475569' }}>— {lang === 'en' ? 'or' : 'o'} —</p>
-
-                    {/* Texto secundario */}
+                    <p className="text-xs" style={{ color: '#475569' }}>— o —</p>
                     <p className="text-xs leading-relaxed" style={{ color: '#64748B' }}>
-                      {lang === 'en'
-                        ? "Continue to the next month when you're ready"
-                        : 'Continúa con el siguiente mes cuando estés listo'}
+                      Continúa con el siguiente mes cuando estés listo
                     </p>
                   </div>
                 )}
@@ -452,7 +411,7 @@ export default function MateriaPage() {
       {tab === 'examen' && (
         <div className="space-y-4">
 
-          {/* Guía de estudio — aparece antes del examen */}
+          {/* Guía de estudio */}
           {mostrarGuia && (() => {
             const pendientes = materia.semanas.filter(s => !semanasCompletadas.has(s.id)).length
             const termsPills = glosario.slice(0, 4)
@@ -462,19 +421,15 @@ export default function MateriaPage() {
                 className="rounded-xl p-5 space-y-5"
                 style={{ background: '#1A1F2E', border: '1px solid #2A2F3E' }}
               >
-                {/* Encabezado */}
                 <div className="space-y-0.5">
                   <h3 className="text-base font-bold" style={{ color: '#F1F5F9' }}>
-                    {lang === 'en' ? 'Prepare for the exam' : 'Prepárate para el examen'}
+                    Prepárate para el examen
                   </h3>
                   <p className="text-sm" style={{ color: '#64748B' }}>
-                    {lang === 'en'
-                      ? 'Review these key points before starting'
-                      : 'Repasa estos puntos clave antes de comenzar'}
+                    Repasa estos puntos clave antes de comenzar
                   </p>
                 </div>
 
-                {/* Alerta semanas pendientes */}
                 {pendientes > 0 && (
                   <div
                     className="flex items-start gap-2.5 px-4 py-3 rounded-lg text-sm"
@@ -482,17 +437,14 @@ export default function MateriaPage() {
                   >
                     <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>⚠️</span>
                     <p style={{ color: '#FDE68A' }}>
-                      {lang === 'en'
-                        ? `You have ${pendientes} pending week${pendientes !== 1 ? 's' : ''}. We recommend completing them before the exam.`
-                        : `Tienes ${pendientes} semana${pendientes !== 1 ? 's' : ''} pendiente${pendientes !== 1 ? 's' : ''}. Te recomendamos completarlas antes del examen.`}
+                      Tienes {pendientes} semana{pendientes !== 1 ? 's' : ''} pendiente{pendientes !== 1 ? 's' : ''}. Te recomendamos completarlas antes del examen.
                     </p>
                   </div>
                 )}
 
-                {/* Checklist de semanas */}
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#475569' }}>
-                    {lang === 'en' ? 'Weeks' : 'Semanas'}
+                    Semanas
                   </p>
                   <ul className="space-y-1.5">
                     {materia.semanas.map(s => {
@@ -503,7 +455,7 @@ export default function MateriaPage() {
                             {completa ? '✅' : '⚪'}
                           </span>
                           <span style={{ color: completa ? '#CBD5E1' : '#475569' }}>
-                            {loc(s.titulo, s.titulo_en)}
+                            {s.titulo}
                           </span>
                         </li>
                       )
@@ -511,11 +463,10 @@ export default function MateriaPage() {
                   </ul>
                 </div>
 
-                {/* Términos importantes */}
                 {termsPills.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#475569' }}>
-                      {lang === 'en' ? 'Key terms' : 'Términos importantes'}
+                      Términos importantes
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {termsPills.map(term => (
@@ -524,14 +475,13 @@ export default function MateriaPage() {
                           className="px-3 py-1 rounded-full text-xs font-medium"
                           style={{ background: 'rgba(91,108,255,0.12)', color: '#7B8AFF', border: '1px solid rgba(91,108,255,0.25)' }}
                         >
-                          {lang === 'en' ? term.termino_en : term.termino}
+                          {term.termino}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Botón comenzar */}
                 <button
                   onClick={ocultarGuia}
                   className="w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
@@ -539,16 +489,15 @@ export default function MateriaPage() {
                   onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
                   onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
                 >
-                  {lang === 'en' ? "I'm ready — start exam →" : 'Ya estoy listo — comenzar examen →'}
+                  Ya estoy listo — comenzar examen →
                 </button>
               </div>
             )
           })()}
 
-          {/* Evaluaciones — se muestran al ocultar la guía */}
           {!mostrarGuia && (materia.evaluaciones.length === 0 ? (
             <div className="flex items-center justify-center py-12 rounded-xl" style={CARD}>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>{t('subjects.noExams')}</p>
+              <p className="text-sm" style={{ color: '#94A3B8' }}>No hay exámenes disponibles</p>
             </div>
           ) : (
             materia.evaluaciones.map(ev => {
@@ -556,9 +505,9 @@ export default function MateriaPage() {
               return (
                 <div key={ev.id} className="rounded-xl p-5 space-y-4" style={CARD}>
                   <div>
-                    <h3 className="text-base font-semibold" style={{ color: '#F1F5F9' }}>{loc(ev.titulo, ev.titulo_en)}</h3>
+                    <h3 className="text-base font-semibold" style={{ color: '#F1F5F9' }}>{ev.titulo}</h3>
                     <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: '#94A3B8' }}>
-                      <span>{t('subjects.attemptsLabel')} {ev.intentos_usados}/{ev.intentos_max}</span>
+                      <span>Intentos: {ev.intentos_usados}/{ev.intentos_max}</span>
                     </div>
                   </div>
 
@@ -566,16 +515,16 @@ export default function MateriaPage() {
                     <div className="flex items-center gap-3 px-4 py-3 rounded-lg" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <span className="text-lg">✓</span>
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#10B981' }}>{t('subjects.alreadyPassed')}</p>
+                        <p className="text-sm font-semibold" style={{ color: '#10B981' }}>¡Materia aprobada!</p>
                         <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                          {t('subjects.gradeLabel')} <strong style={{ color: '#10B981' }}>{ev.calificacion_aprobatoria}</strong>
+                          Calificación: <strong style={{ color: '#10B981' }}>{ev.calificacion_aprobatoria}</strong>
                         </p>
                       </div>
                     </div>
                   ) : intentosRestantes <= 0 ? (
                     <div className="flex items-center gap-3 px-4 py-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
                       <span className="text-lg">✗</span>
-                      <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>{t('subjects.noAttemptsLeft')}</p>
+                      <p className="text-sm font-semibold" style={{ color: '#EF4444' }}>Sin intentos disponibles</p>
                     </div>
                   ) : (
                     <button
@@ -585,7 +534,7 @@ export default function MateriaPage() {
                       onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
                       onMouseLeave={e => { e.currentTarget.style.background = '#5B6CFF' }}
                     >
-                      {t('subjects.takeExam')} ({intentosRestantes} {intentosRestantes !== 1 ? t('subjects.attemptPlural') : t('subjects.attemptSingular')} {intentosRestantes !== 1 ? t('subjects.availablePlural') : t('subjects.availableSingular')})
+                      Presentar examen ({intentosRestantes} {intentosRestantes !== 1 ? 'intentos' : 'intento'} {intentosRestantes !== 1 ? 'disponibles' : 'disponible'})
                     </button>
                   )}
                 </div>
@@ -598,32 +547,29 @@ export default function MateriaPage() {
       {/* Tab: Información */}
       {tab === 'informacion' && (
         <div className="space-y-4">
-          {/* Descripción / Objetivo */}
           {(materia.descripcion || materia.objetivo) && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.descriptionLabel')}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Descripción</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>
-                {loc(materia.descripcion || materia.objetivo, materia.descripcion_en)}
+                {materia.descripcion || materia.objetivo}
               </p>
             </div>
           )}
-          {/* Objetivo (solo si es distinto de descripción) */}
           {materia.objetivo && materia.objetivo !== materia.descripcion && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.objectiveLabel')}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{loc(materia.objetivo, materia.objetivo_en)}</p>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Objetivo</h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{materia.objetivo}</p>
             </div>
           )}
 
-          {/* Syllabus: títulos de semanas + un solo temario (ES o EN según idioma) */}
           {(() => {
-            const temas = (lang === 'en' && materia.temario_en?.length) ? materia.temario_en : (materia.temario ?? [])
+            const temas = materia.temario ?? []
             const haySemanas = materia.semanas?.length > 0
             const hayTemas = temas.length > 0
             if (!haySemanas && !hayTemas) return null
             return (
               <div className="rounded-xl p-5 space-y-3" style={CARD}>
-                <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.syllabus')}</h3>
+                <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Plan de estudios</h3>
                 {haySemanas && (
                   <ol className="space-y-2">
                     {materia.semanas!.map(semana => (
@@ -631,7 +577,7 @@ export default function MateriaPage() {
                         <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold" style={{ background: 'rgba(91,108,255,0.15)', color: '#5B6CFF' }}>
                           {semana.numero}
                         </span>
-                        <span style={{ color: '#94A3B8' }}>{loc(semana.titulo, semana.titulo_en)}</span>
+                        <span style={{ color: '#94A3B8' }}>{semana.titulo}</span>
                       </li>
                     ))}
                   </ol>
@@ -652,12 +598,11 @@ export default function MateriaPage() {
             )
           })()}
 
-          {/* Bibliografía: loc(bibliografia, bibliografia_en) con fallback */}
-          {((lang === 'en' && materia.bibliografia_en?.length) ? materia.bibliografia_en : materia.bibliografia)?.length > 0 && (
+          {materia.bibliografia?.length > 0 && (
             <div className="rounded-xl p-5 space-y-3" style={CARD}>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('subjects.bibliography')}</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Bibliografía</h3>
               <ul className="space-y-2">
-                {(lang === 'en' && materia.bibliografia_en?.length ? materia.bibliografia_en : materia.bibliografia).map((bib, i) => {
+                {materia.bibliografia.map((bib, i) => {
                   const etiqueta = bib.tipo ? `${bib.titulo} (${bib.tipo})` : bib.titulo
                   return (
                     <li key={i} className="flex items-start gap-2">
@@ -684,16 +629,15 @@ export default function MateriaPage() {
             </div>
           )}
 
-          {/* Glosario */}
           {glosario.length > 0 && (
             <div className="rounded-xl p-5 space-y-4" style={CARD}>
               <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>
-                {lang === 'en' ? 'Glossary' : 'Glosario'}
+                Glosario
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {glosario.map(t => (
+                {glosario.map(term => (
                   <div
-                    key={t.id}
+                    key={term.id}
                     className="px-4 py-3 rounded-lg space-y-1"
                     style={{
                       background: 'rgba(91,108,255,0.04)',
@@ -704,10 +648,10 @@ export default function MateriaPage() {
                     }}
                   >
                     <p className="text-sm font-semibold" style={{ color: '#7B8AFF' }}>
-                      {lang === 'en' ? t.termino_en : t.termino}
+                      {term.termino}
                     </p>
                     <p className="text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
-                      {lang === 'en' ? t.definicion_en : t.definicion}
+                      {term.definicion}
                     </p>
                   </div>
                 ))}
@@ -723,7 +667,7 @@ export default function MateriaPage() {
         <CelebrationBanner
           materiaNombre={materia.nombre}
           materiaNombre_en={materia.nombre_en}
-          lang={lang}
+          lang="es"
           onClose={() => setMateriaAcreditada(false)}
         />
       )}

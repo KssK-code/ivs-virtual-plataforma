@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, Upload, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { useLanguage } from '@/context/LanguageContext'
-import type { TKey } from '@/lib/translations'
 
 type DocTipo =
   | 'acta_nacimiento'
@@ -42,16 +40,15 @@ const TIPOS_SECUNDARIA: DocTipo[] = [
   'foto_perfil_doc',
 ]
 
-const TIPO_LABEL_KEY: Record<DocTipo, TKey> = {
-  acta_nacimiento:        'docs.acta_nacimiento',
-  curp:                   'docs.curp',
-  certificado_primaria:   'docs.certificado_primaria',
-  certificado_secundaria: 'docs.certificado_secundaria',
-  identificacion_oficial: 'docs.identificacion_oficial',
-  foto_perfil_doc:        'docs.foto_perfil_doc',
+const TIPO_LABEL: Record<DocTipo, string> = {
+  acta_nacimiento:        'Acta de Nacimiento',
+  curp:                   'CURP',
+  certificado_primaria:   'Certificado de Primaria',
+  certificado_secundaria: 'Certificado de Secundaria',
+  identificacion_oficial: 'Identificación Oficial',
+  foto_perfil_doc:        'Foto de Perfil',
 }
 
-// SVG icons per document type
 function DocIcon({ tipo }: { tipo: DocTipo }) {
   const color = '#7B8AFF'
   if (tipo === 'acta_nacimiento') return (
@@ -77,7 +74,6 @@ function DocIcon({ tipo }: { tipo: DocTipo }) {
       <path d="M13 10h5M13 14h3"/>
     </svg>
   )
-  // foto_perfil_doc
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -97,16 +93,15 @@ const ESTADO_ICON: Record<DocEstado, React.ReactNode> = {
   rechazado: <XCircle className="w-3.5 h-3.5" />,
 }
 
-const ESTADO_LABEL_KEY: Record<DocEstado, TKey> = {
-  pendiente: 'docs.estadoPendiente',
-  aprobado:  'docs.estadoAprobado',
-  rechazado: 'docs.estadoRechazado',
+const ESTADO_LABEL: Record<DocEstado, string> = {
+  pendiente: 'Pendiente',
+  aprobado:  'Aprobado',
+  rechazado: 'Rechazado',
 }
 
 const CARD = { background: '#181C26', border: '1px solid #2A2F3E' }
 
 export default function DocumentosPage() {
-  const { t } = useLanguage()
   const { toasts, showToast, removeToast } = useToast()
 
   const [documentos, setDocumentos] = useState<Documento[]>([])
@@ -133,13 +128,12 @@ export default function DocumentosPage() {
       form.append('tipo', tipo)
       const res = await fetch('/api/alumno/documentos', { method: 'POST', body: form })
       const data = await res.json()
-      if (!res.ok) { showToast(data.error ?? t('docs.uploadError'), 'error'); return }
-      showToast(t('docs.uploadSuccess'), 'success')
-      // Reload docs
+      if (!res.ok) { showToast(data.error ?? 'Error al subir documento', 'error'); return }
+      showToast('Documento subido correctamente', 'success')
       const fresh = await fetch('/api/alumno/documentos').then(r => r.json())
       setDocumentos(Array.isArray(fresh.documentos) ? fresh.documentos : [])
     } catch {
-      showToast(t('docs.uploadError'), 'error')
+      showToast('Error al subir documento', 'error')
     } finally {
       setUploading(null)
       const input = fileInputRefs.current[tipo]
@@ -155,20 +149,17 @@ export default function DocumentosPage() {
 
   const esSecundaria = planNombre.toLowerCase().includes('ecundaria')
   const tiposActivos = esSecundaria ? TIPOS_SECUNDARIA : TIPOS_PREPA
-
   const docMap = new Map(documentos.map(d => [d.tipo, d]))
 
   return (
     <div className="space-y-6 max-w-3xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{t('docs.title')}</h2>
-        <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>{t('docs.subtitle')}</p>
+        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Mis Documentos</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Sube y administra tus documentos escolares</p>
       </div>
 
-      {/* Grid de documentos */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {tiposActivos.map(tipo => {
           const doc = docMap.get(tipo)
@@ -176,7 +167,6 @@ export default function DocumentosPage() {
 
           return (
             <div key={tipo} className="rounded-xl p-5 flex flex-col gap-4" style={CARD}>
-              {/* Ícono + nombre */}
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -186,7 +176,7 @@ export default function DocumentosPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>
-                    {t(TIPO_LABEL_KEY[tipo])}
+                    {TIPO_LABEL[tipo]}
                   </p>
                   {doc ? (
                     <div
@@ -194,28 +184,26 @@ export default function DocumentosPage() {
                       style={ESTADO_STYLE[doc.estado]}
                     >
                       {ESTADO_ICON[doc.estado]}
-                      {t(ESTADO_LABEL_KEY[doc.estado])}
+                      {ESTADO_LABEL[doc.estado]}
                     </div>
                   ) : (
-                    <p className="text-xs mt-1" style={{ color: '#475569' }}>{t('docs.noDocuments')}</p>
+                    <p className="text-xs mt-1" style={{ color: '#475569' }}>Sin documento</p>
                   )}
                 </div>
               </div>
 
-              {/* Comentario admin si rechazado */}
               {doc?.estado === 'rechazado' && doc.comentario_admin && (
                 <div
                   className="rounded-lg px-3 py-2 text-xs"
                   style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}
                 >
-                  <span style={{ fontWeight: 600 }}>{t('docs.adminComment')}</span>{' '}
+                  <span style={{ fontWeight: 600 }}>Comentario: </span>
                   {doc.comentario_admin}
                 </div>
               )}
 
-              {/* Footer: formato + botón */}
               <div className="flex items-center justify-between gap-3 mt-auto">
-                <p className="text-xs" style={{ color: '#475569' }}>{t('docs.formats')}</p>
+                <p className="text-xs" style={{ color: '#475569' }}>JPG, PNG, PDF · máx. 5 MB</p>
                 <input
                   ref={el => { fileInputRefs.current[tipo] = el }}
                   type="file"
@@ -235,8 +223,8 @@ export default function DocumentosPage() {
                   onMouseLeave={e => { if (!isUploading) e.currentTarget.style.background = 'rgba(91,108,255,0.15)' }}
                 >
                   {isUploading
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{t('docs.uploading')}</>
-                    : <><Upload className="w-3.5 h-3.5" />{doc ? t('docs.replace') : t('docs.upload')}</>
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
+                    : <><Upload className="w-3.5 h-3.5" />{doc ? 'Reemplazar' : 'Subir'}</>
                   }
                 </button>
               </div>

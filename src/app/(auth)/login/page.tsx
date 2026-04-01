@@ -7,12 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import { ROLE_REDIRECTS, APP_NAME } from '@/lib/constants'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { EdvexLogo } from '@/components/ui/edvex-logo'
-import { LangToggle } from '@/components/ui/lang-toggle'
-import { useLanguage } from '@/context/LanguageContext'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { t }  = useLanguage()
 
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -30,13 +27,13 @@ export default function LoginPage() {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
       if (authError) {
-        setError(t('auth.errInvalidCreds'))
+        setError('Credenciales incorrectas. Verifica tu correo y contraseña.')
         return
       }
 
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setError(t('auth.errNoUser'))
+        setError('No se pudo obtener la información del usuario.')
         return
       }
 
@@ -47,14 +44,14 @@ export default function LoginPage() {
         .single()
 
       if (userError || !usuario) {
-        setError(t('auth.errNoProfile'))
+        setError('No se encontró el perfil de usuario. Contacta al administrador.')
         return
       }
 
       const redirect = ROLE_REDIRECTS[usuario.rol] ?? '/login'
       router.push(redirect)
     } catch {
-      setError(t('auth.errUnexpected'))
+      setError('Ocurrió un error inesperado. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -66,11 +63,6 @@ export default function LoginPage() {
         className="w-full rounded-2xl p-6 sm:p-8 shadow-2xl"
         style={{ background: '#181C26', border: '1px solid rgba(255,255,255,0.06)' }}
       >
-        {/* Toggle de idioma */}
-        <div className="flex justify-end mb-4">
-          <LangToggle />
-        </div>
-
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
           <div className="mb-4">
@@ -79,15 +71,15 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold tracking-tight text-center" style={{ color: '#F1F5F9' }}>
             {APP_NAME}
           </h1>
-          <p className="text-sm font-medium mt-1 text-center" style={{ color: '#1ad9ff' }}>
+          <p className="text-sm font-medium mt-1 text-center" style={{ color: '#3AAFA9' }}>
             {ESCUELA_CONFIG.nombre}
           </p>
           <p className="text-xs mt-1.5 text-center italic" style={{ color: '#64748B' }}>
-            {t('auth.tagline')}
+            Tu educación, a tu ritmo
           </p>
-          <div className="w-10 h-px mt-4" style={{ background: 'rgba(0,85,255,0.4)' }} />
+          <div className="w-10 h-px mt-4" style={{ background: 'rgba(58,175,169,0.4)' }} />
           <p className="text-sm mt-4" style={{ color: '#94A3B8' }}>
-            {t('auth.continueText')}
+            Inicia sesión para continuar
           </p>
         </div>
 
@@ -96,7 +88,7 @@ export default function LoginPage() {
           {/* Email */}
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('auth.email')}
+              Correo electrónico
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -107,7 +99,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('auth.emailPlaceholder')}
+                placeholder="correo@ejemplo.com"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
@@ -115,8 +107,8 @@ export default function LoginPage() {
                   color:      '#F1F5F9',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.border     = '1px solid rgba(0,85,255,0.6)'
-                  e.currentTarget.style.boxShadow  = '0 0 0 3px rgba(0,85,255,0.1)'
+                  e.currentTarget.style.border     = '1px solid rgba(58,175,169,0.6)'
+                  e.currentTarget.style.boxShadow  = '0 0 0 3px rgba(58,175,169,0.1)'
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.border    = '1px solid rgba(255,255,255,0.1)'
@@ -129,7 +121,7 @@ export default function LoginPage() {
           {/* Password */}
           <div className="space-y-1.5">
             <label htmlFor="password" className="block text-sm font-medium" style={{ color: '#94A3B8' }}>
-              {t('auth.password')}
+              Contraseña
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94A3B8' }} />
@@ -140,7 +132,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('auth.passwordPlaceholder')}
+                placeholder="••••••••"
                 className="w-full pl-10 pr-4 py-3 rounded-lg text-sm outline-none transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
@@ -148,8 +140,8 @@ export default function LoginPage() {
                   color:      '#F1F5F9',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.border    = '1px solid rgba(0,85,255,0.6)'
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,85,255,0.1)'
+                  e.currentTarget.style.border    = '1px solid rgba(58,175,169,0.6)'
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(58,175,169,0.1)'
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.border    = '1px solid rgba(255,255,255,0.1)'
@@ -179,17 +171,17 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#0055ff', color: '#ffffff' }}
-            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#1ad9ff' }}
-            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#0055ff' }}
+            style={{ background: '#3AAFA9', color: '#ffffff' }}
+            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#4ECDC4' }}
+            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {t('auth.signingIn')}
+                Iniciando sesión...
               </>
             ) : (
-              t('auth.signIn')
+              'Iniciar sesión'
             )}
           </button>
 
@@ -199,10 +191,10 @@ export default function LoginPage() {
               onClick={() => router.push('/forgot-password')}
               className="text-sm transition-colors"
               style={{ color: '#94A3B8' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#0055ff' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#3AAFA9' }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8' }}
             >
-              {t('auth.forgotPassword')}
+              ¿Olvidaste tu contraseña?
             </button>
           </div>
         </form>
@@ -210,10 +202,10 @@ export default function LoginPage() {
         {/* Footer del card */}
         <div className="mt-6 space-y-2 text-center">
           <p className="text-xs" style={{ color: '#475569' }}>
-            {t('auth.contactAdmin')}
+            ¿Problemas para acceder? Contacta a tu administrador.
           </p>
           <p className="text-xs" style={{ color: '#374151' }}>
-            {t('auth.platformDesc')}
+            Plataforma de educación 100% en línea
           </p>
         </div>
       </div>
@@ -227,7 +219,7 @@ export default function LoginPage() {
           href={`mailto:${ESCUELA_CONFIG.contactoEmail}`}
           className="text-xs transition-colors"
           style={{ color: '#475569' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#1ad9ff' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#3AAFA9' }}
           onMouseLeave={(e) => { e.currentTarget.style.color = '#475569' }}
         >
           {ESCUELA_CONFIG.contactoEmail}

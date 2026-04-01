@@ -5,7 +5,6 @@ import { Loader2, Eye, EyeOff, User, Lock, GraduationCap, Mail, Phone, Camera } 
 import Image from 'next/image'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { useLanguage } from '@/context/LanguageContext'
 
 interface Perfil {
   id: string
@@ -27,12 +26,10 @@ const INPUT_STYLE = {
 }
 
 export default function PerfilPage() {
-  const { t } = useLanguage()
   const { toasts, showToast, removeToast } = useToast()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Password form
   const [passForm, setPassForm] = useState({ current: '', nueva: '', confirmar: '' })
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNueva, setShowNueva] = useState(false)
@@ -40,7 +37,6 @@ export default function PerfilPage() {
   const [passLoading, setPassLoading] = useState(false)
   const [passError, setPassError] = useState<string | null>(null)
 
-  // Avatar
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarLoading, setAvatarLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -80,11 +76,11 @@ export default function PerfilPage() {
     setPassError(null)
 
     if (passForm.nueva.length < 6) {
-      setPassError(t('profile.passwordTooShort'))
+      setPassError('La contraseña debe tener al menos 6 caracteres.')
       return
     }
     if (passForm.nueva !== passForm.confirmar) {
-      setPassError(t('profile.passwordsNoMatch'))
+      setPassError('Las contraseñas no coinciden.')
       return
     }
 
@@ -97,13 +93,13 @@ export default function PerfilPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setPassError(data.error ?? t('profile.passwordError'))
+        setPassError(data.error ?? 'Error al cambiar contraseña.')
         return
       }
       setPassForm({ current: '', nueva: '', confirmar: '' })
-      showToast(t('profile.passwordUpdated'), 'success')
+      showToast('Contraseña actualizada correctamente', 'success')
     } catch {
-      setPassError(t('profile.unexpectedError'))
+      setPassError('Ocurrió un error inesperado.')
     } finally {
       setPassLoading(false)
     }
@@ -119,10 +115,9 @@ export default function PerfilPage() {
     <div className="space-y-6 max-w-2xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{t('profile.title')}</h2>
-        <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>{t('profile.subtitle')}</p>
+        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Mi Perfil</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Información de tu cuenta y datos personales</p>
       </div>
 
       {/* Card Foto de perfil */}
@@ -134,7 +129,6 @@ export default function PerfilPage() {
           <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Foto de perfil</h3>
         </div>
         <div className="p-5 flex items-center gap-5">
-          {/* Avatar preview */}
           <div className="relative flex-shrink-0">
             {avatarUrl ? (
               <Image
@@ -148,7 +142,7 @@ export default function PerfilPage() {
             ) : (
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold"
-                style={{ background: '#0055ff', color: '#fff' }}
+                style={{ background: '#3AAFA9', color: '#fff' }}
               >
                 {perfil?.nombre_completo.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() ?? '?'}
               </div>
@@ -160,7 +154,6 @@ export default function PerfilPage() {
             )}
           </div>
 
-          {/* Upload button */}
           <div className="space-y-1.5">
             <input
               ref={fileInputRef}
@@ -191,17 +184,17 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.15)' }}>
             <User className="w-4 h-4" style={{ color: '#7B8AFF' }} />
           </div>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('profile.personalInfo')}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información Personal</h3>
         </div>
         <div className="p-5 space-y-4">
           {perfil ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: t('profile.fullName'),    value: perfil.nombre_completo },
-                { label: t('profile.email'),        value: perfil.email },
-                { label: t('profile.studentId'),    value: perfil.matricula, mono: true },
-                { label: t('profile.studyPlan'),    value: perfil.plan_nombre },
-                { label: t('profile.planDuration'), value: `${perfil.duracion_meses} ${t('profile.months')}` },
+                { label: 'Nombre completo',   value: perfil.nombre_completo },
+                { label: 'Correo electrónico', value: perfil.email },
+                { label: 'Matrícula',          value: perfil.matricula, mono: true },
+                { label: 'Plan de estudios',   value: perfil.plan_nombre },
+                { label: 'Duración del plan',  value: `${perfil.duracion_meses} meses` },
               ].map(({ label, value, mono }) => (
                 <div key={label}>
                   <p className="text-xs font-medium mb-1" style={{ color: '#64748B' }}>{label}</p>
@@ -215,7 +208,7 @@ export default function PerfilPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: '#94A3B8' }}>{t('profile.noProfile')}</p>
+            <p className="text-sm" style={{ color: '#94A3B8' }}>No se encontró el perfil.</p>
           )}
         </div>
       </div>
@@ -226,14 +219,14 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.15)' }}>
             <Lock className="w-4 h-4" style={{ color: '#F59E0B' }} />
           </div>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('profile.changePassword')}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Cambiar Contraseña</h3>
         </div>
         <div className="p-5">
           <form onSubmit={handleCambiarPassword} className="space-y-4">
             {[
-              { label: t('profile.currentPassword'),    key: 'current',   show: showCurrent,   toggle: () => setShowCurrent(v => !v) },
-              { label: t('profile.newPassword'),         key: 'nueva',     show: showNueva,     toggle: () => setShowNueva(v => !v) },
-              { label: t('profile.confirmNewPassword'),  key: 'confirmar', show: showConfirmar, toggle: () => setShowConfirmar(v => !v) },
+              { label: 'Contraseña actual',       key: 'current',   show: showCurrent,   toggle: () => setShowCurrent(v => !v) },
+              { label: 'Nueva contraseña',          key: 'nueva',     show: showNueva,     toggle: () => setShowNueva(v => !v) },
+              { label: 'Confirmar nueva contraseña',key: 'confirmar', show: showConfirmar, toggle: () => setShowConfirmar(v => !v) },
             ].map(({ label, key, show, toggle }) => (
               <div key={key} className="space-y-1.5">
                 <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>{label}</label>
@@ -285,7 +278,7 @@ export default function PerfilPage() {
               onMouseEnter={e => { if (!passLoading) e.currentTarget.style.background = '#7B8AFF' }}
               onMouseLeave={e => { if (!passLoading) e.currentTarget.style.background = '#5B6CFF' }}
             >
-              {passLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('profile.changing')}</> : t('profile.changeBtn')}
+              {passLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Cambiando...</> : 'Cambiar contraseña'}
             </button>
           </form>
         </div>
@@ -297,20 +290,20 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}>
             <GraduationCap className="w-4 h-4" style={{ color: '#10B981' }} />
           </div>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{t('profile.schoolInfo')}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información de la Escuela</h3>
         </div>
         <div className="p-5 space-y-3">
           <div className="flex items-center gap-3">
             <GraduationCap className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
             <div>
-              <p className="text-xs" style={{ color: '#64748B' }}>{t('profile.institution')}</p>
+              <p className="text-xs" style={{ color: '#64748B' }}>Institución</p>
               <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>{ESCUELA_CONFIG.nombre}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Mail className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
             <div>
-              <p className="text-xs" style={{ color: '#64748B' }}>{t('profile.contact')}</p>
+              <p className="text-xs" style={{ color: '#64748B' }}>Contacto</p>
               <a
                 href={`mailto:${ESCUELA_CONFIG.contactoEmail}`}
                 className="text-sm transition-colors"
@@ -326,9 +319,9 @@ export default function PerfilPage() {
             <div className="flex items-center gap-3">
               <Phone className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
               <div>
-                <p className="text-xs" style={{ color: '#64748B' }}>{t('profile.phone')}</p>
+                <p className="text-xs" style={{ color: '#64748B' }}>Teléfono / WhatsApp</p>
                 <a
-                  href={`tel:${ESCUELA_CONFIG.contactoTelefono}`}
+                  href={`https://wa.me/${ESCUELA_CONFIG.contactoTelefono}`}
                   className="text-sm transition-colors"
                   style={{ color: '#5B6CFF' }}
                 >

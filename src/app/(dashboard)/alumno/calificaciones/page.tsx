@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react'
-import { useLanguage } from '@/context/LanguageContext'
 import FadeIn from '@/components/ui/FadeIn'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
@@ -46,6 +45,12 @@ const ICON_BG: Record<Estado, string> = {
   'Pendiente':     'rgba(245,158,11,0.15)',
 }
 
+const ESTADO_LABEL: Record<Estado, string> = {
+  'Acreditada':    'Acreditada',
+  'No acreditada': 'No acreditada',
+  'Pendiente':     'Pendiente',
+}
+
 function EstadoIcon({ estado }: { estado: Estado }) {
   if (estado === 'Acreditada')    return <CheckCircle className="w-4 h-4" style={{ color: '#10B981' }} />
   if (estado === 'No acreditada') return <XCircle    className="w-4 h-4" style={{ color: '#EF4444' }} />
@@ -53,14 +58,6 @@ function EstadoIcon({ estado }: { estado: Estado }) {
 }
 
 export default function CalificacionesPage() {
-  const { t } = useLanguage()
-
-  const estadoLabel: Record<Estado, string> = {
-    'Acreditada':    t('grades.acreditadaBadge'),
-    'No acreditada': t('grades.noAcreditadaBadge'),
-    'Pendiente':     t('grades.pending'),
-  }
-
   const [materias, setMaterias] = useState<MateriaCalif[]>([])
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [loading, setLoading] = useState(true)
@@ -106,7 +103,6 @@ export default function CalificacionesPage() {
     </div>
   )
 
-  // Agrupar materias por mes_numero
   const porMes = materias
     .slice()
     .sort((a, b) => a.mes_numero - b.mes_numero)
@@ -119,11 +115,10 @@ export default function CalificacionesPage() {
   return (
     <div className="space-y-6 max-w-4xl">
 
-      {/* SECCIÓN 1 — Header */}
       <FadeIn delay={0}>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{t('grades.title')}</h2>
-          <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>{t('grades.subtitle')}</p>
+          <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Mis Calificaciones</h2>
+          <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Estado de acreditación por materia</p>
         </div>
       </FadeIn>
 
@@ -133,7 +128,6 @@ export default function CalificacionesPage() {
         </div>
       ) : (
         <>
-          {/* SECCIÓN 2 — Stats cards */}
           {resumen && (
             <FadeIn delay={100}>
               <div className="grid grid-cols-3 gap-4">
@@ -144,7 +138,7 @@ export default function CalificacionesPage() {
                   </div>
                   <div>
                     <p ref={refAcreditadas} className="text-xl sm:text-2xl font-bold" style={{ color: '#10B981' }}>0</p>
-                    <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.acreditada')}</p>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>Acreditadas</p>
                   </div>
                 </div>
 
@@ -155,7 +149,7 @@ export default function CalificacionesPage() {
                   </div>
                   <div>
                     <p ref={refNoAcreditadas} className="text-xl sm:text-2xl font-bold" style={{ color: '#EF4444' }}>0</p>
-                    <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.noAcreditada')}</p>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>No acreditadas</p>
                   </div>
                 </div>
 
@@ -166,35 +160,31 @@ export default function CalificacionesPage() {
                   </div>
                   <div>
                     <p ref={refPendientes} className="text-xl sm:text-2xl font-bold" style={{ color: '#F59E0B' }}>0</p>
-                    <p className="text-xs" style={{ color: '#94A3B8' }}>{t('grades.pendientes')}</p>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>Pendientes</p>
                   </div>
                 </div>
               </div>
             </FadeIn>
           )}
 
-          {/* SECCIÓN 3 — Materias agrupadas por mes */}
           <FadeIn delay={200}>
             {materias.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-xl" style={CARD}>
                 <Clock className="w-10 h-10" style={{ color: '#2A2F3E' }} />
-                <p className="text-sm" style={{ color: '#94A3B8' }}>{t('grades.noData')}</p>
+                <p className="text-sm" style={{ color: '#94A3B8' }}>No hay materias disponibles aún</p>
               </div>
             ) : (
               <div className="space-y-8">
                 {Object.entries(porMes).map(([mes, items]) => (
                   <div key={mes} className="space-y-3">
-
-                    {/* Título de mes con separador */}
                     <div className="flex items-center gap-3">
                       <p className="text-xs font-semibold tracking-widest uppercase whitespace-nowrap"
                         style={{ color: '#475569' }}>
-                        {t('grades.monthCol')} {mes}
+                        Mes {mes}
                       </p>
                       <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
                     </div>
 
-                    {/* Grid de cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {items.map(m => (
                         <div
@@ -206,7 +196,6 @@ export default function CalificacionesPage() {
                             borderLeft: `3px solid ${BORDER_COLOR[m.estado]}`,
                           }}
                         >
-                          {/* Ícono de estado */}
                           <div
                             className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0"
                             style={{ background: ICON_BG[m.estado] }}
@@ -214,7 +203,6 @@ export default function CalificacionesPage() {
                             <EstadoIcon estado={m.estado} />
                           </div>
 
-                          {/* Código y nombre */}
                           <div className="flex-1 min-w-0">
                             <p className="font-mono text-xs mb-0.5" style={{ color: '#64748B' }}>{m.codigo}</p>
                             <p className="text-sm font-medium leading-snug" style={{ color: '#F1F5F9' }}>
@@ -222,12 +210,11 @@ export default function CalificacionesPage() {
                             </p>
                           </div>
 
-                          {/* Badge de estado */}
                           <span
                             className="px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 mt-1"
                             style={BADGE[m.estado]}
                           >
-                            {estadoLabel[m.estado]}
+                            {ESTADO_LABEL[m.estado]}
                           </span>
                         </div>
                       ))}

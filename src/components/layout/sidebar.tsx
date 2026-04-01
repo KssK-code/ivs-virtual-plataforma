@@ -14,43 +14,39 @@ import {
   Settings,
   X,
   User,
-  CreditCard,
   FolderOpen,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { EdvexLogo } from '@/components/ui/edvex-logo'
-import { useLanguage } from '@/context/LanguageContext'
-import type { TKey } from '@/lib/translations'
 import type { UserRole } from '@/types'
 
 interface NavItem {
-  labelKey: TKey
-  href:     string
-  icon:     React.ElementType
+  label: string
+  href:  string
+  icon:  React.ElementType
 }
 
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ADMIN: [
-    { labelKey: 'sidebar.dashboard',  href: '/admin',                icon: LayoutDashboard },
-    { labelKey: 'sidebar.students',   href: '/admin/alumnos',        icon: Users           },
-    { labelKey: 'sidebar.content',    href: '/admin/contenido',      icon: BookOpen        },
-    { labelKey: 'sidebar.reports',    href: '/admin/reportes',       icon: BarChart3       },
-    { labelKey: 'sidebar.settings',   href: '/admin/configuracion',  icon: Settings        },
+    { label: 'Dashboard',      href: '/admin',                icon: LayoutDashboard },
+    { label: 'Alumnos',        href: '/admin/alumnos',        icon: Users           },
+    { label: 'Contenido',      href: '/admin/contenido',      icon: BookOpen        },
+    { label: 'Reportes',       href: '/admin/reportes',       icon: BarChart3       },
+    { label: 'Configuración',  href: '/admin/configuracion',  icon: Settings        },
   ],
   ALUMNO: [
-    { labelKey: 'sidebar.myProgress',  href: '/alumno',               icon: LayoutDashboard },
-    { labelKey: 'sidebar.mySubjects',  href: '/alumno/materias',      icon: BookOpen        },
-    { labelKey: 'sidebar.grades',      href: '/alumno/calificaciones',icon: Award           },
-    { labelKey: 'sidebar.certificate', href: '/alumno/constancia',    icon: FileText        },
-    { labelKey: 'sidebar.payment',     href: '/alumno/pagar',         icon: CreditCard      },
-    { labelKey: 'sidebar.myDocuments', href: '/alumno/documentos',    icon: FolderOpen      },
-    { labelKey: 'sidebar.myProfile',   href: '/alumno/perfil',        icon: User            },
+    { label: 'Mi Progreso',    href: '/alumno',               icon: LayoutDashboard },
+    { label: 'Mis Materias',   href: '/alumno/materias',      icon: BookOpen        },
+    { label: 'Calificaciones', href: '/alumno/calificaciones',icon: Award           },
+    { label: 'Constancia',     href: '/alumno/constancia',    icon: FileText        },
+    { label: 'Mis Documentos', href: '/alumno/documentos',    icon: FolderOpen      },
+    { label: 'Mi Perfil',      href: '/alumno/perfil',        icon: User            },
   ],
 }
 
-const ROLE_LABEL_KEY: Record<UserRole, TKey> = {
-  ADMIN:  'sidebar.admin',
-  ALUMNO: 'sidebar.student',
+const ROLE_LABEL: Record<UserRole, string> = {
+  ADMIN:  'Administrador',
+  ALUMNO: 'Alumno',
 }
 
 interface SidebarProps {
@@ -63,11 +59,9 @@ interface SidebarProps {
 export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
   const pathname  = usePathname()
   const router    = useRouter()
-  const { t }     = useLanguage()
   const navItems  = NAV_ITEMS[role]
   const [pendientesCount, setPendientesCount] = useState(0)
 
-  // Fetch badge de alumnos pendientes solo para admins
   useEffect(() => {
     if (role !== 'ADMIN') return
     let cancelled = false
@@ -84,7 +78,7 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
     }
 
     fetchCount()
-    const interval = setInterval(fetchCount, 60_000) // refresca cada minuto
+    const interval = setInterval(fetchCount, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [role])
 
@@ -134,18 +128,18 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
               <p
                 className="text-sm font-bold leading-none"
                 style={{
-                  background:           'linear-gradient(130deg, #1ad9ff 0%, #0055ff 100%)',
+                  background:           'linear-gradient(130deg, #3AAFA9 0%, #1B3A57 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor:  'transparent',
                 }}
               >
-                EDVEX
+                IVS Virtual
               </p>
               <p
                 className="text-xs mt-0.5"
                 style={{ color: '#2a3d5a', letterSpacing: '3px', textTransform: 'uppercase' }}
               >
-                Academy
+                Instituto
               </p>
             </div>
           </div>
@@ -175,12 +169,12 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                 style={{
                   color:      active ? '#F1F5F9' : '#94A3B8',
-                  background: active ? 'rgba(0,85,255,0.2)' : 'transparent',
-                  borderLeft: active ? '3px solid #0055ff' : '3px solid transparent',
+                  background: active ? 'rgba(58,175,169,0.2)' : 'transparent',
+                  borderLeft: active ? '3px solid #3AAFA9' : '3px solid transparent',
                 }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.background = 'rgba(0,85,255,0.08)'
+                    e.currentTarget.style.background = 'rgba(58,175,169,0.08)'
                     e.currentTarget.style.color      = '#F1F5F9'
                   }
                 }}
@@ -192,7 +186,7 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
                 }}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1">{t(item.labelKey)}</span>
+                <span className="flex-1">{item.label}</span>
                 {showBadge && (
                   <span
                     className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
@@ -211,7 +205,7 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
           <div className="flex items-center gap-3 px-2 mb-3">
             <div
               className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 text-xs font-bold"
-              style={{ background: '#0055ff', color: '#fff' }}
+              style={{ background: '#3AAFA9', color: '#fff' }}
             >
               {initials}
             </div>
@@ -221,9 +215,9 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
               </p>
               <span
                 className="text-xs px-1.5 py-0.5 rounded font-medium"
-                style={{ background: 'rgba(0,85,255,0.2)', color: '#1ad9ff' }}
+                style={{ background: 'rgba(58,175,169,0.2)', color: '#3AAFA9' }}
               >
-                {t(ROLE_LABEL_KEY[role])}
+                {ROLE_LABEL[role]}
               </span>
             </div>
           </div>
@@ -242,7 +236,7 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
             }}
           >
             <LogOut className="w-4 h-4" />
-            {t('sidebar.signOut')}
+            Cerrar sesión
           </button>
         </div>
       </aside>
