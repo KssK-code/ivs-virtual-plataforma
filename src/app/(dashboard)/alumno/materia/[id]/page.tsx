@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, PlayCircle } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import VideoEmbed from '@/components/alumno/VideoEmbed'
 import ReadingProgress from '@/components/alumno/ReadingProgress'
@@ -41,7 +41,6 @@ interface Materia {
 type Tab = 'contenido' | 'examen' | 'informacion'
 
 const CARD = { background: '#181C26', border: '1px solid #2A2F3E' }
-const INPUT_BG = { background: '#0B0D11' }
 
 function renderBold(text: string) {
   const parts = text.split(/\*\*(.*?)\*\*/g)
