@@ -249,6 +249,25 @@ export default function MateriaPage() {
                         <h3 className="text-base font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
                           {loc(semana.titulo, semana.titulo_en)}
                         </h3>
+                        {/* Tiempo estimado de lectura y videos */}
+                        {(() => {
+                          const contenidoActual = loc(semana.contenido, semana.contenido_en) || ''
+                          const palabras = contenidoActual.trim() ? contenidoActual.trim().split(/\s+/).length : 0
+                          const minLectura = palabras > 0 ? Math.ceil(palabras / 200) : 0
+                          const minVideos = (semana.videos ?? []).reduce((acc, v) => {
+                            const match = v.duracion?.match(/(\d+)/)
+                            return acc + (match ? parseInt(match[1]) : 0)
+                          }, 0)
+                          const partes = []
+                          if (minLectura > 0) partes.push(`📖 ${minLectura} min ${lang === 'en' ? 'reading' : 'lectura'}`)
+                          if (minVideos > 0) partes.push(`🎬 ${minVideos} min ${lang === 'en' ? 'of videos' : 'de videos'}`)
+                          if (partes.length === 0) return null
+                          return (
+                            <p className="text-xs mt-1.5" style={{ color: '#64748B' }}>
+                              {partes.join(' · ')}
+                            </p>
+                          )
+                        })()}
                       </div>
 
                       {/* Contenido */}
