@@ -176,27 +176,6 @@ export default function ConstanciaPage() {
               </div>
             </div>
 
-            {/* Foto del alumno */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              {datos.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={datos.avatar_url}
-                  alt={datos.nombre_completo}
-                  style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563eb' }}
-                />
-              ) : (
-                <div style={{
-                  width: 80, height: 80, borderRadius: '50%',
-                  background: '#0055ff', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, fontWeight: 700, letterSpacing: '0.05em',
-                }}>
-                  {datos.nombre_completo.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()}
-                </div>
-              )}
-            </div>
-
             {/* Meta folio / fecha */}
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9, letterSpacing: '0.18em', color: '#a0aec0', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -216,17 +195,46 @@ export default function ConstanciaPage() {
 
             {/* Título */}
             <div style={{
-              fontFamily: '"Playfair Display", serif',
-              fontSize: 26, color: '#0f172a', fontWeight: 700,
               marginBottom: 22, paddingBottom: 18,
               borderBottom: '1px solid #edf0f7',
-              display: 'flex', alignItems: 'center', gap: 14,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <span style={{
-                display: 'inline-block', width: 4, height: 28, flexShrink: 0,
-                background: 'linear-gradient(180deg, #2563eb, #93c5fd)', borderRadius: 2,
-              }} />
-              {t('certificate.title')}
+              {/* Título izquierdo */}
+              <div style={{
+                fontFamily: '"Playfair Display", serif',
+                fontSize: 26, color: '#0f172a', fontWeight: 700,
+                display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                <span style={{
+                  display: 'inline-block', width: 4, height: 28, flexShrink: 0,
+                  background: 'linear-gradient(180deg, #2563eb, #93c5fd)', borderRadius: 2,
+                }} />
+                {t('certificate.title')}
+              </div>
+
+              {/* Foto del alumno */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                {datos.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={datos.avatar_url}
+                    alt={datos.nombre_completo}
+                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #2563eb' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 90, height: 90, borderRadius: '50%',
+                    background: '#0055ff', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 28, fontWeight: 700,
+                  }}>
+                    {datos.nombre_completo.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                  </div>
+                )}
+                <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', maxWidth: 110 }}>
+                  {datos.nombre_completo}
+                </span>
+              </div>
             </div>
 
             {/* Párrafo 1 */}
