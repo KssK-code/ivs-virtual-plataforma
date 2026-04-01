@@ -1,138 +1,124 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Lock, Loader2, BookOpen, TrendingUp, ChevronRight, GraduationCap, Bell } from 'lucide-react'
+import {
+  Lock, BookOpen, TrendingUp, GraduationCap,
+  Bell, Flame, CheckCircle2, ChevronRight, Star,
+} from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import BadgesGrid from '@/components/alumno/BadgesGrid'
-import StreakTracker from '@/components/alumno/StreakTracker'
-import FadeIn from '@/components/ui/FadeIn'
-import SplitTitle from '@/components/ui/SplitTitle'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useGSAP } from '@gsap/react'
 
-gsap.registerPlugin(useGSAP, ScrollTrigger)
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Perfil {
-  id: string
-  matricula: string
+  id:                  string
+  matricula:           string
   meses_desbloqueados: number
-  inscripcion_pagada: boolean
-  plan_nombre: string
-  duracion_meses: number
-  nombre_completo: string
-  email: string
+  inscripcion_pagada:  boolean
+  plan_nombre:         string
+  duracion_meses:      number
+  nombre_completo:     string
+  email:               string
+  nivel?:              string
 }
 
 interface MateriaResumen {
-  id: string
-  codigo: string
-  nombre: string
-  nombre_en: string
+  id:        string
+  codigo:    string
+  nombre:    string
   color_hex: string
 }
 
 interface Mes {
-  id: string
-  numero: number
-  titulo: string
+  id:          string
+  numero:      number
+  titulo:      string
   desbloqueado: boolean
-  materias: MateriaResumen[]
+  materias:    MateriaResumen[]
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio',
+                  'julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+function getFechaLarga() {
+  const d = new Date()
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+  return `${dias[d.getDay()]}, ${d.getDate()} de ${MESES_ES[d.getMonth()]} de ${d.getFullYear()}`
+}
+
+// ─── Circle Progress ──────────────────────────────────────────────────────────
+function CircleProgress({ pct, size = 72, stroke = 7 }: { pct: number; size?: number; stroke?: number }) {
+  const r    = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  const off  = circ - (pct / 100) * circ
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E8F4F4" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#3AAFA9" strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 1.2s ease' }} />
+    </svg>
+  )
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({
+  icon, iconBg, iconColor, label, value, sub, extra,
+}: {
+  icon:       React.ReactNode
+  iconBg:     string
+  iconColor:  string
+  label:      string
+  value:      React.ReactNode
+  sub?:       string
+  extra?:     React.ReactNode
+}) {
+  return (
+    <div className="rounded-2xl p-4 sm:p-5 flex flex-col gap-3"
+      style={{ background: '#fff', border: '1px solid #EEF2F7', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9DB0C0' }}>
+          {label}
+        </p>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: iconBg }}>
+          <span style={{ color: iconColor }}>{icon}</span>
+        </div>
+      </div>
+      <div>
+        <div className="text-2xl font-bold" style={{ color: '#1B3A57' }}>{value}</div>
+        {sub && <p className="text-xs mt-1" style={{ color: '#9DB0C0' }}>{sub}</p>}
+      </div>
+      {extra}
+    </div>
+  )
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function Skeleton({ className }: { className?: string }) {
+  return (
+    <div className={`animate-pulse rounded-xl ${className ?? ''}`}
+      style={{ background: '#EEF2F7' }} />
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AlumnoDashboard() {
-  const router = useRouter()
+  const router       = useRouter()
   const searchParams = useSearchParams()
   const { toasts, showToast, removeToast } = useToast()
-  const [perfil, setPerfil] = useState<Perfil | null>(null)
-  const [meses, setMeses] = useState<Mes[]>([])
-  const [demo, setDemo] = useState(false)
+
+  const [perfil,             setPerfil]             = useState<Perfil | null>(null)
+  const [meses,              setMeses]               = useState<Mes[]>([])
+  const [demo,               setDemo]               = useState(false)
   const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
-  const [logros, setLogros] = useState<Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>>([])
-  const [loading, setLoading] = useState(true)
-  const [matriculaDisplay, setMatriculaDisplay] = useState<string | null>(null)
-  const porcentajeRef = useRef<HTMLSpanElement>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const btnContinuarRef = useRef<HTMLButtonElement>(null)
+  const [logros,             setLogros]             = useState<Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>>([])
+  const [loading,            setLoading]            = useState(true)
 
-  const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-
-  // Scramble effect en matrícula
-  useEffect(() => {
-    if (!perfil) return
-    const target = perfil.matricula
-    const arr = target.split('').map(ch =>
-      SCRAMBLE_CHARS.includes(ch) ? SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)] : ch
-    )
-    setMatriculaDisplay(arr.join(''))
-    const interval = setInterval(() => {
-      let resolved = false
-      for (let i = 0; i < target.length; i++) {
-        if (arr[i] !== target[i]) {
-          arr[i] = target[i]
-          resolved = true
-          break
-        }
-      }
-      setMatriculaDisplay(arr.join(''))
-      if (!resolved) clearInterval(interval)
-    }, 80)
-    return () => clearInterval(interval)
-  }, [perfil]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Botón magnético: handlers
-  const handleMagneticMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const btn = btnContinuarRef.current
-    if (!btn) return
-    const rect = btn.getBoundingClientRect()
-    const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
-    const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
-    gsap.to(btn, { x: dx * 8, y: dy * 4, duration: 0.2, ease: 'power2.out' })
-  }
-  const handleMagneticLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    gsap.to(btnContinuarRef.current, { x: 0, y: 0, duration: 0.3, ease: 'power2.out' })
-    e.currentTarget.style.background = '#5B6CFF'
-  }
-
-  // Contador animado del porcentaje
-  useGSAP(() => {
-    if (!porcentajeRef.current || !perfil) return
-    const target = perfil.duracion_meses > 0
-      ? Math.round((perfil.meses_desbloqueados / perfil.duracion_meses) * 100)
-      : 0
-    const obj = { val: 0 }
-    gsap.to(obj, {
-      val: target,
-      duration: 1.5,
-      ease: 'power2.out',
-      onUpdate: () => {
-        if (porcentajeRef.current) {
-          porcentajeRef.current.textContent = Math.round(obj.val).toString()
-        }
-      },
-    })
-  }, { dependencies: [perfil] })
-
-  // ScrollTrigger: cards de meses entran al hacer scroll
-  useGSAP(() => {
-    if (!gridRef.current || meses.length === 0) return
-    const cards = gridRef.current.querySelectorAll('.mes-card')
-    gsap.from(cards, {
-      opacity: 0,
-      y: 30,
-      duration: 0.5,
-      stagger: 0.1,
-      ease: 'power2.out',
-      scrollTrigger: {
-        trigger: gridRef.current,
-        start: 'top 85%',
-      },
-    })
-  }, { dependencies: [meses], scope: gridRef })
-
+  // Toast on redirect
   useEffect(() => {
     const pago = searchParams.get('pago')
     if (pago === 'exitoso') {
@@ -144,6 +130,7 @@ export default function AlumnoDashboard() {
     }
   }, [searchParams, router, showToast])
 
+  // Fetch data
   useEffect(() => {
     Promise.all([
       fetch('/api/alumno/perfil').then(r => r.json()),
@@ -151,23 +138,21 @@ export default function AlumnoDashboard() {
       fetch('/api/alumno/calificaciones').then(r => r.json()),
     ]).then(([p, m, c]) => {
       setPerfil(p)
-      if (m && m.demo === true) {
-        setDemo(true)
-        setMeses([])
+      if (m?.demo === true) {
+        setDemo(true); setMeses([])
       } else {
-        setDemo(false)
-        setMeses(Array.isArray(m) ? m : [])
+        setDemo(false); setMeses(Array.isArray(m) ? m : [])
       }
       setMateriasAcreditadas(c?.resumen?.materias_acreditadas ?? 0)
     }).finally(() => setLoading(false))
   }, [])
 
-  // Cargar logros una vez que perfil está disponible
+  // Logros
   useEffect(() => {
     if (!perfil) return
-    const supabase = createClient()
+    const sb = createClient()
     ;(async () => {
-      const { data } = await supabase
+      const { data } = await sb
         .from('logros_alumno')
         .select('tipo, obtenido_en, metadata')
         .eq('alumno_id', perfil.id)
@@ -175,9 +160,22 @@ export default function AlumnoDashboard() {
     })()
   }, [perfil])
 
+  // ── Loading skeletons ──────────────────────────────────────────────────────
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#5B6CFF' }} />
+    <div className="space-y-6 max-w-5xl">
+      {/* Header skeleton */}
+      <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #EEF2F7' }}>
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      {/* Stats skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[0,1,2,3].map(i => <Skeleton key={i} className="h-32" />)}
+      </div>
+      {/* Grid skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[0,1,2,3,4,5].map(i => <Skeleton key={i} className="h-28" />)}
+      </div>
     </div>
   )
 
@@ -187,316 +185,290 @@ export default function AlumnoDashboard() {
     </div>
   )
 
-  const porcentaje = perfil.duracion_meses > 0
+  // ── Derived values ─────────────────────────────────────────────────────────
+  const porcentaje    = perfil.duracion_meses > 0
     ? Math.round((perfil.meses_desbloqueados / perfil.duracion_meses) * 100)
     : 0
-
-  const hora = new Date().getHours()
-  const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
-
-  const primerNombre = perfil.nombre_completo.split(' ')[0]
-  const mesActivo = perfil.meses_desbloqueados
-  const rachaLogro = logros.find(l => l.tipo === 'racha_actual')
-  const diasRacha = (rachaLogro?.metadata?.dias as number | undefined) ?? 0
+  const hora          = new Date().getHours()
+  const saludo        = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const primerNombre  = perfil.nombre_completo.split(' ')[0]
+  const mesActivo     = perfil.meses_desbloqueados
+  const rachaLogro    = logros.find(l => l.tipo === 'racha_actual')
+  const diasRacha     = (rachaLogro?.metadata?.dias as number | undefined) ?? 0
+  const logrosCount   = logros.filter(l => l.tipo !== 'racha_actual').length
+  const nivelLabel    = perfil.nivel === 'preparatoria' ? 'Preparatoria'
+                      : perfil.nivel === 'secundaria'   ? 'Secundaria'
+                      : perfil.plan_nombre?.toLowerCase().includes('prepa') ? 'Preparatoria'
+                      : 'Secundaria'
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-6 max-w-5xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
-      {/* Banner: Modo DEMO */}
+      {/* ── Banner DEMO ────────────────────────────────────────────────────── */}
       {demo && (
-        <FadeIn delay={0}>
-          <div
-            className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(58,175,169,0.14) 0%, rgba(43,122,119,0.08) 100%)',
-              border: '1px solid rgba(58,175,169,0.4)',
-            }}
-          >
-            <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
-              style={{ background: 'rgba(58,175,169,0.18)', border: '1px solid rgba(58,175,169,0.45)' }}
-            >
-              <GraduationCap className="w-5 h-5" style={{ color: '#3AAFA9' }} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-snug" style={{ color: '#4ECDC4' }}>
-                🎓 Bienvenido a IVS Virtual
-              </p>
-              <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
-                Estás en modo demo — explora la plataforma gratis
-              </p>
-            </div>
-
-            <div className="flex-shrink-0 flex flex-col items-center gap-2">
-              <a
-                href="https://wa.me/523328381405"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
-                style={{ background: '#3AAFA9', color: '#fff' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#4ECDC4' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}
-              >
-                💬 Activar mi cuenta — contacta a tu asesor →
-              </a>
-            </div>
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{ background: 'linear-gradient(135deg, rgba(58,175,169,0.1) 0%, rgba(27,58,87,0.06) 100%)', border: '1.5px solid rgba(58,175,169,0.3)' }}>
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
+            style={{ background: 'rgba(58,175,169,0.15)', border: '1px solid rgba(58,175,169,0.3)' }}>
+            <GraduationCap className="w-5 h-5" style={{ color: '#3AAFA9' }} />
           </div>
-        </FadeIn>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm" style={{ color: '#1B3A57' }}>🎓 Estás en modo demo</p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#6B8FA8' }}>
+              Explora la plataforma gratis. Para iniciar tu programa contacta a tu asesor.
+            </p>
+          </div>
+          <a href="https://wa.me/523328381405" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all"
+            style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.3)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}>
+            💬 Contactar por WhatsApp
+          </a>
+        </div>
       )}
 
-      {/* Banner: Inscripción pendiente */}
-      {!demo && perfil.inscripcion_pagada === false && (
-        <FadeIn delay={0}>
-          <div
-            className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(239,68,68,0.08) 100%)',
-              border: '1px solid rgba(245,158,11,0.35)',
-            }}
-          >
-            <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
-              style={{ background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)' }}
-            >
-              <Bell className="w-5 h-5" style={{ color: '#F59E0B' }} />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-snug" style={{ color: '#FCD34D' }}>
-                ¡Bienvenido a IVS Virtual!
-              </p>
-              <p className="text-xs mt-1 leading-relaxed" style={{ color: '#94A3B8' }}>
-                Para comenzar, contacta a tu asesor y realiza el pago de inscripción.{' '}
-                <strong style={{ color: '#CBD5E1' }}>Control Escolar te contactará por WhatsApp</strong>{' '}
-                para darte la bienvenida y solicitarte tus documentos.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-stretch sm:items-end gap-3 flex-shrink-0">
-              <a
-                href="https://wa.me/523328381405"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                style={{ background: '#F59E0B', color: '#0B0D11' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FBBF24' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F59E0B' }}
-              >
-                💬 WhatsApp 33 2838 1405
-              </a>
-            </div>
+      {/* ── Banner inscripción pendiente ───────────────────────────────────── */}
+      {!demo && !perfil.inscripcion_pagada && (
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{ background: 'rgba(245,158,11,0.07)', border: '1.5px solid rgba(245,158,11,0.3)' }}>
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
+            style={{ background: 'rgba(245,158,11,0.15)' }}>
+            <Bell className="w-5 h-5" style={{ color: '#F59E0B' }} />
           </div>
-        </FadeIn>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm" style={{ color: '#B45309' }}>Inscripción pendiente de pago</p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#92400E' }}>
+              Control Escolar te contactará por WhatsApp para darte la bienvenida y solicitarte tus documentos.
+            </p>
+          </div>
+          <a href="https://wa.me/523328381405" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0"
+            style={{ background: '#F59E0B', color: '#fff' }}>
+            💬 WhatsApp 33 2838 1405
+          </a>
+        </div>
       )}
 
-      {/* SECCIÓN 1 — Header de bienvenida */}
-      <FadeIn delay={perfil.inscripcion_pagada === false ? 100 : 0}>
-        <div className="space-y-1.5">
-          <SplitTitle
-            text={`${saludo}, ${primerNombre}`}
-            className="text-2xl sm:text-4xl font-bold"
-            style={{ color: '#F1F5F9' }}
-          />
-          <p className="text-sm font-mono" style={{ color: '#475569' }}>
-            Matrícula:{' '}
-            <span style={{ color: '#64748B', letterSpacing: '0.05em' }}>
-              {matriculaDisplay ?? perfil.matricula}
-            </span>
+      {/* ── Welcome header ────────────────────────────────────────────────── */}
+      <div className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #2B6B6B 60%, #3AAFA9 100%)', position: 'relative', overflow: 'hidden' }}>
+        {/* Decorative circle */}
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -30, right: 80, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+
+        <div className="relative z-10">
+          <p className="text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            {getFechaLarga()}
           </p>
-          <StreakTracker diasRacha={diasRacha} lang="es" />
-        </div>
-      </FadeIn>
-
-      {/* SECCIÓN 2 — 3 tarjetas de stats */}
-      <FadeIn delay={perfil.inscripcion_pagada === false ? 200 : 100}>
-        <div className="grid grid-cols-3 gap-3">
-          {/* Tarjeta 1: Progreso general */}
-          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                Avance total
-              </p>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.12)' }}>
-                <TrendingUp className="w-3.5 h-3.5" style={{ color: '#7B8AFF' }} />
-              </div>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}><span ref={porcentajeRef}>0</span><span className="text-sm font-normal ml-0.5" style={{ color: '#475569' }}>%</span></p>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${porcentaje}%`, background: 'linear-gradient(90deg, #5B6CFF, #7B8AFF)' }}
-              />
-            </div>
-          </div>
-
-          {/* Tarjeta 2: Mes en curso */}
-          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                Mes en curso
-              </p>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
-                <BookOpen className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
-              </div>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>
-              {mesActivo}
-              <span className="text-sm font-normal ml-1.5" style={{ color: '#475569' }}>
-                / {perfil.duracion_meses}
-              </span>
-            </p>
-            <p className="text-xs" style={{ color: '#475569' }}>
-              {perfil.plan_nombre}
-            </p>
-          </div>
-
-          {/* Tarjeta 3: Materias acreditadas */}
-          <div className="rounded-xl p-3 sm:p-5 space-y-3" style={{ background: '#181C26', border: '1px solid #2A2F3E' }}>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: '#64748B' }}>
-                Materias acreditadas
-              </p>
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
-                <GraduationCap className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />
-              </div>
-            </div>
-            <p className="text-xl sm:text-2xl font-bold" style={{ color: '#F1F5F9' }}>{materiasAcreditadas}</p>
-            <p className="text-xs" style={{ color: '#475569' }}>
-              materias aprobadas
-            </p>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
+            {saludo}, {primerNombre} 👋
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-xs font-mono px-2 py-1 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
+              {perfil.matricula}
+            </span>
+            <span className="text-xs font-semibold px-2 py-1 rounded-lg"
+              style={{ background: 'rgba(168,237,234,0.2)', color: '#A8EDEA' }}>
+              {nivelLabel}
+            </span>
           </div>
         </div>
-      </FadeIn>
 
-      {/* SECCIÓN 3 — Botón continuar estudiando (solo modo normal) */}
-      {!demo && (
-        <FadeIn delay={perfil.inscripcion_pagada === false ? 300 : 200}>
-          <div>
-            {mesActivo > 0 && (
-              <button
-                ref={btnContinuarRef}
-                onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm"
-                style={{ background: '#5B6CFF', color: '#fff' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#7B8AFF' }}
-                onMouseMove={handleMagneticMove}
-                onMouseLeave={handleMagneticLeave}
-              >
-                Continuar estudiando
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </FadeIn>
-      )}
+        {!demo && mesActivo > 0 && (
+          <button
+            onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
+            className="relative z-10 flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm flex-shrink-0 transition-all"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+          >
+            Continuar estudiando <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-      {/* SECCIÓN 4a — Card de materia DEMO */}
+      {/* ── Stats 4 cards ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Card 1: Progreso general */}
+        <StatCard
+          icon={<TrendingUp className="w-4 h-4" />}
+          iconBg="rgba(58,175,169,0.1)" iconColor="#3AAFA9"
+          label="Progreso general"
+          value={
+            <div className="flex items-center gap-3">
+              <CircleProgress pct={porcentaje} />
+              <span>{porcentaje}<span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>%</span></span>
+            </div>
+          }
+          sub={`${mesActivo} de ${perfil.duracion_meses} meses`}
+        />
+
+        {/* Card 2: Racha activa */}
+        <StatCard
+          icon={<Flame className="w-4 h-4" />}
+          iconBg="rgba(245,158,11,0.1)" iconColor="#F59E0B"
+          label="Racha activa"
+          value={
+            <span>{diasRacha} <span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>días</span></span>
+          }
+          sub={diasRacha > 0 ? '¡Sigue así! 🔥' : 'Comienza hoy'}
+        />
+
+        {/* Card 3: Materias */}
+        <StatCard
+          icon={<BookOpen className="w-4 h-4" />}
+          iconBg="rgba(99,102,241,0.1)" iconColor="#6366F1"
+          label="Materias"
+          value={materiasAcreditadas}
+          sub="materias acreditadas"
+          extra={
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#EEF2F7' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(100, (materiasAcreditadas / 10) * 100)}%`, background: '#6366F1' }} />
+            </div>
+          }
+        />
+
+        {/* Card 4: Logros */}
+        <StatCard
+          icon={<Star className="w-4 h-4" />}
+          iconBg="rgba(16,185,129,0.1)" iconColor="#10B981"
+          label="Logros"
+          value={
+            <span>{logrosCount} <span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>/ 8</span></span>
+          }
+          sub="badges obtenidos"
+          extra={
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#EEF2F7' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${(logrosCount / 8) * 100}%`, background: '#10B981' }} />
+            </div>
+          }
+        />
+      </div>
+
+      {/* ── Materia DEMO ──────────────────────────────────────────────────── */}
       {demo && (
-        <FadeIn delay={200}>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
-                Materia de demostración
+        <div>
+          <SectionTitle>Materia de demostración</SectionTitle>
+          <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+            style={{ background: '#fff', border: '1.5px solid rgba(58,175,169,0.25)', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
+            <div className="flex-1 min-w-0 space-y-1">
+              <p className="text-xs font-mono font-bold" style={{ color: '#3AAFA9' }}>TUT101</p>
+              <p className="text-base font-bold" style={{ color: '#1B3A57' }}>Tutoría de ingreso I</p>
+              <p className="text-sm" style={{ color: '#7A92A9' }}>
+                Familiarízate con la plataforma, tu plan de estudio y la metodología del bachillerato virtual.
               </p>
-              <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
             </div>
-            <div
-              className="rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-              style={{ background: '#181C26', border: '1px solid rgba(58,175,169,0.3)' }}
-            >
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-xs font-mono" style={{ color: '#3AAFA9' }}>TUT101</p>
-                <p className="text-base font-bold" style={{ color: '#F1F5F9' }}>
-                  Tutoría de ingreso I
-                </p>
-                <p className="text-sm" style={{ color: '#64748B' }}>
-                  Familiarízate con la plataforma, tu plan de estudio y la metodología del bachillerato virtual.
-                </p>
-              </div>
-              <Link
-                href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
-                style={{ background: 'rgba(58,175,169,0.15)', color: '#3AAFA9', border: '1px solid rgba(58,175,169,0.35)' }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(58,175,169,0.25)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = '#3AAFA9'
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(58,175,169,0.15)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(58,175,169,0.35)'
-                }}
-              >
-                Explorar materia →
-              </Link>
-            </div>
+            <Link href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
+              style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.25)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}>
+              Explorar materia →
+            </Link>
           </div>
-        </FadeIn>
+        </div>
       )}
 
-      {/* SECCIÓN 4b — Grid de meses (solo modo normal) */}
+      {/* ── Meses del programa ────────────────────────────────────────────── */}
       {!demo && (
-        <FadeIn delay={perfil.inscripcion_pagada === false ? 400 : 300}>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>
-                Meses del programa
-              </p>
-              <div className="flex-1 h-px" style={{ background: '#2A2F3E' }} />
-            </div>
-            <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {meses.map((mes) => (
+        <div>
+          <SectionTitle>Meses del programa</SectionTitle>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {meses.map(mes => {
+              const completado = mes.desbloqueado && mes.numero < mesActivo
+              const activo     = mes.desbloqueado && mes.numero === mesActivo
+              const bloqueado  = !mes.desbloqueado
+
+              return (
                 <div
                   key={mes.id}
                   onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
-                  className="mes-card rounded-xl p-4 transition-all duration-200"
+                  className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-3"
                   style={{
-                    background: '#181C26',
-                    border: mes.desbloqueado ? '1px solid rgba(91,108,255,0.35)' : '1px solid #2A2F3E',
-                    opacity: mes.desbloqueado ? 1 : 0.5,
-                    cursor: mes.desbloqueado ? 'pointer' : 'default',
+                    background:  bloqueado  ? '#F1F5F9'
+                               : completado ? '#F0FDF4'
+                               : '#fff',
+                    border:      bloqueado  ? '1.5px solid #E2E8F0'
+                               : completado ? '1.5px solid #86EFAC'
+                               : '1.5px solid #3AAFA9',
+                    opacity:     bloqueado  ? 0.7 : 1,
+                    cursor:      bloqueado  ? 'default' : 'pointer',
+                    boxShadow:   activo     ? '0 4px 20px rgba(58,175,169,0.18)' : 'none',
                   }}
                   onMouseEnter={e => {
-                    if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = 'rgba(91,108,255,0.07)'
+                    if (!bloqueado) (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
                   }}
                   onMouseLeave={e => {
-                    if (mes.desbloqueado) (e.currentTarget as HTMLElement).style.background = '#181C26'
+                    if (!bloqueado) (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                   }}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="space-y-0.5">
-                      <span
-                        className="text-3xl font-bold leading-none"
-                        style={{ color: mes.desbloqueado ? '#5B6CFF' : '#475569' }}
-                      >
-                        {mes.numero}
+                    <div>
+                      <span className="text-3xl font-bold leading-none block"
+                        style={{ color: bloqueado ? '#C0CDD8' : completado ? '#16A34A' : '#3AAFA9' }}>
+                        {mes.numero < 10 ? `0${mes.numero}` : mes.numero}
                       </span>
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: mes.desbloqueado ? '#F1F5F9' : '#64748B' }}
-                      >
+                      <p className="text-sm font-semibold mt-1"
+                        style={{ color: bloqueado ? '#9DB0C0' : completado ? '#15803D' : '#1B3A57' }}>
                         {mes.titulo || `Mes ${mes.numero}`}
                       </p>
-                      <p className="text-xs" style={{ color: '#475569' }}>
-                        {(mes.materias ?? []).length} materias
-                      </p>
                     </div>
-                    {!mes.desbloqueado && (
-                      <Lock className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: '#475569' }} />
-                    )}
+                    <div className="flex-shrink-0 mt-0.5">
+                      {bloqueado  && <Lock className="w-5 h-5" style={{ color: '#C0CDD8' }} />}
+                      {completado && <CheckCircle2 className="w-5 h-5" style={{ color: '#22C55E' }} />}
+                      {activo     && (
+                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
+                          style={{ background: 'rgba(58,175,169,0.12)', color: '#3AAFA9' }}>
+                          ▶ Activo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Materias count + progress bar */}
+                  <div>
+                    <p className="text-xs mb-1.5" style={{ color: bloqueado ? '#B0C4D4' : '#7A92A9' }}>
+                      {(mes.materias ?? []).length} materias
+                    </p>
+                    <div className="h-1.5 rounded-full overflow-hidden"
+                      style={{ background: bloqueado ? '#E2E8F0' : 'rgba(58,175,169,0.12)' }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width:      completado ? '100%' : activo ? `${Math.min(100, (materiasAcreditadas / Math.max(1, (mes.materias ?? []).length)) * 100)}%` : '0%',
+                          background: completado ? '#22C55E' : '#3AAFA9',
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              )
+            })}
           </div>
-        </FadeIn>
+        </div>
       )}
 
-      {/* SECCIÓN 5 — Logros */}
-      <FadeIn delay={perfil.inscripcion_pagada === false ? 500 : 400}>
+      {/* ── Logros / Badges ───────────────────────────────────────────────── */}
+      <div className="rounded-2xl p-5 sm:p-6"
+        style={{ background: '#fff', border: '1px solid #EEF2F7', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
         <BadgesGrid logros={logros} lang="es" />
-      </FadeIn>
+      </div>
+    </div>
+  )
+}
+
+// ─── Section title helper ─────────────────────────────────────────────────────
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <h2 className="text-sm font-bold uppercase tracking-wider flex-shrink-0" style={{ color: '#1B3A57' }}>
+        {children}
+      </h2>
+      <div className="flex-1 h-px" style={{ background: '#EEF2F7' }} />
     </div>
   )
 }

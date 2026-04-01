@@ -1,93 +1,73 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import {
-  LayoutDashboard,
-  Users,
-  BookOpen,
-  BarChart3,
-  Award,
-  FileText,
-  LogOut,
-  Settings,
-  X,
-  User,
-  FolderOpen,
+  Home, BookOpen, BarChart3, Trophy, FolderOpen,
+  ClipboardList, LogOut, X, Users, Settings, LayoutDashboard,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { EdvexLogo } from '@/components/ui/edvex-logo'
 import type { UserRole } from '@/types'
 
 interface NavItem {
   label: string
   href:  string
   icon:  React.ElementType
+  emoji?: string
 }
 
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ADMIN: [
-    { label: 'Dashboard',      href: '/admin',                icon: LayoutDashboard },
-    { label: 'Alumnos',        href: '/admin/alumnos',        icon: Users           },
-    { label: 'Contenido',      href: '/admin/contenido',      icon: BookOpen        },
-    { label: 'Reportes',       href: '/admin/reportes',       icon: BarChart3       },
-    { label: 'Configuración',  href: '/admin/configuracion',  icon: Settings        },
+    { label: 'Dashboard',     href: '/admin',               icon: LayoutDashboard },
+    { label: 'Alumnos',       href: '/admin/alumnos',       icon: Users           },
+    { label: 'Contenido',     href: '/admin/contenido',     icon: BookOpen        },
+    { label: 'Reportes',      href: '/admin/reportes',      icon: BarChart3       },
+    { label: 'Configuración', href: '/admin/configuracion', icon: Settings        },
   ],
   ALUMNO: [
-    { label: 'Mi Progreso',    href: '/alumno',               icon: LayoutDashboard },
-    { label: 'Mis Materias',   href: '/alumno/materias',      icon: BookOpen        },
-    { label: 'Calificaciones', href: '/alumno/calificaciones',icon: Award           },
-    { label: 'Constancia',     href: '/alumno/constancia',    icon: FileText        },
-    { label: 'Mis Documentos', href: '/alumno/documentos',    icon: FolderOpen      },
-    { label: 'Mi Perfil',      href: '/alumno/perfil',        icon: User            },
+    { label: 'Inicio',             href: '/alumno',                emoji: '🏠', icon: Home          },
+    { label: 'Mis Materias',       href: '/alumno/materias',       emoji: '📚', icon: BookOpen      },
+    { label: 'Mi Progreso',        href: '/alumno/calificaciones', emoji: '📊', icon: BarChart3     },
+    { label: 'Logros',             href: '/alumno/constancia',     emoji: '🏆', icon: Trophy        },
+    { label: 'Mis Documentos',     href: '/alumno/documentos',     emoji: '📄', icon: FolderOpen    },
+    { label: 'Mis Calificaciones', href: '/alumno/calificaciones', emoji: '📋', icon: ClipboardList },
   ],
-}
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:  'Administrador',
-  ALUMNO: 'Alumno',
 }
 
 interface SidebarProps {
-  role:     UserRole
-  userName: string
-  isOpen:   boolean
-  onClose:  () => void
+  role:      UserRole
+  userName:  string
+  avatarUrl?: string | null
+  nivel?:    string
+  isOpen:    boolean
+  onClose:   () => void
 }
 
-export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
-  const pathname  = usePathname()
-  const router    = useRouter()
-  const navItems  = NAV_ITEMS[role]
+export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: SidebarProps) {
+  const pathname = usePathname()
+  const router   = useRouter()
+  const navItems = NAV_ITEMS[role]
   const [pendientesCount, setPendientesCount] = useState(0)
 
   useEffect(() => {
     if (role !== 'ADMIN') return
     let cancelled = false
-
     async function fetchCount() {
       try {
         const res = await fetch('/api/admin/alumnos/pendientes-count')
         if (!res.ok || cancelled) return
         const json = await res.json()
         if (!cancelled) setPendientesCount(json.count ?? 0)
-      } catch {
-        // silencioso — el badge no es crítico
-      }
+      } catch { /* silencioso */ }
     }
-
     fetchCount()
     const interval = setInterval(fetchCount, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [role])
 
-  const initials = userName
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
+  const initials = userName.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -100,14 +80,24 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
     return pathname.startsWith(href)
   }
 
+  const nivelLabel = nivel === 'preparatoria' ? 'Preparatoria' : nivel === 'secundaria' ? 'Secundaria' : null
+
+  const isAlumno = role === 'ALUMNO'
+
+  // ─── sidebar styles based on role ───────────────────────────────────────────
+  const sidebarBg     = isAlumno ? '#1B3A57' : '#181C26'
+  const sidebarBorder = isAlumno ? 'rgba(58,175,169,0.2)' : '#2A2F3E'
+  const activeBg      = isAlumno ? '#3AAFA9' : 'rgba(58,175,169,0.2)'
+  const activeColor   = '#fff'
+  const inactiveColor = isAlumno ? 'rgba(255,255,255,0.65)' : '#94A3B8'
+  const hoverBg       = isAlumno ? 'rgba(58,175,169,0.2)' : 'rgba(58,175,169,0.08)'
+  const hoverColor    = '#fff'
+
   return (
     <>
-      {/* Overlay en móvil */}
+      {/* Mobile overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black/60 md:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={onClose} />
       )}
 
       {/* Sidebar */}
@@ -115,83 +105,72 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
         className={`fixed top-0 left-0 z-30 h-screen flex flex-col transition-transform duration-300 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{ width: '260px', background: '#181C26', borderRight: '1px solid #2A2F3E' }}
+        style={{ width: 260, background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}
       >
         {/* Logo */}
-        <div
-          className="flex items-center justify-between px-5 py-5"
-          style={{ borderBottom: '1px solid #2A2F3E' }}
-        >
+        <div className="flex items-center justify-between px-5 py-5"
+          style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
           <div className="flex items-center gap-3">
-            <EdvexLogo size={36} innerFill="#181C26" />
+            <div style={{
+              background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3,
+              border: '1px solid rgba(255,255,255,0.2)',
+            }}>
+              <Image src="/logo-ivs.jpg" alt="IVS" width={34} height={34}
+                style={{ borderRadius: 7, objectFit: 'contain', display: 'block' }} />
+            </div>
             <div>
-              <p
-                className="text-sm font-bold leading-none"
-                style={{
-                  background:           'linear-gradient(130deg, #3AAFA9 0%, #1B3A57 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor:  'transparent',
-                }}
-              >
+              <p className="text-sm font-bold leading-none" style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
                 IVS Virtual
               </p>
-              <p
-                className="text-xs mt-0.5"
-                style={{ color: '#2a3d5a', letterSpacing: '3px', textTransform: 'uppercase' }}
-              >
-                Instituto
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em' }}>
+                INSTITUTO
               </p>
             </div>
           </div>
-
-          {/* Botón cerrar (móvil) */}
-          <button
-            onClick={onClose}
-            className="md:hidden p-1 rounded-lg transition-colors"
-            style={{ color: '#94A3B8' }}
-          >
+          <button onClick={onClose} className="md:hidden p-1 rounded-lg"
+            style={{ color: 'rgba(255,255,255,0.5)' }}>
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Navegación */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
           {navItems.map((item) => {
             const Icon   = item.icon
             const active = isActive(item.href)
-            const isAlumnos = item.href === '/admin/alumnos'
-            const showBadge = isAlumnos && pendientesCount > 0
+            const showBadge = item.href === '/admin/alumnos' && pendientesCount > 0
             return (
               <Link
-                key={item.href}
+                key={`${item.href}-${item.label}`}
                 href={item.href}
                 onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
                 style={{
-                  color:      active ? '#F1F5F9' : '#94A3B8',
-                  background: active ? 'rgba(58,175,169,0.2)' : 'transparent',
-                  borderLeft: active ? '3px solid #3AAFA9' : '3px solid transparent',
+                  color:      active ? activeColor : inactiveColor,
+                  background: active ? activeBg    : 'transparent',
+                  fontWeight: active ? 600 : 500,
                 }}
-                onMouseEnter={(e) => {
+                onMouseEnter={e => {
                   if (!active) {
-                    e.currentTarget.style.background = 'rgba(58,175,169,0.08)'
-                    e.currentTarget.style.color      = '#F1F5F9'
+                    e.currentTarget.style.background = hoverBg
+                    e.currentTarget.style.color      = hoverColor
                   }
                 }}
-                onMouseLeave={(e) => {
+                onMouseLeave={e => {
                   if (!active) {
                     e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color      = '#94A3B8'
+                    e.currentTarget.style.color      = inactiveColor
                   }
                 }}
               >
-                <Icon className="w-4 h-4 flex-shrink-0" />
+                {isAlumno && item.emoji
+                  ? <span className="text-base w-4 flex-shrink-0 leading-none">{item.emoji}</span>
+                  : <Icon className="w-4 h-4 flex-shrink-0" />
+                }
                 <span className="flex-1">{item.label}</span>
                 {showBadge && (
-                  <span
-                    className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
-                    style={{ background: '#EF4444', color: '#fff' }}
-                  >
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
+                    style={{ background: '#EF4444', color: '#fff' }}>
                     {pendientesCount > 99 ? '99+' : pendientesCount}
                   </span>
                 )}
@@ -200,39 +179,50 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
           })}
         </nav>
 
-        {/* Footer usuario */}
-        <div className="px-3 py-4" style={{ borderTop: '1px solid #2A2F3E' }}>
-          <div className="flex items-center gap-3 px-2 mb-3">
-            <div
-              className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 text-xs font-bold"
-              style={{ background: '#3AAFA9', color: '#fff' }}
-            >
-              {initials}
-            </div>
+        {/* Footer: perfil + cerrar sesión */}
+        <div className="px-4 py-4" style={{ borderTop: `1px solid ${sidebarBorder}` }}>
+          {/* Avatar + info */}
+          <div className="flex items-center gap-3 mb-3 px-1">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={userName} width={38} height={38}
+                className="rounded-full object-cover flex-shrink-0"
+                style={{ border: '2px solid rgba(58,175,169,0.5)' }} />
+            ) : (
+              <div className="flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 text-xs font-bold"
+                style={{ background: 'rgba(58,175,169,0.3)', color: '#fff', border: '2px solid rgba(58,175,169,0.5)' }}>
+                {initials}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>
+              <p className="text-sm font-semibold truncate" style={{ color: '#fff' }}>
                 {userName}
               </p>
-              <span
-                className="text-xs px-1.5 py-0.5 rounded font-medium"
-                style={{ background: 'rgba(58,175,169,0.2)', color: '#3AAFA9' }}
-              >
-                {ROLE_LABEL[role]}
-              </span>
+              {nivelLabel && (
+                <span className="inline-block mt-0.5 text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{ background: 'rgba(58,175,169,0.25)', color: '#A8EDEA', fontSize: 10 }}>
+                  {nivelLabel}
+                </span>
+              )}
+              {!nivelLabel && (
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {role === 'ADMIN' ? 'Administrador' : 'Alumno'}
+                </span>
+              )}
             </div>
           </div>
 
+          {/* Sign out */}
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
-            style={{ color: '#94A3B8' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239,68,68,0.1)'
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(239,68,68,0.15)'
               e.currentTarget.style.color      = '#FCA5A5'
             }}
-            onMouseLeave={(e) => {
+            onMouseLeave={e => {
               e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.color      = '#94A3B8'
+              e.currentTarget.style.color      = 'rgba(255,255,255,0.5)'
             }}
           >
             <LogOut className="w-4 h-4" />
@@ -240,6 +230,49 @@ export function Sidebar({ role, userName, isOpen, onClose }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      {/* Mobile bottom navigation (ALUMNO only) */}
+      {isAlumno && (
+        <MobileBottomNav items={navItems} isActive={isActive} />
+      )}
     </>
+  )
+}
+
+// ─── Mobile bottom nav ────────────────────────────────────────────────────────
+function MobileBottomNav({ items, isActive }: { items: NavItem[]; isActive: (h: string) => boolean }) {
+  // Show first 5 items max
+  const visible = items.slice(0, 5)
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-30 md:hidden flex items-center justify-around px-2 pb-safe"
+      style={{
+        background: '#1B3A57',
+        borderTop:  '1px solid rgba(58,175,169,0.25)',
+        height:     60,
+        paddingBottom: 'env(safe-area-inset-bottom, 0)',
+      }}
+    >
+      {visible.map((item) => {
+        const Icon   = item.icon
+        const active = isActive(item.href)
+        return (
+          <Link
+            key={`mobile-${item.href}-${item.label}`}
+            href={item.href}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1 rounded-lg transition-all"
+            style={{ color: active ? '#3AAFA9' : 'rgba(255,255,255,0.45)' }}
+          >
+            {item.emoji
+              ? <span className="text-lg leading-none">{item.emoji}</span>
+              : <Icon className="w-5 h-5" />
+            }
+            <span className="text-[9px] font-medium truncate max-w-[48px] text-center leading-tight">
+              {item.label}
+            </span>
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
