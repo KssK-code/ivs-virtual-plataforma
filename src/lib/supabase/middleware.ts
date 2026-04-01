@@ -46,7 +46,7 @@ export async function updateSession(request: NextRequest) {
       ALUMNO: '/alumno',
     }
 
-    const destination = usuario?.rol ? (roleRedirects[usuario.rol] ?? '/login') : '/login'
+    const destination = usuario?.rol ? (roleRedirects[usuario.rol] ?? '/alumno') : '/alumno'
     const url = request.nextUrl.clone()
     url.pathname = destination
     return NextResponse.redirect(url)

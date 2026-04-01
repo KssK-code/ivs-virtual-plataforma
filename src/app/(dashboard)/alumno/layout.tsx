@@ -19,7 +19,9 @@ export default async function AlumnoLayout({
     .eq('id', user.id)
     .single()
 
-  if (!usuario || usuario.rol !== 'ALUMNO') redirect('/login')
+  // Si no hay fila en usuarios pero sí hay sesión activa, permitir paso
+  // (el usuario puede existir en auth.users sin fila en usuarios aún)
+  if (usuario && usuario.rol !== 'ALUMNO') redirect('/login')
 
   // Fetch alumno data (nivel, matrícula)
   const { data: alumno } = await supabase
@@ -31,8 +33,8 @@ export default async function AlumnoLayout({
   return (
     <DashboardLayout
       role="ALUMNO"
-      userName={usuario.nombre_completo}
-      avatarUrl={(usuario as unknown as { avatar_url?: string | null }).avatar_url ?? null}
+      userName={usuario?.nombre_completo ?? user.email ?? 'Alumno'}
+      avatarUrl={(usuario as unknown as { avatar_url?: string | null } | null)?.avatar_url ?? null}
       nivel={alumno?.nivel ?? null}
       pageTitle="header.studentPortal"
       showFooter={true}
