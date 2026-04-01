@@ -191,7 +191,7 @@ export default function AlumnoDashboard() {
     : 0
   const hora          = new Date().getHours()
   const saludo        = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
-  const primerNombre  = perfil.nombre_completo.split(' ')[0]
+  const primerNombre  = perfil?.nombre_completo?.split(' ')?.[0] ?? 'Alumno'
   const mesActivo     = perfil.meses_desbloqueados
   const rachaLogro    = logros.find(l => l.tipo === 'racha_actual')
   const diasRacha     = (rachaLogro?.metadata?.dias as number | undefined) ?? 0

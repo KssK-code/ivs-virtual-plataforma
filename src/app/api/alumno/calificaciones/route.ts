@@ -7,28 +7,67 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Obtener alumno con plan
-    const { data: alumnoData } = await supabase
+    // ── Resolver alumno_id y duracion (schema antiguo o nuevo) ────────────────
+    let alumnoId:        string | null = null
+    let mesesDesbloqueados             = 0
+    let duracionMeses                  = 0
+
+    // Intento 1: schema antiguo (alumnos.usuario_id)
+    const { data: a1 } = await supabase
       .from('alumnos')
       .select('id, meses_desbloqueados, planes_estudio(duracion_meses)')
       .eq('usuario_id', user.id)
       .single()
 
-    if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
-
-    const alumno = alumnoData as unknown as {
-      id: string
-      meses_desbloqueados: number
-      planes_estudio: { duracion_meses: number } | null
+    if (a1) {
+      const row = a1 as unknown as {
+        id: string
+        meses_desbloqueados: number
+        planes_estudio: { duracion_meses: number } | null
+      }
+      alumnoId           = row.id
+      mesesDesbloqueados = row.meses_desbloqueados ?? 0
+      duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
     }
 
-    const duracionMeses = alumno.planes_estudio?.duracion_meses ?? 0
+    // Intento 2: schema nuevo (alumnos.id = user.id)
+    if (!alumnoId) {
+      const { data: a2 } = await supabase
+        .from('alumnos')
+        .select('id, meses_desbloqueados, modalidad')
+        .eq('id', user.id)
+        .single()
 
-    // Obtener calificaciones registradas
+      if (a2) {
+        const row = a2 as unknown as {
+          id: string
+          meses_desbloqueados: number
+          modalidad?: string
+        }
+        alumnoId           = row.id
+        mesesDesbloqueados = row.meses_desbloqueados ?? 0
+        duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
+      }
+    }
+
+    // Sin alumno → respuesta vacía (no 404)
+    if (!alumnoId) {
+      return NextResponse.json({
+        materias: [],
+        resumen: {
+          total_materias_plan:    0,
+          materias_acreditadas:   0,
+          materias_no_acreditadas: 0,
+          materias_pendientes:    0,
+        },
+      })
+    }
+
+    // ── Calificaciones registradas ────────────────────────────────────────────
     const { data: califs } = await supabase
       .from('calificaciones')
       .select('materia_id, aprobada')
-      .eq('alumno_id', alumno.id)
+      .eq('alumno_id', alumnoId)
 
     const califMap = new Map<string, boolean>()
     for (const c of (califs ?? [])) {
@@ -36,62 +75,60 @@ export async function GET() {
       califMap.set(row.materia_id, row.aprobada)
     }
 
-    // Obtener todas las materias de los meses del plan
+    // ── Materias del plan ─────────────────────────────────────────────────────
     const { data: meses } = await supabase
       .from('meses_contenido')
       .select('numero, materias(id, codigo, nombre)')
       .order('numero')
       .lte('numero', duracionMeses)
 
-    type MesRow = {
-      numero: number
-      materias: { id: string; codigo: string; nombre: string }[]
-    }
+    type MesRow = { numero: number; materias: { id: string; codigo: string; nombre: string }[] }
 
     const resultado: {
-      materia_id: string
-      codigo: string
+      materia_id:     string
+      codigo:         string
       nombre_materia: string
-      mes_numero: number
-      estado: 'Acreditada' | 'No acreditada' | 'Pendiente'
+      mes_numero:     number
+      estado:         'Acreditada' | 'No acreditada' | 'Pendiente'
     }[] = []
 
     for (const mes of ((meses ?? []) as unknown as MesRow[])) {
       for (const mat of (mes.materias ?? [])) {
         if (califMap.has(mat.id)) {
           resultado.push({
-            materia_id: mat.id,
-            codigo: mat.codigo,
+            materia_id:     mat.id,
+            codigo:         mat.codigo,
             nombre_materia: mat.nombre,
-            mes_numero: mes.numero,
-            estado: califMap.get(mat.id) ? 'Acreditada' : 'No acreditada',
+            mes_numero:     mes.numero,
+            estado:         califMap.get(mat.id) ? 'Acreditada' : 'No acreditada',
           })
-        } else if (mes.numero <= alumno.meses_desbloqueados) {
+        } else if (mes.numero <= mesesDesbloqueados) {
           resultado.push({
-            materia_id: mat.id,
-            codigo: mat.codigo,
+            materia_id:     mat.id,
+            codigo:         mat.codigo,
             nombre_materia: mat.nombre,
-            mes_numero: mes.numero,
-            estado: 'Pendiente',
+            mes_numero:     mes.numero,
+            estado:         'Pendiente',
           })
         }
       }
     }
 
-    const acreditadas = resultado.filter(r => r.estado === 'Acreditada').length
-    const noAcreditadas = resultado.filter(r => r.estado === 'No acreditada').length
-    const pendientes = resultado.filter(r => r.estado === 'Pendiente').length
+    const acreditadas    = resultado.filter(r => r.estado === 'Acreditada').length
+    const noAcreditadas  = resultado.filter(r => r.estado === 'No acreditada').length
+    const pendientes     = resultado.filter(r => r.estado === 'Pendiente').length
 
     return NextResponse.json({
       materias: resultado,
       resumen: {
-        total_materias_plan: resultado.length,
-        materias_acreditadas: acreditadas,
+        total_materias_plan:     resultado.length,
+        materias_acreditadas:    acreditadas,
         materias_no_acreditadas: noAcreditadas,
-        materias_pendientes: pendientes,
+        materias_pendientes:     pendientes,
       },
     })
-  } catch {
+  } catch (err) {
+    console.error('[api/alumno/calificaciones] error:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
