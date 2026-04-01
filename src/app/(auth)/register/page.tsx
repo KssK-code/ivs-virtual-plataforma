@@ -4,34 +4,181 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, Loader2, Eye, EyeOff, Phone, User } from 'lucide-react'
+import { Mail, Lock, Loader2, Eye, EyeOff, Phone, User, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const WA_URL = 'https://wa.me/523328381405'
 
-const inputBase: React.CSSProperties = {
-  background: '#fff', border: '1.5px solid #E2EAF0', color: '#1B3A57',
-  borderRadius: 10, fontSize: 14, width: '100%',
-  padding: '10px 12px 10px 40px', outline: 'none',
-  transition: 'border .15s, box-shadow .15s',
-}
-const inputNoIcon: React.CSSProperties = { ...inputBase, paddingLeft: 12 }
+const BENEFITS = [
+  'Certificado oficial con validez SEP',
+  'Estudia desde casa, a tu ritmo',
+  'Convenio IMSS y Ferrocarrileros',
+  'Secundaria y Preparatoria',
+]
 
-function focusIn(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.border    = '1.5px solid #3AAFA9'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(58,175,169,0.12)'
+// ─── Input helpers ─────────────────────────────────────────────────────────────
+function onFocus(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+  e.currentTarget.style.borderColor = '#3AAFA9'
+  e.currentTarget.style.boxShadow   = '0 0 0 3px rgba(58,175,169,0.12)'
 }
-function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
-  e.currentTarget.style.border    = '1.5px solid #E2EAF0'
-  e.currentTarget.style.boxShadow = 'none'
+function onBlur(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+  e.currentTarget.style.borderColor = '#E2E8F0'
+  e.currentTarget.style.boxShadow   = 'none'
 }
 
-const Label = ({ text, required }: { text: string; required?: boolean }) => (
-  <label className="block text-xs mb-1.5" style={{ color: '#4A6785', fontWeight: 600 }}>
-    {text}{required && <span style={{ color: '#EF4444' }}> *</span>}
-  </label>
-)
+const inputStyle: React.CSSProperties = {
+  width: '100%', border: '1.5px solid #E2E8F0', borderRadius: 10,
+  padding: '11px 14px 11px 38px', fontSize: 14, color: '#1B3A57',
+  outline: 'none', transition: 'border-color .2s, box-shadow .2s',
+  background: '#FAFCFF',
+}
+const inputNoIcon: React.CSSProperties = { ...inputStyle, paddingLeft: 14 }
+const selectStyle: React.CSSProperties = {
+  ...inputNoIcon,
+  appearance: 'none', cursor: 'pointer',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23B0C4D4' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
+}
 
+// ─── Sub-components ─────────────────────────────────────────────────────────────
+function Label({ text, required: req }: { text: string; required?: boolean }) {
+  return (
+    <label className="block text-sm font-semibold mb-1.5" style={{ color: '#1B3A57' }}>
+      {text}{req && <span style={{ color: '#EF4444' }}> *</span>}
+    </label>
+  )
+}
+
+function SectionHeader({ step, label }: { step: number; label: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold"
+        style={{ background: '#3AAFA9', color: '#fff', flexShrink: 0 }}>
+        {step}
+      </div>
+      <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: '#1B3A57', letterSpacing: '0.07em' }}>
+        {label}
+      </h3>
+      <div className="flex-1 h-px" style={{ background: '#EEF2F7' }} />
+    </div>
+  )
+}
+
+function WaSvg({ size = 16 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.538 5.943L0 24l6.232-1.503A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.36-.214-3.7.893.935-3.58-.235-.372A9.818 9.818 0 1112 21.818z"/>
+    </svg>
+  )
+}
+
+// ─── Progress steps ─────────────────────────────────────────────────────────────
+function ProgressBar({ current }: { current: 1 | 2 | 3 }) {
+  const steps = [
+    { n: 1, label: 'Datos personales' },
+    { n: 2, label: 'Acceso' },
+    { n: 3, label: 'Plan de estudios' },
+  ]
+  return (
+    <div className="flex items-center justify-between mb-8">
+      {steps.map((s, i) => {
+        const done    = s.n < current
+        const active  = s.n === current
+        return (
+          <div key={s.n} className="flex items-center" style={{ flex: i < steps.length - 1 ? 1 : undefined }}>
+            <div className="flex flex-col items-center" style={{ minWidth: 0 }}>
+              <div
+                className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all"
+                style={{
+                  background: done ? '#3AAFA9' : active ? '#3AAFA9' : '#EEF2F7',
+                  color:      done || active ? '#fff' : '#B0C4D4',
+                  boxShadow:  active ? '0 0 0 4px rgba(58,175,169,0.18)' : 'none',
+                }}
+              >
+                {done ? <CheckCircle2 className="w-4 h-4" /> : s.n}
+              </div>
+              <span
+                className="mt-1.5 text-xs font-medium text-center leading-tight hidden sm:block"
+                style={{ color: active ? '#1B3A57' : done ? '#3AAFA9' : '#B0C4D4', maxWidth: 72 }}
+              >
+                {s.label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className="flex-1 h-0.5 mx-2 mb-4"
+                style={{ background: s.n < current ? '#3AAFA9' : '#EEF2F7', transition: 'background .3s' }}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Left decorative panel ─────────────────────────────────────────────────────
+function LeftPanel() {
+  return (
+    <div
+      className="hidden md:flex flex-col justify-between px-10 py-12"
+      style={{
+        width: '38%',
+        minHeight: '100vh',
+        background: 'linear-gradient(160deg, #1B3A57 0%, #2B6B6B 55%, #3AAFA9 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ position: 'absolute', top: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+      <div style={{ position: 'absolute', bottom: -60, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+
+      <div className="relative z-10">
+        <div style={{
+          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
+          borderRadius: 16, padding: 4, display: 'inline-block',
+          border: '1px solid rgba(255,255,255,0.25)',
+        }}>
+          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={68} height={68}
+            style={{ borderRadius: 12, objectFit: 'contain', display: 'block' }} />
+        </div>
+        <p className="mt-4 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
+          IVS INSTITUTO VIRTUAL SUPERIOR
+        </p>
+      </div>
+
+      <div className="relative z-10">
+        <h2 className="text-3xl font-bold leading-tight mb-3" style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
+          Comienza hoy<br />
+          <span style={{ color: '#A8EDEA' }}>tu certificado oficial</span>
+        </h2>
+        <p className="text-sm mb-8" style={{ color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>
+          Únete a miles de alumnos que ya obtuvieron su certificado con validez SEP.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {BENEFITS.map(b => (
+            <div key={b} className="flex items-center gap-3">
+              <CheckCircle2 className="shrink-0 w-5 h-5" style={{ color: '#A8EDEA' }} />
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.9)' }}>{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-10">
+        <div style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12, padding: '12px 16px' }}>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>INCORPORADO A</p>
+          <p className="text-sm font-bold" style={{ color: '#fff' }}>Sistema Educativo Nacional · CCT 09GBD0002D</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
 export default function RegisterPage() {
   const router = useRouter()
 
@@ -51,18 +198,17 @@ export default function RegisterPage() {
   const [error,           setError]           = useState<string | null>(null)
   const [loading,         setLoading]         = useState(false)
 
+  // Derive current progress step
+  const filledStep1 = !!(nombre && apellidoPat && apellidoMat && telefono)
+  const filledStep2 = !!(email && password && confirmPassword)
+  const currentStep: 1 | 2 | 3 = filledStep1 && filledStep2 ? 3 : filledStep1 ? 2 : 1
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.')
-      return
-    }
+    if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres.'); return }
+    if (password !== confirmPassword) { setError('Las contraseñas no coinciden.'); return }
     if (!nivel) { setError('Selecciona tu nivel educativo.'); return }
     if (!modalidad) { setError('Selecciona la modalidad.'); return }
     if (sindicalizado && !sindicato) { setError('Selecciona tu sindicato.'); return }
@@ -76,9 +222,9 @@ export default function RegisterPage() {
         password,
         options: {
           data: {
-            nombre: nombre.trim(),
+            nombre:    nombre.trim(),
             apellidos: `${apellidoPat.trim()} ${apellidoMat.trim()}`.trim(),
-            rol: 'alumno',
+            rol:       'alumno',
           },
         },
       })
@@ -93,16 +239,16 @@ export default function RegisterPage() {
       }
 
       const res = await fetch('/api/auth/register-complete', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre:         nombre.trim(),
-          apellidos:      `${apellidoPat.trim()} ${apellidoMat.trim()}`.trim(),
-          telefono:       telefono.trim(),
+        body:    JSON.stringify({
+          nombre:           nombre.trim(),
+          apellidos:        `${apellidoPat.trim()} ${apellidoMat.trim()}`.trim(),
+          telefono:         telefono.trim(),
           nivel,
           modalidad,
           es_sindicalizado: sindicalizado,
-          sindicato:      sindicalizado ? sindicato : null,
+          sindicato:        sindicalizado ? sindicato : null,
         }),
       })
       const data = await res.json()
@@ -120,212 +266,272 @@ export default function RegisterPage() {
     }
   }
 
-  const selectStyle: React.CSSProperties = {
-    ...inputNoIcon, appearance: 'none', cursor: 'pointer',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239DB0C0' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center',
-  }
-
   return (
-    <div className="w-full max-w-lg flex flex-col items-center gap-5">
-      <div className="w-full rounded-2xl p-6 sm:p-8"
-        style={{ background: '#fff', boxShadow: '0 8px 40px rgba(27,58,87,0.12)', border: '1px solid #E8F0F6' }}>
+    <div className="flex min-h-screen">
+      <LeftPanel />
 
-        {/* Header */}
-        <div className="flex flex-col items-center mb-6">
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={56} height={56}
-            style={{ borderRadius: 10, objectFit: 'contain', marginBottom: 12 }} />
-          <h1 className="text-xl font-bold text-center" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
-            Crear mi cuenta gratis
-          </h1>
-          <p className="text-sm mt-1 text-center" style={{ color: '#6B8FA8' }}>
-            IVS Instituto Virtual Superior
+      {/* Right: form */}
+      <div
+        className="flex flex-col items-center flex-1 px-5 py-10 overflow-y-auto"
+        style={{ background: '#fff' }}
+      >
+        {/* Mobile-only logo */}
+        <div className="flex flex-col items-center mb-6 md:hidden">
+          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={60} height={60}
+            style={{ borderRadius: 12, objectFit: 'contain', border: '1px solid #E2E8F0' }} />
+          <p className="mt-2 text-xs font-semibold" style={{ color: '#6B8FA8', letterSpacing: '0.05em' }}>
+            IVS INSTITUTO VIRTUAL SUPERIOR
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Card */}
+        <div
+          className="w-full"
+          style={{
+            maxWidth: 560,
+            background: '#fff',
+            borderRadius: 20,
+            border: '1px solid #EEF2F7',
+            boxShadow: '0 4px 32px rgba(27,58,87,0.08)',
+            padding: '36px 32px 32px',
+          }}
+        >
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
+              Crear mi cuenta gratis
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: '#7A92A9' }}>
+              Completa el formulario y comienza hoy
+            </p>
+          </div>
 
-          {/* Nombre + Apellidos en grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Progress */}
+          <ProgressBar current={currentStep} />
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* ─── Sección 1: Datos personales ─────────────────────────── */}
             <div>
-              <Label text="Nombre(s)" required />
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-                <input type="text" required value={nombre} onChange={e => setNombre(e.target.value)}
-                  placeholder="María" style={inputBase} onFocus={focusIn} onBlur={focusOut} />
+              <SectionHeader step={1} label="Datos personales" />
+
+              {/* Nombre completo: 3 cols en desktop */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                <div>
+                  <Label text="Nombre(s)" required />
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                    <input type="text" required value={nombre} onChange={e => setNombre(e.target.value)}
+                      placeholder="María" style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                  </div>
+                </div>
+                <div>
+                  <Label text="Apellido Paterno" required />
+                  <input type="text" required value={apellidoPat} onChange={e => setApellidoPat(e.target.value)}
+                    placeholder="García" style={inputNoIcon} onFocus={onFocus} onBlur={onBlur} />
+                </div>
+                <div>
+                  <Label text="Apellido Materno" />
+                  <input type="text" value={apellidoMat} onChange={e => setApellidoMat(e.target.value)}
+                    placeholder="López" style={inputNoIcon} onFocus={onFocus} onBlur={onBlur} />
+                </div>
+              </div>
+
+              {/* Teléfono */}
+              <div>
+                <Label text="Teléfono / WhatsApp" required />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                  <input type="tel" required value={telefono}
+                    onChange={e => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10 dígitos" style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                </div>
               </div>
             </div>
-            <div>
-              <Label text="Apellido Paterno" required />
-              <input type="text" required value={apellidoPat} onChange={e => setApellidoPat(e.target.value)}
-                placeholder="García" style={inputNoIcon} onFocus={focusIn} onBlur={focusOut} />
-            </div>
-            <div>
-              <Label text="Apellido Materno" required />
-              <input type="text" required value={apellidoMat} onChange={e => setApellidoMat(e.target.value)}
-                placeholder="López" style={inputNoIcon} onFocus={focusIn} onBlur={focusOut} />
-            </div>
-          </div>
 
-          {/* Email */}
-          <div>
-            <Label text="Correo electrónico" required />
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-              <input type="email" required autoComplete="email" value={email}
-                onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com"
-                style={inputBase} onFocus={focusIn} onBlur={focusOut} />
-            </div>
-          </div>
-
-          {/* Teléfono */}
-          <div>
-            <Label text="Teléfono / WhatsApp" required />
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-              <input type="tel" required value={telefono}
-                onChange={e => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                placeholder="10 dígitos"
-                style={inputBase} onFocus={focusIn} onBlur={focusOut} />
-            </div>
-          </div>
-
-          {/* Contraseñas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* ─── Sección 2: Acceso ────────────────────────────────────── */}
             <div>
-              <Label text="Contraseña" required />
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-                <input type={showPass ? 'text' : 'password'} required autoComplete="new-password"
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="Mín. 8 caracteres"
-                  style={{ ...inputBase, paddingRight: 38 }} onFocus={focusIn} onBlur={focusOut} />
-                <button type="button" tabIndex={-1} onClick={() => setShowPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#9DB0C0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <SectionHeader step={2} label="Acceso" />
+
+              {/* Email */}
+              <div className="mb-3">
+                <Label text="Correo electrónico" required />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                  <input type="email" required autoComplete="email" value={email}
+                    onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com"
+                    style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+                </div>
+              </div>
+
+              {/* Contraseñas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label text="Contraseña" required />
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                    <input type={showPass ? 'text' : 'password'} required autoComplete="new-password"
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      placeholder="Mín. 8 caracteres"
+                      style={{ ...inputStyle, paddingRight: 38 }} onFocus={onFocus} onBlur={onBlur} />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0C4D4', padding: 2 }}>
+                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <Label text="Confirmar contraseña" required />
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                    <input type={showConfirm ? 'text' : 'password'} required autoComplete="new-password"
+                      value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Repite tu contraseña"
+                      style={{ ...inputStyle, paddingRight: 38 }} onFocus={onFocus} onBlur={onBlur} />
+                    <button type="button" tabIndex={-1} onClick={() => setShowConfirm(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B0C4D4', padding: 2 }}>
+                      {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* ─── Sección 3: Plan de estudios ─────────────────────────── */}
             <div>
-              <Label text="Confirmar contraseña" required />
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-                <input type={showConfirm ? 'text' : 'password'} required autoComplete="new-password"
-                  value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repite tu contraseña"
-                  style={{ ...inputBase, paddingRight: 38 }} onFocus={focusIn} onBlur={focusOut} />
-                <button type="button" tabIndex={-1} onClick={() => setShowConfirm(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#9DB0C0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <SectionHeader step={3} label="Plan de estudios" />
+
+              {/* Nivel + Modalidad */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <Label text="Nivel educativo" required />
+                  <select value={nivel} onChange={e => setNivel(e.target.value)} required
+                    style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+                    <option value="">Selecciona…</option>
+                    <option value="secundaria">Secundaria</option>
+                    <option value="preparatoria">Preparatoria</option>
+                  </select>
+                </div>
+                <div>
+                  <Label text="Modalidad" required />
+                  <select value={modalidad} onChange={e => setModalidad(e.target.value)} required
+                    style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+                    <option value="">Selecciona…</option>
+                    <option value="6_meses">6 meses — Estándar</option>
+                    <option value="3_meses">3 meses — Express</option>
+                  </select>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Nivel + Modalidad */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label text="Nivel educativo" required />
-              <select value={nivel} onChange={e => setNivel(e.target.value)} required
-                style={selectStyle} onFocus={focusIn} onBlur={focusOut}>
-                <option value="">Selecciona…</option>
-                <option value="secundaria">Secundaria</option>
-                <option value="preparatoria">Preparatoria</option>
-              </select>
-            </div>
-            <div>
-              <Label text="Modalidad" required />
-              <select value={modalidad} onChange={e => setModalidad(e.target.value)} required
-                style={selectStyle} onFocus={focusIn} onBlur={focusOut}>
-                <option value="">Selecciona…</option>
-                <option value="6_meses">6 meses (Estándar)</option>
-                <option value="3_meses">3 meses (Express)</option>
-              </select>
-            </div>
-          </div>
+              {/* Sindicalizado */}
+              <div
+                className="flex items-start gap-3 rounded-xl p-3.5 cursor-pointer"
+                style={{ background: 'rgba(58,175,169,0.05)', border: '1.5px solid rgba(58,175,169,0.18)' }}
+                onClick={() => { setSindicalizado(v => !v); if (sindicalizado) setSindicato('') }}
+              >
+                <div className="mt-0.5 flex items-center justify-center w-4 h-4 rounded shrink-0"
+                  style={{
+                    background: sindicalizado ? '#3AAFA9' : '#fff',
+                    border: `2px solid ${sindicalizado ? '#3AAFA9' : '#C8D8E4'}`,
+                    transition: 'all .15s',
+                  }}>
+                  {sindicalizado && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1" onClick={e => e.stopPropagation()}>
+                  <label
+                    className="text-sm font-semibold cursor-pointer select-none"
+                    style={{ color: '#1B3A57' }}
+                    onClick={() => { setSindicalizado(v => !v); if (sindicalizado) setSindicato('') }}
+                  >
+                    Soy trabajador sindicalizado 🤝
+                  </label>
+                  <p className="text-xs mt-0.5" style={{ color: '#6B8FA8' }}>
+                    IMSS o Ferrocarrileros — aplica precio preferencial
+                  </p>
+                </div>
+              </div>
 
-          {/* Sindicalizado */}
-          <div className="flex items-start gap-3 rounded-xl p-3"
-            style={{ background: 'rgba(58,175,169,0.05)', border: '1px solid rgba(58,175,169,0.2)' }}>
-            <input type="checkbox" id="sindicalizado" checked={sindicalizado}
-              onChange={e => { setSindicalizado(e.target.checked); if (!e.target.checked) setSindicato('') }}
-              className="mt-0.5 cursor-pointer"
-              style={{ width: 16, height: 16, accentColor: '#3AAFA9' }} />
-            <div className="flex-1">
-              <label htmlFor="sindicalizado" className="text-sm font-semibold cursor-pointer"
-                style={{ color: '#1B3A57' }}>
-                Soy trabajador sindicalizado 🤝
-              </label>
-              <p className="text-xs mt-0.5" style={{ color: '#6B8FA8' }}>
-                IMSS o Ferrocarrileros — aplica precio preferencial
-              </p>
+              {sindicalizado && (
+                <div className="mt-3">
+                  <Label text="¿Cuál sindicato?" required />
+                  <select value={sindicato} onChange={e => setSindicato(e.target.value)} required
+                    style={selectStyle} onFocus={onFocus} onBlur={onBlur}>
+                    <option value="">Selecciona tu sindicato…</option>
+                    <option value="IMSS">IMSS</option>
+                    <option value="Ferrocarrileros">Ferrocarrileros</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+              )}
             </div>
-          </div>
 
-          {sindicalizado && (
-            <div>
-              <Label text="¿Cuál sindicato?" required />
-              <select value={sindicato} onChange={e => setSindicato(e.target.value)} required
-                style={selectStyle} onFocus={focusIn} onBlur={focusOut}>
-                <option value="">Selecciona tu sindicato…</option>
-                <option value="IMSS">IMSS</option>
-                <option value="Ferrocarrileros">Ferrocarrileros</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          )}
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm"
+                style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', color: '#DC2626' }}>
+                <span className="mt-px">⚠</span>
+                <span>{error}</span>
+              </div>
+            )}
 
-          {/* Error */}
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm"
-              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626' }}>
-              <span>⚠</span><span>{error}</span>
-            </div>
-          )}
+            {/* Submit */}
+            <button
+              type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 font-bold text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: '#3AAFA9', borderRadius: 12, height: 52, fontSize: 15,
+                boxShadow: '0 4px 18px rgba(58,175,169,0.38)',
+                border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#2B7A77' }}
+              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
+            >
+              {loading
+                ? <><Loader2 className="w-5 h-5 animate-spin" />Creando cuenta...</>
+                : 'Crear mi cuenta gratis →'}
+            </button>
 
-          {/* Submit */}
-          <button type="submit" disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-2"
-            style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.3)' }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#2B7A77' }}
-            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
+            {/* Legal */}
+            <p className="text-xs text-center leading-relaxed" style={{ color: '#B0C4D4' }}>
+              Al registrarte aceptas que IVS Instituto Virtual Superior tratará tus datos
+              conforme a su política de privacidad.
+            </p>
+
+            {/* Login link */}
+            <p className="text-center text-sm" style={{ color: '#7A92A9' }}>
+              ¿Ya tienes cuenta?{' '}
+              <Link href="/login" className="font-semibold transition-colors" style={{ color: '#3AAFA9' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#1B3A57' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#3AAFA9' }}>
+                Inicia sesión
+              </Link>
+            </p>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <a
+            href={WA_URL} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm transition-colors"
+            style={{ color: '#7A92A9', textDecoration: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#16A34A' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#7A92A9' }}
           >
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Creando cuenta...</>
-              : 'Crear mi cuenta gratis →'}
-          </button>
-
-          {/* Legal */}
-          <p className="text-xs text-center leading-relaxed" style={{ color: '#9DB0C0' }}>
-            Al registrarte aceptas que IVS Instituto Virtual Superior tratará tus datos
-            conforme a su política de privacidad.
+            <span style={{ color: '#22C55E' }}><WaSvg size={16} /></span>
+            ¿Necesitas ayuda? WhatsApp
+          </a>
+          <p className="text-xs" style={{ color: '#C8D8E4' }}>
+            © {new Date().getFullYear()} IVS Instituto Virtual Superior
           </p>
-
-          {/* Login link */}
-          <p className="text-center text-sm" style={{ color: '#6B8FA8' }}>
-            ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="font-semibold transition-colors" style={{ color: '#3AAFA9' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#1B3A57' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#3AAFA9' }}>
-              Inicia sesión
-            </Link>
-          </p>
-        </form>
+        </div>
       </div>
-
-      {/* WhatsApp */}
-      <a href={WA_URL} target="_blank" rel="noopener noreferrer"
-        className="flex items-center gap-2 text-sm transition-colors" style={{ color: '#6B8FA8' }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#16a34a' }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#6B8FA8' }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.538 5.943L0 24l6.232-1.503A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.36-.214-3.7.893.935-3.58-.235-.372A9.818 9.818 0 1112 21.818z"/>
-        </svg>
-        ¿Necesitas ayuda? WhatsApp
-      </a>
     </div>
   )
 }
