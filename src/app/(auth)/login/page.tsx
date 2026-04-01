@@ -141,16 +141,33 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-      if (authError) { setError('Correo o contraseña incorrectos. Verifica tus datos.'); return }
+      if (authError) {
+        console.error('[login] signInWithPassword error:', authError.message)
+        setError('Correo o contraseña incorrectos. Verifica tus datos.')
+        return
+      }
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setError('No se pudo obtener la sesión.'); return }
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        console.error('[login] getUser error:', userError?.message)
+        setError('No se pudo obtener la sesión.')
+        return
+      }
 
-      const { data: usuario } = await supabase
+      const { data: usuario, error: rolError } = await supabase
         .from('usuarios').select('rol').eq('id', user.id).single()
 
-      router.push(ROLE_REDIRECTS[usuario?.rol ?? 'alumno'] ?? '/alumno')
-    } catch {
+      if (rolError) console.warn('[login] rol query error (non-fatal):', rolError.message)
+
+      const rol  = usuario?.rol ?? 'ALUMNO'
+      const dest = ROLE_REDIRECTS[rol] ?? '/alumno'
+      console.log('[login] success → rol:', rol, '→ redirect:', dest)
+
+      // router.refresh() asegura que los Server Components relean la cookie de sesión
+      router.refresh()
+      router.push(dest)
+    } catch (err) {
+      console.error('[login] unexpected error:', err)
       setError('Ocurrió un error inesperado. Intenta de nuevo.')
     } finally {
       setLoading(false)
