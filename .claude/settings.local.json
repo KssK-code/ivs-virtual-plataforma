@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(npm install:*)",
+      "Bash(find 'C:/Users/Kevin Serrano/' -name *CERTI* -o -name *certi*ivs*)",
+      "Bash(find /mnt -name LOGOIVS*)",
+      "Bash(find 'C:/Users/Kevin Serrano' -name LOGOIVS*)"
+    ]
+  }
+}
