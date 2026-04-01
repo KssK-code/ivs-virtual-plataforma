@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, X, Loader2, CreditCard, Key, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, X, Loader2, CreditCard, Key, Eye, EyeOff, Download, FileText } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
 interface AlumnoDetalle {
@@ -14,6 +14,36 @@ interface AlumnoDetalle {
   plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
   pagos: { id: string; monto: number; mes_desbloqueado: number; metodo_pago: string; referencia: string | null; created_at: string }[]
   calificaciones: { id: string; calificacion_final: number; aprobada: boolean; materias: { nombre: string; codigo: string } }[]
+}
+
+type DocTipo =
+  | 'acta_nacimiento' | 'curp' | 'certificado_primaria'
+  | 'certificado_secundaria' | 'identificacion_oficial' | 'foto_perfil_doc'
+
+type DocEstado = 'pendiente' | 'aprobado' | 'rechazado'
+
+interface DocumentoAdmin {
+  id: string
+  tipo: DocTipo
+  nombre_archivo: string
+  estado: DocEstado
+  comentario_admin?: string | null
+  signed_url?: string | null
+  subido_en: string
+}
+
+const DOC_TIPOS: DocTipo[] = [
+  'acta_nacimiento', 'curp', 'certificado_primaria',
+  'certificado_secundaria', 'identificacion_oficial', 'foto_perfil_doc',
+]
+
+const DOC_LABELS: Record<DocTipo, string> = {
+  acta_nacimiento:        'Acta de Nacimiento',
+  curp:                   'CURP',
+  certificado_primaria:   'Certificado de Primaria',
+  certificado_secundaria: 'Certificado de Secundaria',
+  identificacion_oficial: 'Identificación Oficial',
+  foto_perfil_doc:        'Foto (fondo blanco)',
 }
 
 const CARD_STYLE = { background: '#181C26', border: '1px solid #2A2F3E' }
@@ -42,13 +72,30 @@ export default function AlumnoDetallePage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [pago, setPago] = useState({ monto: '', metodo_pago: 'Efectivo', referencia: '' })
 
+  // Documentos
+  const [documentos, setDocumentos] = useState<DocumentoAdmin[]>([])
+  const [docEdits, setDocEdits] = useState<Record<string, { estado: DocEstado; comentario: string }>>({})
+  const [savingDoc, setSavingDoc] = useState<string | null>(null)
+
   const cargar = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/admin/alumnos/${id}`)
-      if (!res.ok) throw new Error('Alumno no encontrado')
-      setAlumno(await res.json())
+      const [alumnoRes, docsRes] = await Promise.all([
+        fetch(`/api/admin/alumnos/${id}`),
+        fetch(`/api/admin/documentos/${id}`),
+      ])
+      if (!alumnoRes.ok) throw new Error('Alumno no encontrado')
+      const alumnoData = await alumnoRes.json()
+      setAlumno(alumnoData)
+      const docsData: DocumentoAdmin[] = docsRes.ok ? await docsRes.json() : []
+      setDocumentos(docsData)
+      // Inicializar edits con valores actuales
+      const edits: Record<string, { estado: DocEstado; comentario: string }> = {}
+      for (const d of docsData) {
+        edits[d.id] = { estado: d.estado, comentario: d.comentario_admin ?? '' }
+      }
+      setDocEdits(edits)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al cargar el alumno')
     } finally {
@@ -134,6 +181,27 @@ export default function AlumnoDetallePage() {
       )
     } finally {
       setTogglingActivo(false)
+    }
+  }
+
+  async function handleGuardarDoc(docId: string) {
+    const edit = docEdits[docId]
+    if (!edit) return
+    setSavingDoc(docId)
+    try {
+      const res = await fetch(`/api/admin/documentos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentoId: docId, estado: edit.estado, comentario: edit.comentario }),
+      })
+      const data = await res.json()
+      if (!res.ok) { showToast(data.error ?? 'Error al guardar', 'error'); return }
+      showToast('✓ Cambios guardados', 'success')
+      await cargar()
+    } catch {
+      showToast('Error inesperado', 'error')
+    } finally {
+      setSavingDoc(null)
     }
   }
 
@@ -339,6 +407,99 @@ export default function AlumnoDetallePage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Documentos */}
+      <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
+          <FileText className="w-4 h-4" style={{ color: '#7B8AFF' }} />
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Documentos del Alumno</h3>
+        </div>
+        <div className="divide-y" style={{ borderColor: '#2A2F3E' }}>
+          {DOC_TIPOS.map(tipo => {
+            const doc = documentos.find(d => d.tipo === tipo)
+            const edit = doc ? docEdits[doc.id] : null
+            const isSaving = doc ? savingDoc === doc.id : false
+
+            return (
+              <div key={tipo} className="px-5 py-4 flex flex-col sm:flex-row sm:items-start gap-4">
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>{DOC_LABELS[tipo]}</p>
+                  {doc ? (
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs" style={{ color: '#64748B' }}>{doc.nombre_archivo}</span>
+                      <span className="text-xs" style={{ color: '#475569' }}>·</span>
+                      <span className="text-xs" style={{ color: '#64748B' }}>
+                        {new Date(doc.subido_en).toLocaleDateString('es-MX')}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs mt-1" style={{ color: '#475569' }}>Sin documento</p>
+                  )}
+                </div>
+
+                {/* Controles admin */}
+                {doc && edit ? (
+                  <div className="flex flex-col gap-2 w-full sm:w-72 flex-shrink-0">
+                    <div className="flex gap-2">
+                      {/* Descargar */}
+                      {doc.signed_url && (
+                        <a
+                          href={doc.signed_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Descargar
+                        </a>
+                      )}
+                      {/* Estado dropdown */}
+                      <select
+                        value={edit.estado}
+                        onChange={e => setDocEdits(prev => ({ ...prev, [doc.id]: { ...prev[doc.id], estado: e.target.value as DocEstado } }))}
+                        className="flex-1 px-2 py-1.5 rounded-lg text-xs outline-none"
+                        style={INPUT_STYLE}
+                      >
+                        <option value="pendiente">⏳ Pendiente</option>
+                        <option value="aprobado">✅ Aprobado</option>
+                        <option value="rechazado">❌ Rechazado</option>
+                      </select>
+                    </div>
+                    {/* Comentario */}
+                    <input
+                      type="text"
+                      placeholder="Comentario (opcional)"
+                      value={edit.comentario}
+                      onChange={e => setDocEdits(prev => ({ ...prev, [doc.id]: { ...prev[doc.id], comentario: e.target.value } }))}
+                      className="w-full px-3 py-1.5 rounded-lg text-xs outline-none"
+                      style={INPUT_STYLE}
+                      onFocus={e => { e.currentTarget.style.border = '1px solid #5B6CFF' }}
+                      onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+                    />
+                    {/* Guardar */}
+                    <button
+                      onClick={() => handleGuardarDoc(doc.id)}
+                      disabled={isSaving}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-60"
+                      style={{ background: '#5B6CFF', color: '#fff' }}
+                      onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = '#7B8AFF' }}
+                      onMouseLeave={e => { if (!isSaving) e.currentTarget.style.background = '#5B6CFF' }}
+                    >
+                      {isSaving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Guardando...</> : 'Guardar cambios'}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs flex-shrink-0" style={{ color: '#475569' }}>—</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Modal Resetear Contraseña */}

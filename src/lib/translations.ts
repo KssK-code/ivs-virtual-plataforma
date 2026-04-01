@@ -32,7 +32,8 @@ const dict = {
       grades:     'Calificaciones',
       certificate:'Constancia',
       payment:     'Pagos',
-      myProfile:  'Mi Perfil',
+      myProfile:   'Mi Perfil',
+      myDocuments: 'Mis Documentos',
       // Roles
       admin:      'Administrador',
       student:    'Alumno',
@@ -315,6 +316,38 @@ const dict = {
       enrolledAt:    'Inscrito',
       searchStudents:'Buscar alumnos...',
     },
+    docs: {
+      title:           'Mis Documentos',
+      subtitle:        'Sube tus documentos para iniciar tu proceso de certificación',
+      // Tipos
+      acta_nacimiento:        'Acta de Nacimiento',
+      curp:                   'CURP',
+      certificado_primaria:   'Certificado de Primaria',
+      certificado_secundaria: 'Certificado de Secundaria',
+      identificacion_oficial: 'Identificación Oficial',
+      foto_perfil_doc:        'Foto (fondo blanco)',
+      // Estados
+      estadoPendiente:  'Pendiente',
+      estadoAprobado:   'Aprobado',
+      estadoRechazado:  'Rechazado',
+      // Botones / mensajes
+      upload:           'Subir',
+      replace:          'Reemplazar',
+      uploading:        'Subiendo...',
+      uploadSuccess:    'Documento subido correctamente',
+      uploadError:      'Error al subir el documento',
+      noDocuments:      'Sin documentos subidos',
+      formats:          'PDF, JPG, PNG · máx. 10 MB',
+      adminComment:     'Comentario del revisor:',
+      // Admin
+      adminTitle:       'Documentos del Alumno',
+      downloadBtn:      'Descargar',
+      saveBtn:          'Guardar cambios',
+      saving:           'Guardando...',
+      saveSuccess:      'Cambios guardados',
+      commentLabel:     'Comentario (opcional)',
+      commentPlaceholder: 'Motivo de rechazo o nota para el alumno...',
+    },
   },
 
   en: {
@@ -347,7 +380,8 @@ const dict = {
       grades:     'Grades',
       certificate:'Certificate',
       payment:     'Payments',
-      myProfile:  'My Profile',
+      myProfile:   'My Profile',
+      myDocuments: 'My Documents',
       // Roles
       admin:      'Administrator',
       student:    'Student',
@@ -629,6 +663,38 @@ const dict = {
       inactive:      'Inactive',
       enrolledAt:    'Enrolled',
       searchStudents:'Search students...',
+    },
+    docs: {
+      title:           'My Documents',
+      subtitle:        'Upload your documents to start your certification process',
+      // Types
+      acta_nacimiento:        'Birth Certificate',
+      curp:                   'CURP',
+      certificado_primaria:   'Elementary Certificate',
+      certificado_secundaria: 'Middle School Certificate',
+      identificacion_oficial: 'Official ID',
+      foto_perfil_doc:        'Photo (white background)',
+      // States
+      estadoPendiente:  'Pending',
+      estadoAprobado:   'Approved',
+      estadoRechazado:  'Rejected',
+      // Buttons / messages
+      upload:           'Upload',
+      replace:          'Replace',
+      uploading:        'Uploading...',
+      uploadSuccess:    'Document uploaded successfully',
+      uploadError:      'Error uploading document',
+      noDocuments:      'No documents uploaded',
+      formats:          'PDF, JPG, PNG · max. 10 MB',
+      adminComment:     'Reviewer comment:',
+      // Admin
+      adminTitle:       'Student Documents',
+      downloadBtn:      'Download',
+      saveBtn:          'Save changes',
+      saving:           'Saving...',
+      saveSuccess:      'Changes saved',
+      commentLabel:     'Comment (optional)',
+      commentPlaceholder: 'Rejection reason or note for the student...',
     },
   },
 } as const
