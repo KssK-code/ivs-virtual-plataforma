@@ -4,24 +4,128 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Loader2, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_REDIRECTS } from '@/lib/constants'
 
 const WA_URL = 'https://wa.me/523328381405'
 
-const inputBase: React.CSSProperties = {
-  background: '#fff',
-  border: '1.5px solid #E2EAF0',
-  color: '#1B3A57',
-  borderRadius: 10,
-  fontSize: 14,
-  width: '100%',
-  padding: '11px 12px 11px 40px',
-  outline: 'none',
-  transition: 'border .15s, box-shadow .15s',
+const BENEFITS = [
+  'Certificado oficial con validez SEP',
+  'Estudia desde casa, a tu ritmo',
+  'Convenio IMSS y Ferrocarrileros',
+  'Secundaria y Preparatoria',
+]
+
+// ─── Input helpers ─────────────────────────────────────────────────────────────
+function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = '#3AAFA9'
+  e.currentTarget.style.boxShadow   = '0 0 0 3px rgba(58,175,169,0.12)'
+}
+function onBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = '#E2E8F0'
+  e.currentTarget.style.boxShadow   = 'none'
 }
 
+// ─── WA SVG ────────────────────────────────────────────────────────────────────
+function WaSvg({ size = 18 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.538 5.943L0 24l6.232-1.503A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.36-.214-3.7.893.935-3.58-.235-.372A9.818 9.818 0 1112 21.818z"/>
+    </svg>
+  )
+}
+
+// ─── Left decorative panel ─────────────────────────────────────────────────────
+function LeftPanel() {
+  return (
+    <div
+      className="hidden md:flex flex-col justify-between px-10 py-12"
+      style={{
+        width: '40%',
+        minHeight: '100vh',
+        background: 'linear-gradient(160deg, #1B3A57 0%, #2B6B6B 55%, #3AAFA9 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Decorative circles */}
+      <div style={{
+        position: 'absolute', top: -80, right: -80,
+        width: 320, height: 320, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.05)',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: -60, left: -60,
+        width: 240, height: 240, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.06)',
+      }} />
+
+      {/* Logo */}
+      <div className="relative z-10">
+        <div style={{
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 16,
+          padding: 4,
+          display: 'inline-block',
+          border: '1px solid rgba(255,255,255,0.25)',
+        }}>
+          <Image
+            src="/logo-ivs.jpg"
+            alt="IVS Virtual"
+            width={72}
+            height={72}
+            style={{ borderRadius: 12, objectFit: 'contain', display: 'block' }}
+          />
+        </div>
+        <p className="mt-4 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em' }}>
+          IVS INSTITUTO VIRTUAL SUPERIOR
+        </p>
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10">
+        <h2 className="text-4xl font-bold leading-tight mb-3" style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
+          Tu educación,<br />
+          <span style={{ color: '#A8EDEA' }}>a tu ritmo</span>
+        </h2>
+        <p className="text-base mb-8" style={{ color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>
+          Obtén tu certificado con validez oficial SEP desde la comodidad de tu hogar.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {BENEFITS.map(b => (
+            <div key={b} className="flex items-center gap-3">
+              <CheckCircle2 className="shrink-0 w-5 h-5" style={{ color: '#A8EDEA' }} />
+              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.9)' }}>{b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom badge */}
+      <div className="relative z-10">
+        <div style={{
+          background: 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: 12,
+          padding: '12px 16px',
+        }}>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>
+            INCORPORADO A
+          </p>
+          <p className="text-sm font-bold" style={{ color: '#fff' }}>
+            Sistema Educativo Nacional · CCT 09GBD0002D
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter()
   const [email,    setEmail]    = useState('')
@@ -30,15 +134,6 @@ export default function LoginPage() {
   const [error,    setError]    = useState<string | null>(null)
   const [loading,  setLoading]  = useState(false)
 
-  function focus(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.border    = '1.5px solid #3AAFA9'
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(58,175,169,0.12)'
-  }
-  function blur(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.border    = '1.5px solid #E2EAF0'
-    e.currentTarget.style.boxShadow = 'none'
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -46,18 +141,15 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-      if (authError) {
-        setError('Correo o contraseña incorrectos. Verifica tus datos.')
-        return
-      }
+      if (authError) { setError('Correo o contraseña incorrectos. Verifica tus datos.'); return }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setError('No se pudo obtener la sesión.'); return }
 
       const { data: usuario } = await supabase
         .from('usuarios').select('rol').eq('id', user.id).single()
 
-      const redirect = ROLE_REDIRECTS[usuario?.rol ?? 'alumno'] ?? '/alumno'
-      router.push(redirect)
+      router.push(ROLE_REDIRECTS[usuario?.rol ?? 'alumno'] ?? '/alumno')
     } catch {
       setError('Ocurrió un error inesperado. Intenta de nuevo.')
     } finally {
@@ -66,134 +158,183 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm flex flex-col items-center gap-5">
+    <div className="flex min-h-screen">
+      <LeftPanel />
 
-      {/* Card */}
+      {/* Right: form */}
       <div
-        className="w-full rounded-2xl p-8"
-        style={{ background: '#fff', boxShadow: '0 8px 40px rgba(27,58,87,0.12)', border: '1px solid #E8F0F6' }}
+        className="flex flex-col items-center justify-center flex-1 px-6 py-10"
+        style={{ background: '#fff' }}
       >
-        {/* Logo + título */}
-        <div className="flex flex-col items-center mb-7">
+        {/* Mobile-only logo */}
+        <div className="flex flex-col items-center mb-8 md:hidden">
           <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={64} height={64}
-            style={{ borderRadius: 12, objectFit: 'contain', marginBottom: 14 }} />
-          <h1 className="text-xl font-bold text-center" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
-            Bienvenido a IVS Virtual
-          </h1>
-          <p className="text-sm mt-1 text-center" style={{ color: '#6B8FA8' }}>
-            Inicia sesión con tu cuenta
+            style={{ borderRadius: 12, objectFit: 'contain', border: '1px solid #E2E8F0' }} />
+          <p className="mt-2 text-xs font-semibold" style={{ color: '#6B8FA8', letterSpacing: '0.05em' }}>
+            IVS INSTITUTO VIRTUAL SUPERIOR
           </p>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-600 mb-1.5" style={{ color: '#4A6785', fontWeight: 600 }}>
-              Correo electrónico
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-              <input
-                type="email" required autoComplete="email"
-                value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="correo@ejemplo.com"
-                style={inputBase} onFocus={focus} onBlur={blur}
-              />
-            </div>
+        {/* Card */}
+        <div
+          className="w-full"
+          style={{
+            maxWidth: 420,
+            background: '#fff',
+            borderRadius: 20,
+            border: '1px solid #EEF2F7',
+            boxShadow: '0 4px 32px rgba(27,58,87,0.08)',
+            padding: '36px 32px',
+          }}
+        >
+          {/* Header */}
+          <div className="mb-7">
+            <h1 className="text-2xl font-bold" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
+              Bienvenido de vuelta
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: '#7A92A9' }}>
+              Ingresa a tu plataforma IVS
+            </p>
           </div>
 
-          {/* Contraseña */}
-          <div>
-            <label className="block text-xs mb-1.5" style={{ color: '#4A6785', fontWeight: 600 }}>
-              Contraseña
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9DB0C0' }} />
-              <input
-                type={showPass ? 'text' : 'password'} required autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{ ...inputBase, paddingRight: 40 }} onFocus={focus} onBlur={blur}
-              />
-              <button type="button" tabIndex={-1}
-                onClick={() => setShowPass(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: '#9DB0C0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold mb-1.5" style={{ color: '#1B3A57' }}>
+                Correo electrónico
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                <input
+                  type="email" required autoComplete="email"
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="correo@ejemplo.com"
+                  onFocus={onFocus} onBlur={onBlur}
+                  style={{
+                    width: '100%', border: '1.5px solid #E2E8F0', borderRadius: 10,
+                    padding: '12px 14px 12px 38px', fontSize: 15, color: '#1B3A57',
+                    outline: 'none', transition: 'border-color .2s, box-shadow .2s', background: '#FAFCFF',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Contraseña */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-semibold" style={{ color: '#1B3A57' }}>
+                  Contraseña
+                </label>
+                <Link href="/forgot-password"
+                  className="text-xs font-medium transition-colors"
+                  style={{ color: '#3AAFA9' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#2B7A77' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#3AAFA9' }}
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#B0C4D4' }} />
+                <input
+                  type={showPass ? 'text' : 'password'} required autoComplete="current-password"
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  onFocus={onFocus} onBlur={onBlur}
+                  style={{
+                    width: '100%', border: '1.5px solid #E2E8F0', borderRadius: 10,
+                    padding: '12px 40px 12px 38px', fontSize: 15, color: '#1B3A57',
+                    outline: 'none', transition: 'border-color .2s, box-shadow .2s', background: '#FAFCFF',
+                  }}
+                />
+                <button type="button" tabIndex={-1} onClick={() => setShowPass(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#B0C4D4' }}>
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm"
+                style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', color: '#DC2626' }}>
+                <span className="mt-px">⚠</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="pt-1">
+              <button
+                type="submit" disabled={loading}
+                className="w-full flex items-center justify-center gap-2 font-semibold text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  background: loading ? '#3AAFA9' : '#3AAFA9',
+                  borderRadius: 12, height: 48, fontSize: 15,
+                  boxShadow: '0 4px 16px rgba(58,175,169,0.35)',
+                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#2B7A77' }}
+                onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
               >
-                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {loading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Iniciando sesión...</>
+                  : 'Iniciar sesión'}
               </button>
             </div>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-5">
+            <div className="flex-1 h-px" style={{ background: '#EEF2F7' }} />
+            <span className="text-xs px-1" style={{ color: '#B0C4D4' }}>o</span>
+            <div className="flex-1 h-px" style={{ background: '#EEF2F7' }} />
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm"
-              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626' }}>
-              <span>⚠</span><span>{error}</span>
-            </div>
-          )}
-
-          {/* Botón */}
-          <button type="submit" disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.3)' }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#2B7A77' }}
-            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#3AAFA9' }}
+          {/* WhatsApp button */}
+          <a
+            href={WA_URL} target="_blank" rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2.5 font-semibold text-sm transition-all"
+            style={{
+              display: 'flex',
+              background: '#fff', border: '1.5px solid #E2E8F0', borderRadius: 12,
+              color: '#1B3A57', padding: '12px 16px', textDecoration: 'none',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = '#22C55E'
+              e.currentTarget.style.color = '#16A34A'
+              e.currentTarget.style.background = '#F0FDF4'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = '#E2E8F0'
+              e.currentTarget.style.color = '#1B3A57'
+              e.currentTarget.style.background = '#fff'
+            }}
           >
-            {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Iniciando sesión...</> : 'Iniciar sesión'}
-          </button>
+            <span style={{ color: '#22C55E' }}><WaSvg size={18} /></span>
+            ¿Necesitas ayuda? Escríbenos por WhatsApp
+          </a>
 
-          {/* Olvidé contraseña */}
-          <div className="text-center">
-            <Link href="/forgot-password" className="text-sm transition-colors"
-              style={{ color: '#6B8FA8' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#6B8FA8' }}
+          {/* Register link */}
+          <p className="mt-5 text-center text-sm" style={{ color: '#7A92A9' }}>
+            ¿No tienes cuenta?{' '}
+            <Link href="/register"
+              className="font-semibold transition-colors"
+              style={{ color: '#3AAFA9' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#1B3A57' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#3AAFA9' }}
             >
-              ¿Olvidaste tu contraseña?
+              Regístrate gratis
             </Link>
-          </div>
-        </form>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px" style={{ background: '#E2EAF0' }} />
-          <span className="text-xs" style={{ color: '#9DB0C0' }}>o</span>
-          <div className="flex-1 h-px" style={{ background: '#E2EAF0' }} />
+          </p>
         </div>
 
-        {/* Registro */}
-        <p className="text-center text-sm" style={{ color: '#6B8FA8' }}>
-          ¿No tienes cuenta?{' '}
-          <Link href="/register" className="font-semibold transition-colors"
-            style={{ color: '#3AAFA9' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#1B3A57' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#3AAFA9' }}
-          >
-            Regístrate aquí
-          </Link>
+        {/* Footer */}
+        <p className="mt-8 text-xs" style={{ color: '#B0C4D4' }}>
+          © {new Date().getFullYear()} IVS Instituto Virtual Superior
         </p>
       </div>
-
-      {/* WhatsApp */}
-      <a href={WA_URL} target="_blank" rel="noopener noreferrer"
-        className="flex items-center gap-2 text-sm transition-colors"
-        style={{ color: '#6B8FA8' }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#16a34a' }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#6B8FA8' }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.538 5.943L0 24l6.232-1.503A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.002-1.366l-.36-.214-3.7.893.935-3.58-.235-.372A9.818 9.818 0 1112 21.818z"/>
-        </svg>
-        ¿Necesitas ayuda? WhatsApp
-      </a>
-
-      <p className="text-xs" style={{ color: '#9DB0C0' }}>
-        © {new Date().getFullYear()} IVS Instituto Virtual Superior
-      </p>
     </div>
   )
 }
