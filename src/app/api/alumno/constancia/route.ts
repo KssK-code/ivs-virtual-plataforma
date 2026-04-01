@@ -10,7 +10,7 @@ export async function GET() {
     // Obtener alumno completo
     const { data: alumnoData } = await supabase
       .from('alumnos')
-      .select('id, matricula, meses_desbloqueados, created_at, planes_estudio(nombre, duracion_meses), usuarios(nombre_completo, email)')
+      .select('id, matricula, meses_desbloqueados, created_at, planes_estudio(nombre, duracion_meses), usuarios(nombre_completo, email, avatar_url)')
       .eq('usuario_id', user.id)
       .single()
 
@@ -22,7 +22,7 @@ export async function GET() {
       meses_desbloqueados: number
       created_at: string
       planes_estudio: { nombre: string; duracion_meses: number } | null
-      usuarios: { nombre_completo: string; email: string } | null
+      usuarios: { nombre_completo: string; email: string; avatar_url?: string | null } | null
     }
 
     const duracionMeses = alumno.planes_estudio?.duracion_meses ?? 0
@@ -90,6 +90,7 @@ export async function GET() {
       duracion_meses: duracionMeses,
       porcentaje_avance: porcentaje,
       fecha_inscripcion: alumno.created_at,
+      avatar_url: alumno.usuarios?.avatar_url ?? null,
       materias_cursadas: materiasCursadas,
     })
   } catch {

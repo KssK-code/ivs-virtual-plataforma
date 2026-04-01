@@ -21,6 +21,7 @@ interface DatosConstancia {
   meses_desbloqueados: number
   duracion_meses: number
   porcentaje_avance: number
+  avatar_url?: string | null
   materias_cursadas: MateriaCursada[]
 }
 
@@ -173,6 +174,27 @@ export default function ConstanciaPage() {
                   Preparatoria &nbsp;•&nbsp; Secundaria
                 </span>
               </div>
+            </div>
+
+            {/* Foto del alumno */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              {datos.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={datos.avatar_url}
+                  alt={datos.nombre_completo}
+                  style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid #2563eb' }}
+                />
+              ) : (
+                <div style={{
+                  width: 80, height: 80, borderRadius: '50%',
+                  background: '#0055ff', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, fontWeight: 700, letterSpacing: '0.05em',
+                }}>
+                  {datos.nombre_completo.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                </div>
+              )}
             </div>
 
             {/* Meta folio / fecha */}
