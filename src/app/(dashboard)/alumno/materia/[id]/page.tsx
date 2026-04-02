@@ -380,6 +380,7 @@ export default function MateriaPage() {
                       {/* Mini quiz de refuerzo */}
                       {alumnoId && (
                         <SemanaQuiz
+                          key={semana.id}
                           semanaId={semana.id}
                           alumnoId={alumnoId}
                           lang="es"
