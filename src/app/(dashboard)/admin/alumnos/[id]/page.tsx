@@ -14,7 +14,6 @@ interface AlumnoDetalle {
   notas_admin: string | null
   usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
   plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
-  pagos: { id: string; monto: number; mes_desbloqueado: number; metodo_pago: string; referencia: string | null; created_at: string }[]
   calificaciones: { id: string; calificacion_final: number; aprobada: boolean; materias: { nombre: string; codigo: string } }[]
 }
 
@@ -418,39 +417,6 @@ export default function AlumnoDetallePage() {
             )
           })}
         </div>
-      </div>
-
-      {/* Historial de Pagos */}
-      <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
-        <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
-          <h3 className="text-sm font-semibold text-gray-100">Historial de Pagos</h3>
-        </div>
-        {alumno.pagos.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>Sin pagos registrados</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
-                  {['Fecha', 'Mes', 'Monto', 'Método', 'Referencia'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 font-medium" style={{ color: '#94A3B8' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {alumno.pagos.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid rgba(42,47,62,0.5)' }}>
-                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('es-MX')}</td>
-                    <td className="px-4 py-3 font-medium" style={{ color: '#F1F5F9' }}>Mes {p.mes_desbloqueado}</td>
-                    <td className="px-4 py-3 font-medium" style={{ color: '#10B981' }}>${p.monto.toLocaleString('es-MX')}</td>
-                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{p.metodo_pago}</td>
-                    <td className="px-4 py-3" style={{ color: '#94A3B8' }}>{p.referencia ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       {/* Calificaciones */}
