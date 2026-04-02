@@ -182,10 +182,18 @@ export async function POST(request: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
     const body = await request.json()
-    const { nombre, apellidos, email, password } = body
+    const { nombre_completo, email, password, nivel, modalidad } = body
+
+    // Aceptar "nombre_completo" del form y dividirlo en nombre / apellidos
+    const partes     = (nombre_completo as string | undefined)?.trim().split(/\s+/) ?? []
+    const nombre     = partes[0] ?? ''
+    const apellidos  = partes.slice(1).join(' ')
 
     if (!nombre || !email || !password) {
       return NextResponse.json({ error: 'nombre, email y password son requeridos' }, { status: 400 })
+    }
+    if (!nivel || !['secundaria', 'preparatoria'].includes(nivel)) {
+      return NextResponse.json({ error: 'nivel es requerido (secundaria o preparatoria)' }, { status: 400 })
     }
 
     const admin = createAdminClient()
@@ -212,10 +220,16 @@ export async function POST(request: NextRequest) {
     // Insertar en usuarios
     await admin.from('usuarios').insert({ id: newUserId, nombre, apellidos, email, rol: 'ALUMNO' })
 
-    // Insertar en alumnos
+    // Insertar en alumnos (nivel + modalidad obligatorios)
     const { data: alumnoData, error: alumnoError } = await admin
       .from('alumnos')
-      .insert({ id: newUserId, matricula, meses_desbloqueados: 0 })
+      .insert({
+        id:                  newUserId,
+        matricula,
+        nivel:               nivel as 'secundaria' | 'preparatoria',
+        modalidad:           modalidad ?? '6_meses',
+        meses_desbloqueados: 0,
+      })
       .select()
       .single()
 
