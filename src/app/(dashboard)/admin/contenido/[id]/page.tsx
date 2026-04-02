@@ -1,87 +1,189 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-interface Opcion { id: string; texto: string; es_correcta: boolean }
-interface Pregunta { id: string; numero: number; texto: string; tipo: string; retroalimentacion: string | null; opciones: Opcion[] }
-interface Evaluacion { id: string; titulo: string; tipo: string; intentos_max: number; preguntas: Pregunta[] }
-interface Semana { id: string; numero: number; titulo: string; contenido: string }
-interface Materia {
-  id: string; codigo: string; nombre: string; color_hex: string
-  descripcion: string; objetivo: string; temario: string[]
-  semanas: Semana[]
-  evaluaciones: Evaluacion[]
+interface VideoState {
+  video_url:   string
+  video_url_2: string
+  video_url_3: string
+  saving:  boolean
+  saved:   boolean
+  error:   string | null
+  dirty:   boolean
 }
 
-const CARD = { background: '#181C26', border: '1px solid #2A2F3E' }
+interface Semana {
+  id: string
+  numero_semana: number
+  titulo: string
+  descripcion: string | null
+  video_url:   string | null
+  video_url_2: string | null
+  video_url_3: string | null
+}
+
+interface Mes {
+  id: string
+  numero_mes: number
+  titulo: string
+  semanas: Semana[]
+}
+
+interface Materia {
+  id: string
+  codigo: string
+  nombre: string
+  color: string | null
+  nivel: string
+  descripcion: string | null
+}
+
+const CARD  = { background: '#181C26', border: '1px solid #2A2F3E' }
+const INNER = { background: '#0D1017', border: '1px solid #2A2F3E' }
+
+function inputStyle(dirty: boolean) {
+  return {
+    background: '#0D1017',
+    border: `1px solid ${dirty ? '#5B6CFF' : '#2A2F3E'}`,
+    color: '#F1F5F9',
+    borderRadius: '0.5rem',
+    padding: '0.375rem 0.625rem',
+    fontSize: '0.75rem',
+    width: '100%',
+    outline: 'none',
+    fontFamily: 'monospace',
+  }
+}
 
 export default function ContenidoDetallePage() {
-  const router = useRouter()
-  const params = useParams()
-  const id = params.id as string
+  const router  = useRouter()
+  const params  = useParams()
+  const id      = params.id as string
 
   const [materia, setMateria] = useState<Materia | null>(null)
+  const [meses,   setMeses]   = useState<Mes[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error,   setError]   = useState<string | null>(null)
+
+  // Estado de edición: semanaId → VideoState
+  const [videos, setVideos] = useState<Record<string, VideoState>>({})
+  // Meses expandidos
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const supabase = createClient()
     async function cargar() {
       try {
-        // 1. Obtener materia base
-        const { data: materiaBase, error: matErr } = await supabase
+        // 1. Materia
+        const { data: mat, error: matErr } = await supabase
           .from('materias')
-          .select('*')
+          .select('id, nombre, codigo, color, nivel, descripcion')
           .eq('id', id)
           .single()
+        if (matErr || !mat) { setError('Materia no encontrada'); return }
+        setMateria(mat as Materia)
 
-        if (matErr || !materiaBase) { setError('Materia no encontrada'); return }
-
-        // 2. Semanas
-        const { data: semanas } = await supabase
-          .from('semanas')
-          .select('*')
+        // 2. Meses + semanas (join correcto IVS: materias → meses_contenido → semanas)
+        const { data: mesesData, error: mErr } = await supabase
+          .from('meses_contenido')
+          .select(`
+            id, numero_mes, titulo,
+            semanas ( id, numero_semana, titulo, descripcion, video_url, video_url_2, video_url_3 )
+          `)
           .eq('materia_id', id)
-          .order('numero')
+          .order('numero_mes')
+        if (mErr) { setError('Error al cargar meses'); return }
 
-        // 3. Evaluaciones
-        const { data: evaluaciones } = await supabase
-          .from('evaluaciones')
-          .select('*')
-          .eq('materia_id', id)
+        type MesRow = {
+          id: string; numero_mes: number; titulo: string
+          semanas: Semana[]
+        }
+        const mesesOrdenados = ((mesesData ?? []) as unknown as MesRow[]).map(mes => ({
+          ...mes,
+          semanas: (mes.semanas ?? []).sort((a, b) => a.numero_semana - b.numero_semana),
+        }))
+        setMeses(mesesOrdenados)
 
-        // 4. Preguntas y opciones por evaluación
-        const evaluacionesConPreguntas: Evaluacion[] = await Promise.all(
-          ((evaluaciones ?? []) as { id: string; titulo: string; tipo: string; intentos_max: number }[]).map(async (ev) => {
-            const { data: preguntas } = await supabase
-              .from('preguntas')
-              .select('*, opciones(*)')
-              .eq('evaluacion_id', ev.id)
-              .order('numero')
+        // Expandir primer mes por defecto
+        if (mesesOrdenados.length > 0) {
+          setAbiertos(new Set([mesesOrdenados[0].id]))
+        }
 
-            return {
-              ...ev,
-              preguntas: (preguntas ?? []) as Pregunta[],
+        // Inicializar estado de videos
+        const initVideos: Record<string, VideoState> = {}
+        for (const mes of mesesOrdenados) {
+          for (const sem of mes.semanas) {
+            initVideos[sem.id] = {
+              video_url:   sem.video_url   ?? '',
+              video_url_2: sem.video_url_2 ?? '',
+              video_url_3: sem.video_url_3 ?? '',
+              saving: false, saved: false, error: null, dirty: false,
             }
-          })
-        )
-
-        setMateria({
-          ...(materiaBase as unknown as Materia),
-          semanas: (semanas ?? []) as Semana[],
-          evaluaciones: evaluacionesConPreguntas,
-        })
+          }
+        }
+        setVideos(initVideos)
       } catch {
-        setError('Error al cargar la materia')
+        setError('Error inesperado al cargar la materia')
       } finally {
         setLoading(false)
       }
     }
     cargar()
   }, [id])
+
+  function toggleMes(mesId: string) {
+    setAbiertos(prev => {
+      const next = new Set(prev)
+      if (next.has(mesId)) next.delete(mesId); else next.add(mesId)
+      return next
+    })
+  }
+
+  function handleChange(semanaId: string, field: 'video_url' | 'video_url_2' | 'video_url_3', value: string) {
+    setVideos(prev => ({
+      ...prev,
+      [semanaId]: { ...prev[semanaId], [field]: value, dirty: true, saved: false, error: null },
+    }))
+  }
+
+  const guardar = useCallback(async (semanaId: string) => {
+    const v = videos[semanaId]
+    if (!v || v.saving) return
+
+    setVideos(prev => ({ ...prev, [semanaId]: { ...prev[semanaId], saving: true, error: null } }))
+
+    try {
+      const res = await fetch(`/api/admin/semanas/${semanaId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_url:   v.video_url   || null,
+          video_url_2: v.video_url_2 || null,
+          video_url_3: v.video_url_3 || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error al guardar')
+
+      setVideos(prev => ({
+        ...prev,
+        [semanaId]: { ...prev[semanaId], saving: false, saved: true, dirty: false },
+      }))
+      // Quitar checkmark después de 3s
+      setTimeout(() => {
+        setVideos(prev => ({ ...prev, [semanaId]: { ...prev[semanaId], saved: false } }))
+      }, 3000)
+    } catch (err) {
+      setVideos(prev => ({
+        ...prev,
+        [semanaId]: { ...prev[semanaId], saving: false, error: (err as Error).message },
+      }))
+    }
+  }, [videos])
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
@@ -91,15 +193,16 @@ export default function ContenidoDetallePage() {
 
   if (error || !materia) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-      <p className="text-sm" style={{ color: '#EF4444' }}>{error ?? 'Error'}</p>
+      <p className="text-sm" style={{ color: '#EF4444' }}>{error ?? 'Materia no encontrada'}</p>
       <button onClick={() => router.back()} className="text-sm" style={{ color: '#5B6CFF' }}>Regresar</button>
     </div>
   )
 
-  const semanasOrdenadas = [...(materia.semanas ?? [])].sort((a, b) => a.numero - b.numero)
+  const totalSemanas = meses.reduce((acc, m) => acc + m.semanas.length, 0)
 
   return (
     <div className="space-y-6 max-w-4xl">
+
       {/* Header */}
       <div className="flex items-start gap-4">
         <button
@@ -111,132 +214,155 @@ export default function ContenidoDetallePage() {
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ background: materia.color_hex || '#5B6CFF' }} />
+            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: materia.color || '#5B6CFF' }} />
             <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
               {materia.codigo}
             </span>
+            <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>
+              {materia.nivel}
+            </span>
           </div>
           <h2 className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }}>{materia.nombre}</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{totalSemanas} semanas · Edita las URLs de video por semana</p>
         </div>
       </div>
 
-      {/* Info */}
-      {(materia.descripcion || materia.objetivo) && (
-        <div className="rounded-xl p-5 space-y-4" style={CARD}>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información</h3>
-          {materia.descripcion && (
-            <div>
-              <p className="text-xs font-medium mb-1" style={{ color: '#94A3B8' }}>Descripción</p>
-              <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{materia.descripcion}</p>
-            </div>
-          )}
-          {materia.objetivo && (
-            <div>
-              <p className="text-xs font-medium mb-1" style={{ color: '#94A3B8' }}>Objetivo</p>
-              <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{materia.objetivo}</p>
-            </div>
-          )}
+      {/* Info materia */}
+      {materia.descripcion && (
+        <div className="rounded-xl px-5 py-4" style={CARD}>
+          <p className="text-xs font-medium mb-1" style={{ color: '#64748B' }}>Descripción</p>
+          <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{materia.descripcion}</p>
         </div>
       )}
 
-      {/* Semanas */}
-      {semanasOrdenadas.length > 0 && (
-        <div className="rounded-xl p-5 space-y-3" style={CARD}>
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Temario — Semanas</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>
-              {semanasOrdenadas.length} semanas
-            </span>
-          </div>
-          <div className="space-y-2">
-            {semanasOrdenadas.map(sem => (
-              <div key={sem.id} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: '#0D1017', border: '1px solid #2A2F3E' }}>
-                <span
-                  className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0 mt-0.5"
-                  style={{ background: 'rgba(91,108,255,0.2)', color: '#5B6CFF' }}
+      {/* Lista de meses → semanas con edición */}
+      {meses.length === 0 ? (
+        <div className="rounded-xl p-8 text-center" style={CARD}>
+          <p className="text-sm" style={{ color: '#94A3B8' }}>No hay semanas cargadas para esta materia.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {meses.map(mes => {
+            const abierto = abiertos.has(mes.id)
+            return (
+              <div key={mes.id} className="rounded-xl overflow-hidden" style={CARD}>
+                {/* Header mes */}
+                <button
+                  onClick={() => toggleMes(mes.id)}
+                  className="w-full flex items-center justify-between px-5 py-4 transition-all text-left"
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                 >
-                  {sem.numero}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>{sem.titulo}</p>
-                  {sem.contenido && (
-                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#94A3B8' }}>
-                      {sem.contenido.replace(/\*\*(.*?)\*\*/g, '$1').slice(0, 120)}
-                      {sem.contenido.length > 120 ? '…' : ''}
-                    </p>
-                  )}
-                </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold flex-shrink-0"
+                      style={{ background: abierto ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.06)', color: abierto ? '#5B6CFF' : '#94A3B8' }}
+                    >
+                      {mes.numero_mes}
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-left" style={{ color: '#F1F5F9' }}>
+                        Mes {mes.numero_mes}{mes.titulo ? ` — ${mes.titulo}` : ''}
+                      </p>
+                      <p className="text-xs" style={{ color: '#64748B' }}>{mes.semanas.length} semanas</p>
+                    </div>
+                  </div>
+                  {abierto
+                    ? <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />
+                    : <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#94A3B8' }} />}
+                </button>
+
+                {/* Semanas */}
+                {abierto && (
+                  <div className="px-5 pb-5 space-y-3" style={{ borderTop: '1px solid #2A2F3E' }}>
+                    <div className="pt-4 space-y-3">
+                      {mes.semanas.map(sem => {
+                        const v = videos[sem.id]
+                        if (!v) return null
+                        return (
+                          <div key={sem.id} className="rounded-xl p-4 space-y-3" style={INNER}>
+                            {/* Semana header */}
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0"
+                                style={{ background: 'rgba(91,108,255,0.2)', color: '#5B6CFF' }}
+                              >
+                                {sem.numero_semana}
+                              </span>
+                              <p className="text-sm font-semibold flex-1 min-w-0" style={{ color: '#F1F5F9' }}>
+                                {sem.titulo}
+                              </p>
+                            </div>
+
+                            {/* Campos de video */}
+                            <div className="space-y-2 pl-9">
+                              {(
+                                [
+                                  { field: 'video_url'   as const, label: 'Video 1 (principal)' },
+                                  { field: 'video_url_2' as const, label: 'Video 2'             },
+                                  { field: 'video_url_3' as const, label: 'Video 3'             },
+                                ]
+                              ).map(({ field, label }) => (
+                                <div key={field}>
+                                  <label className="block text-xs mb-1" style={{ color: '#64748B' }}>
+                                    <Video className="inline w-3 h-3 mr-1" style={{ verticalAlign: 'middle' }} />
+                                    {label}
+                                  </label>
+                                  <input
+                                    type="url"
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    value={v[field]}
+                                    onChange={e => handleChange(sem.id, field, e.target.value)}
+                                    style={inputStyle(v.dirty && v[field] !== (sem[field] ?? ''))}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Footer con feedback y botón */}
+                            <div className="flex items-center justify-between pl-9 pt-1">
+                              <div className="text-xs">
+                                {v.error && (
+                                  <span className="flex items-center gap-1" style={{ color: '#EF4444' }}>
+                                    <AlertCircle className="w-3 h-3" /> {v.error}
+                                  </span>
+                                )}
+                                {v.saved && (
+                                  <span className="flex items-center gap-1" style={{ color: '#10B981' }}>
+                                    <Check className="w-3 h-3" /> Guardado
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => guardar(sem.id)}
+                                disabled={v.saving || (!v.dirty && !v.saved)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
+                                style={v.saved
+                                  ? { background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }
+                                  : { background: v.dirty ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.04)', color: v.dirty ? '#7B8AFF' : '#64748B', border: `1px solid ${v.dirty ? 'rgba(91,108,255,0.4)' : '#2A2F3E'}` }
+                                }
+                              >
+                                {v.saving
+                                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Guardando…</>
+                                  : v.saved
+                                    ? <><Check className="w-3 h-3" /> Guardado</>
+                                    : <><Save className="w-3 h-3" /> Guardar</>
+                                }
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       )}
-
-      {/* Evaluaciones */}
-      {(materia.evaluaciones ?? []).length > 0 && materia.evaluaciones.map(ev => (
-        <div key={ev.id} className="rounded-xl p-5 space-y-4" style={CARD}>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{ev.titulo}</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                {ev.tipo} · {ev.intentos_max} intento{ev.intentos_max !== 1 ? 's' : ''} máx · {(ev.preguntas ?? []).length} preguntas
-              </p>
-            </div>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B' }}>
-              Evaluación
-            </span>
-          </div>
-
-          {/* Preguntas */}
-          <div className="space-y-4">
-            {(ev.preguntas ?? []).sort((a, b) => a.numero - b.numero).map((preg, pi) => (
-              <div key={preg.id} className="rounded-lg p-4 space-y-3" style={{ background: '#0D1017', border: '1px solid #2A2F3E' }}>
-                <div className="flex items-start gap-3">
-                  <span
-                    className="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0 mt-0.5"
-                    style={{ background: 'rgba(91,108,255,0.2)', color: '#5B6CFF' }}
-                  >
-                    {pi + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>{preg.texto}</p>
-                    <span className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(148,163,184,0.1)', color: '#94A3B8' }}>
-                      {preg.tipo}
-                    </span>
-                  </div>
-                </div>
-
-                {(preg.opciones ?? []).length > 0 && (
-                  <div className="ml-9 space-y-1.5">
-                    {preg.opciones.map(op => (
-                      <div
-                        key={op.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-                        style={op.es_correcta
-                          ? { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10B981' }
-                          : { background: 'rgba(255,255,255,0.03)', border: '1px solid #2A2F3E', color: '#94A3B8' }
-                        }
-                      >
-                        {op.es_correcta && <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#10B981' }} />}
-                        <span>{op.texto}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {preg.retroalimentacion && (
-                  <div className="ml-9 px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(91,108,255,0.06)', border: '1px solid rgba(91,108,255,0.15)', color: '#94A3B8' }}>
-                    <span className="font-semibold" style={{ color: '#7B8AFF' }}>Retroalimentación: </span>
-                    {preg.retroalimentacion}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
