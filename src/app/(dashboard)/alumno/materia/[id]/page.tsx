@@ -82,14 +82,36 @@ export default function MateriaPage() {
   const [alumnoId, setAlumnoId] = useState<string>('')
   const [semanasCompletadas, setSemanasCompletadas] = useState<Set<string>>(new Set())
   const [materiaAcreditada, setMateriaAcreditada] = useState(false)
-  const [glosario, setGlosario] = useState<{ id: string; termino: string; termino_en: string; definicion: string; definicion_en: string }[]>([])
+  const [glosario, setGlosario] = useState<{ id: string; termino: string; definicion: string }[]>([])
 
   const [mostrarGuia, setMostrarGuia] = useState(true)
   const guiaRef = useRef<HTMLDivElement>(null)
+  const [guardandoProgreso, setGuardandoProgreso] = useState(false)
 
   useEffect(() => {
     if (tab === 'examen') setMostrarGuia(true)
   }, [tab])
+
+  const marcarSemana = async (semanaId: string) => {
+    if (guardandoProgreso || semanasCompletadas.has(semanaId)) return
+    setGuardandoProgreso(true)
+    try {
+      await fetch('/api/alumno/progreso/semana', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semana_id: semanaId }),
+      })
+      const nuevas = new Set([...semanasCompletadas, semanaId])
+      setSemanasCompletadas(nuevas)
+      if (materia && materia.semanas.every(s => nuevas.has(s.id))) {
+        setMateriaAcreditada(true)
+      }
+    } catch {
+      // silencioso — no bloquear al alumno
+    } finally {
+      setGuardandoProgreso(false)
+    }
+  }
 
   const ocultarGuia = () => {
     if (guiaRef.current) {
@@ -336,7 +358,66 @@ export default function MateriaPage() {
                         </div>
                       )}
 
-                      {/* Progreso de lectura */}
+                      {/* Videos — embebidos (YouTube iframe) */}
+                      {semana.videos?.length > 0 && (
+                        <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #2A2F3E', paddingTop: '1rem' }}>
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#475569' }}>
+                            🎬 Videos de la semana
+                          </p>
+                          {semana.videos.map((v, i) => (
+                            <VideoEmbed
+                              key={i}
+                              url={v.url}
+                              titulo={v.titulo}
+                              duracion={v.duracion}
+                              lang="es"
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Mini quiz de refuerzo */}
+                      {alumnoId && (
+                        <SemanaQuiz
+                          semanaId={semana.id}
+                          alumnoId={alumnoId}
+                          lang="es"
+                        />
+                      )}
+
+                      {/* Botón completar semana — siempre visible al final del contenido */}
+                      <div className="pt-2">
+                        {semanasCompletadas.has(semana.id) ? (
+                          <div
+                            className="flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold"
+                            style={{
+                              background: 'rgba(16,185,129,0.1)',
+                              color: '#10B981',
+                              border: '1px solid rgba(16,185,129,0.2)',
+                            }}
+                          >
+                            ✅ Semana completada
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => marcarSemana(semana.id)}
+                            disabled={guardandoProgreso}
+                            className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-60"
+                            style={{
+                              background: '#3AAFA9',
+                              color: '#fff',
+                              border: 'none',
+                              cursor: guardandoProgreso ? 'not-allowed' : 'pointer',
+                            }}
+                            onMouseEnter={e => { if (!guardandoProgreso) (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}
+                          >
+                            {guardandoProgreso ? '⏳ Guardando...' : '✅ Marcar semana como completada'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Barra de progreso de lectura (flotante, como complemento) */}
                       <ReadingProgress
                         semanaId={semana.id}
                         alumnoId={alumnoId}
@@ -350,32 +431,6 @@ export default function MateriaPage() {
                           }
                         }}
                       />
-
-                      {/* Mini quiz de refuerzo */}
-                      {alumnoId && (
-                        <SemanaQuiz
-                          semanaId={semana.id}
-                          alumnoId={alumnoId}
-                          lang="es"
-                        />
-                      )}
-
-                      {/* Videos */}
-                      {semana.videos?.length > 0 && (
-                        <div className="space-y-2 pt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Videos</p>
-
-                          {semana.videos.map((v, i) => (
-                            <VideoEmbed
-                              key={i}
-                              url={v.url}
-                              titulo={v.titulo}
-                              duracion={v.duracion}
-                              lang="es"
-                            />
-                          ))}
-                        </div>
-                      )}
 
                       {/* Notas personales */}
                       {alumnoId && (
