@@ -18,7 +18,7 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
-    if (!usuario || usuario.rol !== 'ADMIN') {
+    if (!usuario || (usuario.rol as string | undefined)?.toUpperCase() !== 'ADMIN') {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
     }
 
