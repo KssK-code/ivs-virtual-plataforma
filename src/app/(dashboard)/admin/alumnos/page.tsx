@@ -19,12 +19,6 @@ interface Alumno {
   created_at: string
 }
 
-interface Plan {
-  id: string
-  nombre: string
-  duracion_meses: number
-  precio_mensual: number
-}
 
 const INPUT_STYLE = {
   background: '#0B0D11',
@@ -59,7 +53,6 @@ export default function AlumnosPage() {
   const router = useRouter()
   const { toasts, showToast, removeToast } = useToast()
   const [alumnos, setAlumnos] = useState<Alumno[]>([])
-  const [planes, setPlanes] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
@@ -72,7 +65,8 @@ export default function AlumnosPage() {
     nombre_completo: '',
     email: '',
     password: '',
-    plan_estudio_id: '',
+    nivel: '',
+    modalidad: '',
   })
 
   const cargarAlumnos = useCallback(async () => {
@@ -91,10 +85,6 @@ export default function AlumnosPage() {
 
   useEffect(() => {
     cargarAlumnos()
-    fetch('/api/admin/planes')
-      .then(r => r.json())
-      .then(setPlanes)
-      .catch(() => {})
   }, [cargarAlumnos])
 
   // Pendientes = inscrip no pagada. Badge = sin contactar aún
@@ -125,7 +115,7 @@ export default function AlumnosPage() {
       const nombre = form.nombre_completo
       const matricula = data.matricula ?? ''
       setModalOpen(false)
-      setForm({ nombre_completo: '', email: '', password: '', plan_estudio_id: '' })
+      setForm({ nombre_completo: '', email: '', password: '', nivel: '', modalidad: '' })
       await cargarAlumnos()
       showToast(`✓ Alumno ${nombre} creado${matricula ? ` con matrícula ${matricula}` : ''}`, 'success')
     } catch {
@@ -544,20 +534,32 @@ export default function AlumnosPage() {
               ))}
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Plan de estudio</label>
+                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Nivel</label>
                 <select
                   required
-                  value={form.plan_estudio_id}
-                  onChange={e => setForm(prev => ({ ...prev, plan_estudio_id: e.target.value }))}
+                  value={form.nivel}
+                  onChange={e => setForm(prev => ({ ...prev, nivel: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
                   style={INPUT_STYLE}
                 >
-                  <option value="">Selecciona un plan...</option>
-                  {planes.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} — {p.duracion_meses} meses
-                    </option>
-                  ))}
+                  <option value="">Selecciona nivel...</option>
+                  <option value="secundaria">Secundaria</option>
+                  <option value="preparatoria">Preparatoria</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>Modalidad</label>
+                <select
+                  required
+                  value={form.modalidad}
+                  onChange={e => setForm(prev => ({ ...prev, modalidad: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
+                  style={INPUT_STYLE}
+                >
+                  <option value="">Selecciona modalidad...</option>
+                  <option value="6_meses">6 meses (Estándar)</option>
+                  <option value="3_meses">3 meses (Express)</option>
                 </select>
               </div>
 

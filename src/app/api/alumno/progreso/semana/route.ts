@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
     const { semana_id } = body as { semana_id: string }
     if (!semana_id) return NextResponse.json({ error: 'semana_id requerido' }, { status: 400 })
 
-    // Obtener alumno
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
-      .eq('usuario_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Si ya existía, no re-evaluar logros
     if (ya_existia) return NextResponse.json({ ok: true, ya_existia: true })
 
-    // --- Verificar logros ---
+    // ── Verificar logros ──────────────────────────────────────────────────────
 
     // Contar total de semanas completadas por el alumno
     const { count: totalCompletadas } = await supabase
@@ -73,50 +73,36 @@ export async function POST(request: NextRequest) {
     if (semanaData) {
       const { materia_id } = semanaData as { materia_id: string }
 
-      // Total de semanas de la materia
       const { count: totalSemanas } = await supabase
         .from('semanas')
         .select('id', { count: 'exact', head: true })
         .eq('materia_id', materia_id)
 
-      // Semanas de esa materia completadas por el alumno
       const { count: completadasEnMateria } = await supabase
         .from('progreso_semanas')
         .select('id', { count: 'exact', head: true })
         .eq('alumno_id', alumno.id)
         .in(
           'semana_id',
-          // subquery: todas las semanas de la materia
           (
-            await supabase
-              .from('semanas')
-              .select('id')
-              .eq('materia_id', materia_id)
+            await supabase.from('semanas').select('id').eq('materia_id', materia_id)
           ).data?.map((s: { id: string }) => s.id) ?? []
         )
 
-      if (
-        (totalSemanas ?? 0) > 0 &&
-        completadasEnMateria === totalSemanas
-      ) {
+      if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
         await supabase
           .from('logros_alumno')
           .upsert(
-            {
-              alumno_id: alumno.id,
-              tipo: 'materia_completada',
-              metadata: { materia_id },
-            },
+            { alumno_id: alumno.id, tipo: 'materia_completada', metadata: { materia_id } },
             { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
           )
       }
     }
 
-    // --- Racha de días ---
+    // ── Racha de días ─────────────────────────────────────────────────────────
     const ahora = new Date()
     const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
 
-    // Obtener racha actual guardada
     const { data: rachaActual } = await supabase
       .from('logros_alumno')
       .select('metadata')
@@ -131,22 +117,13 @@ export async function POST(request: NextRequest) {
     if (rachaPrevia?.ultima_actividad) {
       const ultimaFecha = new Date(rachaPrevia.ultima_actividad)
       const ultimaDia = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth(), ultimaFecha.getDate())
-      const diffMs = hoy.getTime() - ultimaDia.getTime()
-      const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24))
+      const diffDias = Math.round((hoy.getTime() - ultimaDia.getTime()) / (1000 * 60 * 60 * 24))
 
-      if (diffDias === 0) {
-        // Misma sesión del mismo día — mantener racha
-        diasRacha = rachaPrevia.dias ?? 1
-      } else if (diffDias === 1) {
-        // Ayer → incrementar
-        diasRacha = (rachaPrevia.dias ?? 1) + 1
-      } else {
-        // Más de 1 día sin actividad → resetear
-        diasRacha = 1
-      }
+      if (diffDias === 0)      diasRacha = rachaPrevia.dias ?? 1
+      else if (diffDias === 1) diasRacha = (rachaPrevia.dias ?? 1) + 1
+      else                     diasRacha = 1
     }
 
-    // Guardar racha actual (siempre upsert)
     await supabase
       .from('logros_alumno')
       .upsert(
@@ -158,7 +135,6 @@ export async function POST(request: NextRequest) {
         { onConflict: 'alumno_id,tipo', ignoreDuplicates: false }
       )
 
-    // Logros de racha
     if (diasRacha >= 3) {
       await supabase
         .from('logros_alumno')

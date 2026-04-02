@@ -26,12 +26,12 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: 'Configuración', href: '/admin/configuracion', emoji: '⚙️', icon: Settings        },
   ],
   ALUMNO: [
-    { label: 'Inicio',             href: '/alumno',                emoji: '🏠', icon: Home          },
-    { label: 'Mis Materias',       href: '/alumno/materias',       emoji: '📚', icon: BookOpen      },
-    { label: 'Mi Progreso',        href: '/alumno/calificaciones', emoji: '📊', icon: BarChart3     },
-    { label: 'Logros',             href: '/alumno/constancia',     emoji: '🏆', icon: Trophy        },
-    { label: 'Mis Documentos',     href: '/alumno/documentos',     emoji: '📄', icon: FolderOpen    },
-    { label: 'Mis Calificaciones', href: '/alumno/calificaciones', emoji: '📋', icon: ClipboardList },
+    { label: 'Inicio',         href: '/alumno',                emoji: '🏠', icon: Home          },
+    { label: 'Mis Materias',   href: '/alumno/materias',       emoji: '📚', icon: BookOpen      },
+    { label: 'Calificaciones', href: '/alumno/calificaciones', emoji: '📊', icon: BarChart3     },
+    { label: 'Logros',         href: '/alumno',                emoji: '🏆', icon: Trophy        },
+    { label: 'Constancia',     href: '/alumno/constancia',     emoji: '📜', icon: ClipboardList },
+    { label: 'Mis Documentos', href: '/alumno/documentos',     emoji: '📄', icon: FolderOpen    },
   ],
 }
 

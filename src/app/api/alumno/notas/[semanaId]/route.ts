@@ -12,11 +12,11 @@ export async function GET(
 
     const { semanaId } = params
 
-    // Obtener alumno
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
-      .eq('usuario_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
@@ -57,11 +57,11 @@ export async function PUT(
       return NextResponse.json({ error: 'contenido requerido' }, { status: 400 })
     }
 
-    // Obtener alumno
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
-      .eq('usuario_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })

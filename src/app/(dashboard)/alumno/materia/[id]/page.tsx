@@ -14,6 +14,7 @@ import SemanaQuiz from '@/components/alumno/SemanaQuiz'
 import NotasPersonales from '@/components/alumno/NotasPersonales'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
+import ReactMarkdown from 'react-markdown'
 
 gsap.registerPlugin(useGSAP)
 
@@ -29,7 +30,7 @@ interface Evaluacion {
 }
 interface BibItem { titulo: string; url?: string; tipo?: string }
 interface Materia {
-  id: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
+  id: string; nivel: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
   descripcion: string; descripcion_en: string; objetivo: string; objetivo_en: string; temario: string[]
   temario_en?: string[]
   bibliografia: BibItem[]
@@ -81,14 +82,36 @@ export default function MateriaPage() {
   const [alumnoId, setAlumnoId] = useState<string>('')
   const [semanasCompletadas, setSemanasCompletadas] = useState<Set<string>>(new Set())
   const [materiaAcreditada, setMateriaAcreditada] = useState(false)
-  const [glosario, setGlosario] = useState<{ id: string; termino: string; termino_en: string; definicion: string; definicion_en: string }[]>([])
+  const [glosario, setGlosario] = useState<{ id: string; termino: string; definicion: string }[]>([])
 
   const [mostrarGuia, setMostrarGuia] = useState(true)
   const guiaRef = useRef<HTMLDivElement>(null)
+  const [guardandoProgreso, setGuardandoProgreso] = useState(false)
 
   useEffect(() => {
     if (tab === 'examen') setMostrarGuia(true)
   }, [tab])
+
+  const marcarSemana = async (semanaId: string) => {
+    if (guardandoProgreso || semanasCompletadas.has(semanaId)) return
+    setGuardandoProgreso(true)
+    try {
+      await fetch('/api/alumno/progreso/semana', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ semana_id: semanaId }),
+      })
+      const nuevas = new Set([...semanasCompletadas, semanaId])
+      setSemanasCompletadas(nuevas)
+      if (materia && materia.semanas.every(s => nuevas.has(s.id))) {
+        setMateriaAcreditada(true)
+      }
+    } catch {
+      // silencioso — no bloquear al alumno
+    } finally {
+      setGuardandoProgreso(false)
+    }
+  }
 
   const ocultarGuia = () => {
     if (guiaRef.current) {
@@ -146,15 +169,9 @@ export default function MateriaPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: alumnoData } = await supabase
-        .from('alumnos')
-        .select('id')
-        .eq('usuario_id', user.id)
-        .single()
-      if (!alumnoData) return
-
-      const { id: aId } = alumnoData as { id: string }
-      setAlumnoId(aId)
+      // En IVS: alumnos.id = user.id (no usuario_id)
+      setAlumnoId(user.id)
+      const aId = user.id
 
       const { data: progreso } = await supabase
         .from('progreso_semanas')
@@ -261,6 +278,7 @@ export default function MateriaPage() {
                     semanaActivaId={semanaSeleccionada ?? undefined}
                     onSemanaClick={setSemanaSeleccionada}
                     lang="es"
+                    esDemo={materia.nivel === 'demo'}
                   />
                 </div>
               </div>
@@ -281,7 +299,7 @@ export default function MateriaPage() {
                       {/* Header de la semana */}
                       <div className="pb-3" style={{ borderBottom: '1px solid #2A2F3E' }}>
                         <span className="text-xs font-mono" style={{ color: '#6366F1' }}>
-                          Semana {semana.numero}
+                          {materia.nivel === 'demo' ? `Paso ${semana.numero}` : `Semana ${semana.numero}`}
                         </span>
                         <h3 className="text-base font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
                           {semana.titulo}
@@ -305,14 +323,103 @@ export default function MateriaPage() {
                         })()}
                       </div>
 
-                      {/* Contenido */}
+                      {/* Contenido — markdown (sin sección "Videos recomendados") */}
                       {semana.contenido && (
-                        <div className="space-y-1">
-                          {renderTexto(semana.contenido)}
+                        <div className="prose prose-sm max-w-none" style={{
+                          color: '#94A3B8',
+                          lineHeight: '1.75',
+                        }}>
+                          <ReactMarkdown
+                            components={{
+                              p:      ({ children }) => <p className="mb-3 text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{children}</p>,
+                              strong: ({ children }) => <strong style={{ color: '#F1F5F9', fontWeight: 600 }}>{children}</strong>,
+                              em:     ({ children }) => <em style={{ color: '#CBD5E1' }}>{children}</em>,
+                              h1:     ({ children }) => <h1 className="text-base font-bold mt-4 mb-2" style={{ color: '#F1F5F9' }}>{children}</h1>,
+                              h2:     ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1.5" style={{ color: '#F1F5F9' }}>{children}</h2>,
+                              h3:     ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1" style={{ color: '#E2E8F0' }}>{children}</h3>,
+                              ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3 text-sm" style={{ color: '#94A3B8' }}>{children}</ul>,
+                              ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-3 text-sm" style={{ color: '#94A3B8' }}>{children}</ol>,
+                              li:     ({ children }) => <li className="leading-relaxed">{children}</li>,
+                              blockquote: ({ children }) => (
+                                <blockquote className="pl-4 my-3 text-sm italic"
+                                  style={{ borderLeft: '3px solid rgba(91,108,255,0.4)', color: '#64748B' }}>
+                                  {children}
+                                </blockquote>
+                              ),
+                              code: ({ children }) => (
+                                <code className="px-1.5 py-0.5 rounded text-xs font-mono"
+                                  style={{ background: 'rgba(91,108,255,0.12)', color: '#7B8AFF' }}>
+                                  {children}
+                                </code>
+                              ),
+                            }}
+                          >
+                            {semana.contenido.replace(/(\n|^)(#{1,3} )?(\*\*)?Videos recomendados(\*\*)?:?[\s\S]*$/i, '')}
+                          </ReactMarkdown>
                         </div>
                       )}
 
-                      {/* Progreso de lectura */}
+                      {/* Videos — embebidos (YouTube iframe) */}
+                      {semana.videos?.length > 0 && (
+                        <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #2A2F3E', paddingTop: '1rem' }}>
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#475569' }}>
+                            🎬 Videos de la semana
+                          </p>
+                          {semana.videos.map((v, i) => (
+                            <VideoEmbed
+                              key={i}
+                              url={v.url}
+                              titulo={v.titulo}
+                              duracion={v.duracion}
+                              lang="es"
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Mini quiz de refuerzo */}
+                      {alumnoId && (
+                        <SemanaQuiz
+                          key={semana.id}
+                          semanaId={semana.id}
+                          alumnoId={alumnoId}
+                          lang="es"
+                        />
+                      )}
+
+                      {/* Botón completar semana — siempre visible al final del contenido */}
+                      <div className="pt-2">
+                        {semanasCompletadas.has(semana.id) ? (
+                          <div
+                            className="flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold"
+                            style={{
+                              background: 'rgba(16,185,129,0.1)',
+                              color: '#10B981',
+                              border: '1px solid rgba(16,185,129,0.2)',
+                            }}
+                          >
+                            ✅ Semana completada
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => marcarSemana(semana.id)}
+                            disabled={guardandoProgreso}
+                            className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-60"
+                            style={{
+                              background: '#3AAFA9',
+                              color: '#fff',
+                              border: 'none',
+                              cursor: guardandoProgreso ? 'not-allowed' : 'pointer',
+                            }}
+                            onMouseEnter={e => { if (!guardandoProgreso) (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}
+                          >
+                            {guardandoProgreso ? '⏳ Guardando...' : '✅ Marcar semana como completada'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Barra de progreso de lectura (flotante, como complemento) */}
                       <ReadingProgress
                         semanaId={semana.id}
                         alumnoId={alumnoId}
@@ -326,32 +433,6 @@ export default function MateriaPage() {
                           }
                         }}
                       />
-
-                      {/* Mini quiz de refuerzo */}
-                      {alumnoId && (
-                        <SemanaQuiz
-                          semanaId={semana.id}
-                          alumnoId={alumnoId}
-                          lang="es"
-                        />
-                      )}
-
-                      {/* Videos */}
-                      {semana.videos?.length > 0 && (
-                        <div className="space-y-2 pt-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Videos</p>
-
-                          {semana.videos.map((v, i) => (
-                            <VideoEmbed
-                              key={i}
-                              url={v.url}
-                              titulo={v.titulo}
-                              duracion={v.duracion}
-                              lang="es"
-                            />
-                          ))}
-                        </div>
-                      )}
 
                       {/* Notas personales */}
                       {alumnoId && (
