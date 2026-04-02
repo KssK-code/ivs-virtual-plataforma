@@ -388,12 +388,14 @@ export default function AlumnoDashboard() {
                 const completado = mes.desbloqueado && mes.numero < mesActivo
                 const activo     = mes.desbloqueado && mes.numero === mesActivo
                 const bloqueado  = !mes.desbloqueado
+                const nMat       = mes.materias?.length ?? 0
+                const subMaterias = nMat === 1 ? '1 materia' : `${nMat} materias`
 
                 return (
                   <div
                     key={mes.id}
                     onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
-                    className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-2"
+                    className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-1.5 min-h-[118px]"
                     style={{
                       background:  bloqueado  ? '#F8FAFB'
                                  : completado ? '#F0FDF4'
@@ -412,8 +414,8 @@ export default function AlumnoDashboard() {
                       (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                     }}
                   >
-                    <div className="flex items-start justify-between">
-                      <span className="text-3xl font-bold leading-none"
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-3xl font-bold leading-none tabular-nums"
                         style={{ color: bloqueado ? '#C8D8E8' : completado ? '#16A34A' : '#3AAFA9' }}>
                         {mes.numero < 10 ? `0${mes.numero}` : mes.numero}
                       </span>
@@ -428,13 +430,13 @@ export default function AlumnoDashboard() {
                         )}
                       </div>
                     </div>
-                    <p className="text-sm font-semibold"
-                      style={{ color: bloqueado ? '#B0C4D4' : completado ? '#15803D' : '#1B3A57' }}>
-                      {mes.titulo || `Mes ${mes.numero}`}
+                    <p className="text-xs font-semibold mt-1"
+                      style={{ color: bloqueado ? '#94A3B8' : '#64748B' }}>
+                      {subMaterias}
                     </p>
-                    <p className="text-xs"
-                      style={{ color: bloqueado ? '#C8D8E8' : '#9DB0C0' }}>
-                      {bloqueado ? 'Bloqueado' : completado ? 'Completado ✓' : 'En progreso'}
+                    <p className="text-xs font-medium"
+                      style={{ color: bloqueado ? '#C8D8E8' : completado ? '#15803D' : '#1B3A57' }}>
+                      {bloqueado ? 'Bloqueado' : completado ? 'Completado' : 'En progreso'}
                     </p>
                   </div>
                 )
