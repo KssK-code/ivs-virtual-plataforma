@@ -56,14 +56,15 @@ export async function GET(
       .from('meses_contenido')
       .select(`
         id, numero_mes, titulo, descripcion,
-        semanas ( id, numero_semana, titulo, descripcion, video_url, tiempo_estimado_minutos )
+        semanas ( id, numero_semana, titulo, descripcion, contenido, video_url, tiempo_estimado_minutos )
       `)
       .eq('materia_id', params.id)
       .order('numero_mes')
 
     type SemanaRow = {
       id: string; numero_semana: number; titulo: string
-      descripcion: string | null; video_url: string | null; tiempo_estimado_minutos: number
+      descripcion: string | null; contenido: string | null
+      video_url: string | null; tiempo_estimado_minutos: number
     }
     type MesRow = {
       id: string; numero_mes: number; titulo: string; descripcion: string | null
@@ -83,8 +84,8 @@ export async function GET(
         numero:      s.numero_semana,
         titulo:      s.titulo,
         titulo_en:   s.titulo,
-        contenido:   s.descripcion ?? '',
-        contenido_en: s.descripcion ?? '',
+        contenido:   s.contenido ?? s.descripcion ?? '',
+        contenido_en: s.contenido ?? s.descripcion ?? '',
         url_en:      '',
         videos:      s.video_url
           ? [{
