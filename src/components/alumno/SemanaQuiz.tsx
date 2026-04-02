@@ -11,7 +11,6 @@ interface Pregunta {
   pregunta: string
   opciones: string[]
   respuesta_correcta: number
-  explicacion: string
   orden: number
 }
 
@@ -237,7 +236,7 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
           })}
         </div>
 
-        {/* Explicación */}
+        {/* Retroalimentación inmediata */}
         {yaRespondida && (
           <div
             className="px-4 py-3 rounded-lg text-sm leading-relaxed"
@@ -251,10 +250,11 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
               color: '#CBD5E1',
             }}
           >
-            <span className="font-semibold mr-1">
-              {seleccionada === pregunta.respuesta_correcta ? '✓' : '✗'}
+            <span className="font-semibold">
+              {seleccionada === pregunta.respuesta_correcta
+                ? '✓ ¡Correcto!'
+                : '✗ Incorrecto'}
             </span>
-            {pregunta.explicacion}
           </div>
         )}
       </div>

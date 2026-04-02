@@ -7,7 +7,7 @@ import { useGSAP } from '@gsap/react'
 gsap.registerPlugin(useGSAP)
 
 interface BadgesGridProps {
-  logros: Array<{ tipo: string; obtenido_en: string }>
+  logros: Array<{ tipo_logro: string; fecha_obtenido: string }>
   lang: string
 }
 
@@ -92,7 +92,7 @@ export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
   const [hoveredTipo, setHoveredTipo] = useState<string | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
-  const logroMap = new Map(logros.map(l => [l.tipo, l.obtenido_en]))
+  const logroMap = new Map(logros.map(l => [l.tipo_logro, l.fecha_obtenido]))
   const obtenidos = logros.length
 
   useGSAP(() => {

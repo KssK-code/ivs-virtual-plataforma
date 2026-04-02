@@ -97,7 +97,8 @@ export default function AlumnoDashboard() {
   const [meses,              setMeses]               = useState<Mes[]>([])
   const [demo,               setDemo]               = useState(false)
   const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
-  const [logros,             setLogros]             = useState<Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>>([])
+  const [logros,             setLogros]             = useState<Array<{ tipo_logro: string; fecha_obtenido: string }>>([])
+  const [diasRacha,          setDiasRacha]          = useState(0)
   const [loading,            setLoading]            = useState(true)
 
   // Toast on redirect
@@ -129,16 +130,25 @@ export default function AlumnoDashboard() {
     }).finally(() => setLoading(false))
   }, [])
 
-  // Logros
+  // Logros + racha
   useEffect(() => {
     if (!perfil) return
     const sb = createClient()
     ;(async () => {
+      // FIX #2 logros: usar tipo_logro + fecha_obtenido (columnas IVS reales)
       const { data } = await sb
         .from('logros_alumno')
-        .select('tipo, obtenido_en, metadata')
+        .select('tipo_logro, fecha_obtenido')
         .eq('alumno_id', perfil.id)
-      if (data) setLogros(data as Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>)
+      if (data) setLogros(data as Array<{ tipo_logro: string; fecha_obtenido: string }>)
+
+      // FIX #3 racha: leer de racha_actividad (tabla dedicada)
+      const { data: rachaData } = await sb
+        .from('racha_actividad')
+        .select('racha_actual')
+        .eq('alumno_id', perfil.id)
+        .single()
+      if (rachaData) setDiasRacha((rachaData as { racha_actual: number }).racha_actual ?? 0)
     })()
   }, [perfil])
 
@@ -175,9 +185,7 @@ export default function AlumnoDashboard() {
   const saludo        = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
   const primerNombre  = perfil?.nombre_completo?.split(' ')?.[0] ?? 'Alumno'
   const mesActivo     = perfil.meses_desbloqueados
-  const rachaLogro    = logros.find(l => l.tipo === 'racha_actual')
-  const diasRacha     = (rachaLogro?.metadata?.dias as number | undefined) ?? 0
-  const logrosCount   = logros.filter(l => l.tipo !== 'racha_actual').length
+  const logrosCount   = logros.length
   const nivelLabel    = perfil.nivel === 'preparatoria' ? 'Preparatoria'
                       : perfil.nivel === 'secundaria'   ? 'Secundaria'
                       : perfil.plan_nombre?.toLowerCase().includes('prepa') ? 'Preparatoria'

@@ -14,9 +14,9 @@ export async function GET(
 
     const { data: terminos } = await supabase
       .from('glosario_materia')
-      .select('id, termino, termino_en, definicion, definicion_en, orden')
+      .select('id, termino, definicion')
       .eq('materia_id', materiaId)
-      .order('orden')
+      .order('termino')
 
     return NextResponse.json({ terminos: terminos ?? [] })
   } catch {

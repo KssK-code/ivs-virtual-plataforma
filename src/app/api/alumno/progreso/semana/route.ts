@@ -53,102 +53,127 @@ export async function POST(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('alumno_id', alumno.id)
 
-    // Logro: primera semana completada
+    // FIX #2 logros: usar tipo_logro (no tipo), sin metadata
     if ((totalCompletadas ?? 0) === 1) {
       await supabase
         .from('logros_alumno')
         .upsert(
-          { alumno_id: alumno.id, tipo: 'primera_semana' },
-          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+          { alumno_id: alumno.id, tipo_logro: 'primera_semana' },
+          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
     }
 
-    // Logro: materia completada — obtener materia_id desde la semana
+    // FIX #2 logros: semanas.mes_id → meses_contenido.materia_id (no semanas.materia_id)
     const { data: semanaData } = await supabase
       .from('semanas')
-      .select('materia_id')
+      .select('mes_id, meses_contenido!inner(materia_id)')
       .eq('id', semana_id)
       .single()
 
     if (semanaData) {
-      const { materia_id } = semanaData as { materia_id: string }
+      const raw = semanaData as unknown as {
+        mes_id: string
+        meses_contenido: { materia_id: string } | { materia_id: string }[]
+      }
+      const mc = Array.isArray(raw.meses_contenido)
+        ? raw.meses_contenido[0]
+        : raw.meses_contenido
+      const materia_id = mc?.materia_id
 
-      const { count: totalSemanas } = await supabase
-        .from('semanas')
-        .select('id', { count: 'exact', head: true })
-        .eq('materia_id', materia_id)
+      if (materia_id) {
+        // Obtener todos los mes_ids de la materia para contar semanas
+        const { data: mesesIds } = await supabase
+          .from('meses_contenido')
+          .select('id')
+          .eq('materia_id', materia_id)
 
-      const { count: completadasEnMateria } = await supabase
-        .from('progreso_semanas')
-        .select('id', { count: 'exact', head: true })
-        .eq('alumno_id', alumno.id)
-        .in(
-          'semana_id',
-          (
-            await supabase.from('semanas').select('id').eq('materia_id', materia_id)
-          ).data?.map((s: { id: string }) => s.id) ?? []
-        )
+        const mesIds = (mesesIds ?? []).map((m: { id: string }) => m.id)
 
-      if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
-        await supabase
-          .from('logros_alumno')
-          .upsert(
-            { alumno_id: alumno.id, tipo: 'materia_completada', metadata: { materia_id } },
-            { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
-          )
+        const { count: totalSemanas } = await supabase
+          .from('semanas')
+          .select('id', { count: 'exact', head: true })
+          .in('mes_id', mesIds)
+
+        // Semanas de la materia ya completadas por el alumno
+        const { data: semanasIds } = await supabase
+          .from('semanas')
+          .select('id')
+          .in('mes_id', mesIds)
+
+        const semIds = (semanasIds ?? []).map((s: { id: string }) => s.id)
+
+        const { count: completadasEnMateria } = await supabase
+          .from('progreso_semanas')
+          .select('id', { count: 'exact', head: true })
+          .eq('alumno_id', alumno.id)
+          .in('semana_id', semIds)
+
+        if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
+          await supabase
+            .from('logros_alumno')
+            .upsert(
+              { alumno_id: alumno.id, tipo_logro: 'materia_completada' },
+              { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
+            )
+        }
       }
     }
 
-    // ── Racha de días ─────────────────────────────────────────────────────────
-    const ahora = new Date()
-    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+    // FIX #3 racha: usar tabla racha_actividad (no logros_alumno.metadata)
+    const hoyStr = new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
 
-    const { data: rachaActual } = await supabase
-      .from('logros_alumno')
-      .select('metadata')
+    const { data: rachaData } = await supabase
+      .from('racha_actividad')
+      .select('racha_actual, racha_maxima, ultima_actividad')
       .eq('alumno_id', alumno.id)
-      .eq('tipo', 'racha_actual')
       .single()
 
-    const rachaPrevia = (rachaActual?.metadata as { dias?: number; ultima_actividad?: string } | null)
+    const prev = rachaData as {
+      racha_actual: number; racha_maxima: number; ultima_actividad: string | null
+    } | null
 
     let diasRacha = 1
-
-    if (rachaPrevia?.ultima_actividad) {
-      const ultimaFecha = new Date(rachaPrevia.ultima_actividad)
-      const ultimaDia = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth(), ultimaFecha.getDate())
-      const diffDias = Math.round((hoy.getTime() - ultimaDia.getTime()) / (1000 * 60 * 60 * 24))
-
-      if (diffDias === 0)      diasRacha = rachaPrevia.dias ?? 1
-      else if (diffDias === 1) diasRacha = (rachaPrevia.dias ?? 1) + 1
-      else                     diasRacha = 1
+    if (prev) {
+      const ultima = prev.ultima_actividad
+      if (ultima === hoyStr) {
+        diasRacha = prev.racha_actual // mismo día, sin cambio
+      } else if (ultima) {
+        const diffMs = new Date(hoyStr).getTime() - new Date(ultima).getTime()
+        const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24))
+        if (diffDias === 1) diasRacha = (prev.racha_actual ?? 1) + 1
+        else                diasRacha = 1
+      }
     }
 
+    const nuevaMax = Math.max(diasRacha, prev?.racha_maxima ?? 0)
+
     await supabase
-      .from('logros_alumno')
+      .from('racha_actividad')
       .upsert(
         {
-          alumno_id: alumno.id,
-          tipo: 'racha_actual',
-          metadata: { dias: diasRacha, ultima_actividad: ahora.toISOString() },
+          alumno_id:        alumno.id,
+          racha_actual:     diasRacha,
+          racha_maxima:     nuevaMax,
+          ultima_actividad: hoyStr,
         },
-        { onConflict: 'alumno_id,tipo', ignoreDuplicates: false }
+        { onConflict: 'alumno_id', ignoreDuplicates: false }
       )
 
+    // Logros de racha (usan tipo_logro)
     if (diasRacha >= 3) {
       await supabase
         .from('logros_alumno')
         .upsert(
-          { alumno_id: alumno.id, tipo: 'racha_3_dias' },
-          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+          { alumno_id: alumno.id, tipo_logro: 'racha_3_dias' },
+          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
     }
     if (diasRacha >= 7) {
       await supabase
         .from('logros_alumno')
         .upsert(
-          { alumno_id: alumno.id, tipo: 'racha_7_dias' },
-          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+          { alumno_id: alumno.id, tipo_logro: 'racha_7_dias' },
+          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
     }
 
