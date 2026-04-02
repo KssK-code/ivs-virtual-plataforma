@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+export const runtime = 'nodejs'
+
+/** Insert idempotente: ignora violación UNIQUE (23505) */
+async function otorgarLogro(
+  db: SupabaseClient,
+  alumnoId: string,
+  tipoLogro: string
+): Promise<void> {
+  console.log('Intentando otorgar logro:', tipoLogro, alumnoId)
+  const { data, error } = await db
+    .from('logros_alumno')
+    .insert({ alumno_id: alumnoId, tipo_logro: tipoLogro })
+    .select('id, tipo_logro, fecha_obtenido')
+    .maybeSingle()
+
+  if (error) {
+    const code = (error as { code?: string }).code
+    const msg = String((error as { message?: string }).message ?? '')
+    const dup = code === '23505' || /duplicate key|unique constraint/i.test(msg)
+    if (dup) {
+      console.log('Resultado logro:', null, error)
+      return
+    }
+    console.log('Resultado logro:', null, error)
+    console.error('[progreso/semana] Error logro', tipoLogro, error)
+    return
+  }
+  console.log('Resultado logro:', data, null)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,28 +43,25 @@ export async function POST(request: NextRequest) {
     const { semana_id } = body as { semana_id: string }
     if (!semana_id) return NextResponse.json({ error: 'semana_id requerido' }, { status: 400 })
 
-    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
     const alumno = alumnoData as { id: string }
 
-    // Verificar si ya existía el progreso
     const { data: existente } = await supabase
       .from('progreso_semanas')
       .select('id')
       .eq('alumno_id', alumno.id)
       .eq('semana_id', semana_id)
-      .single()
+      .maybeSingle()
 
-    const ya_existia = !!existente
+    const yaExistiaProgreso = !!existente
 
-    // Upsert progreso (ignora si ya existe)
     const { error: upsertError } = await supabase
       .from('progreso_semanas')
       .upsert(
@@ -41,45 +69,51 @@ export async function POST(request: NextRequest) {
         { onConflict: 'alumno_id,semana_id', ignoreDuplicates: true }
       )
 
-    if (upsertError) return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
+    if (upsertError) {
+      console.error('[progreso/semana] upsert progreso_semanas:', upsertError)
+      return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
+    }
 
-    // Si ya existía, no re-evaluar logros
-    if (ya_existia) return NextResponse.json({ ok: true, ya_existia: true })
-
-    // Logros y racha: RLS en producción suele no permitir INSERT al alumno → usar service role
-    let adminDb: ReturnType<typeof createAdminClient> | null = null
+    let adminDb: SupabaseClient | null = null
     try {
       adminDb = createAdminClient()
-    } catch {
-      adminDb = null
+    } catch (e) {
+      console.warn(
+        '[progreso/semana] createAdminClient falló — logros/racha usan cliente de sesión (puede fallar por RLS).',
+        e
+      )
     }
     const dbPriv = adminDb ?? supabase
 
-    // ── Verificar logros ──────────────────────────────────────────────────────
-
-    // Contar total de semanas completadas por el alumno
-    const { count: totalCompletadas } = await supabase
+    // Contar con el mismo cliente que inserta logros (evita discrepancias por RLS)
+    const { count: totalCompletadas, error: countErr } = await dbPriv
       .from('progreso_semanas')
       .select('id', { count: 'exact', head: true })
       .eq('alumno_id', alumno.id)
 
-    // tipo_logro + onConflict (columna real en IVS; no usar "tipo")
-    if ((totalCompletadas ?? 0) === 1) {
-      const { error: e1 } = await dbPriv
-        .from('logros_alumno')
-        .upsert(
-          { alumno_id: alumno.id, tipo_logro: 'primera_semana' },
-          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
-        )
-      if (e1) console.error('[progreso/semana] logro primera_semana:', e1)
+    if (countErr) console.error('[progreso/semana] count progreso_semanas:', countErr)
+
+    console.log(
+      '[progreso/semana] semana_id:',
+      semana_id,
+      'alumno:',
+      alumno.id,
+      'ya_existía_progreso:',
+      yaExistiaProgreso,
+      'total_completadas:',
+      totalCompletadas
+    )
+
+    // Primera semana completada en la plataforma (idempotente si ya hay fila)
+    if ((totalCompletadas ?? 0) >= 1) {
+      await otorgarLogro(dbPriv, alumno.id, 'primera_semana')
     }
 
-    // FIX #2 logros: semanas.mes_id → meses_contenido.materia_id (no semanas.materia_id)
     const { data: semanaData } = await supabase
       .from('semanas')
       .select('mes_id, meses_contenido!inner(materia_id)')
       .eq('id', semana_id)
-      .single()
+      .maybeSingle()
 
     if (semanaData) {
       const raw = semanaData as unknown as {
@@ -92,7 +126,6 @@ export async function POST(request: NextRequest) {
       const materia_id = mc?.materia_id
 
       if (materia_id) {
-        // Obtener todos los mes_ids de la materia para contar semanas
         const { data: mesesIds } = await supabase
           .from('meses_contenido')
           .select('id')
@@ -100,12 +133,11 @@ export async function POST(request: NextRequest) {
 
         const mesIds = (mesesIds ?? []).map((m: { id: string }) => m.id)
 
-        const { count: totalSemanas } = await supabase
+        const { count: totalSemanas } = await dbPriv
           .from('semanas')
           .select('id', { count: 'exact', head: true })
           .in('mes_id', mesIds)
 
-        // Semanas de la materia ya completadas por el alumno
         const { data: semanasIds } = await supabase
           .from('semanas')
           .select('id')
@@ -113,32 +145,25 @@ export async function POST(request: NextRequest) {
 
         const semIds = (semanasIds ?? []).map((s: { id: string }) => s.id)
 
-        const { count: completadasEnMateria } = await supabase
+        const { count: completadasEnMateria } = await dbPriv
           .from('progreso_semanas')
           .select('id', { count: 'exact', head: true })
           .eq('alumno_id', alumno.id)
           .in('semana_id', semIds)
 
         if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
-          const { error: e2 } = await dbPriv
-            .from('logros_alumno')
-            .upsert(
-              { alumno_id: alumno.id, tipo_logro: 'materia_completada' },
-              { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
-            )
-          if (e2) console.error('[progreso/semana] logro materia_completada:', e2)
+          await otorgarLogro(dbPriv, alumno.id, 'materia_completada')
         }
       }
     }
 
-    // FIX #3 racha: usar tabla racha_actividad (no logros_alumno.metadata)
-    const hoyStr = new Date().toISOString().slice(0, 10) // 'YYYY-MM-DD'
+    const hoyStr = new Date().toISOString().slice(0, 10)
 
-    const { data: rachaData } = await supabase
+    const { data: rachaData } = await dbPriv
       .from('racha_actividad')
       .select('racha_actual, racha_maxima, ultima_actividad')
       .eq('alumno_id', alumno.id)
-      .single()
+      .maybeSingle()
 
     const prev = rachaData as {
       racha_actual: number; racha_maxima: number; ultima_actividad: string | null
@@ -148,7 +173,7 @@ export async function POST(request: NextRequest) {
     if (prev) {
       const ultima = prev.ultima_actividad
       if (ultima === hoyStr) {
-        diasRacha = prev.racha_actual // mismo día, sin cambio
+        diasRacha = prev.racha_actual
       } else if (ultima) {
         const diffMs = new Date(hoyStr).getTime() - new Date(ultima).getTime()
         const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24))
@@ -159,7 +184,9 @@ export async function POST(request: NextRequest) {
 
     const nuevaMax = Math.max(diasRacha, prev?.racha_maxima ?? 0)
 
-    const { error: erRacha } = await dbPriv
+    console.log('[progreso/semana] racha upsert', { alumno: alumno.id, diasRacha, nuevaMax, hoyStr })
+
+    const { data: rachaOut, error: erRacha } = await dbPriv
       .from('racha_actividad')
       .upsert(
         {
@@ -170,30 +197,18 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: 'alumno_id', ignoreDuplicates: false }
       )
+      .select('alumno_id, racha_actual')
+      .maybeSingle()
+
     if (erRacha) console.error('[progreso/semana] racha_actividad:', erRacha)
+    else console.log('[progreso/semana] Resultado racha:', rachaOut, erRacha)
 
-    // Logros de racha (usan tipo_logro)
-    if (diasRacha >= 3) {
-      const { error: e3 } = await dbPriv
-        .from('logros_alumno')
-        .upsert(
-          { alumno_id: alumno.id, tipo_logro: 'racha_3_dias' },
-          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
-        )
-      if (e3) console.error('[progreso/semana] logro racha_3:', e3)
-    }
-    if (diasRacha >= 7) {
-      const { error: e4 } = await dbPriv
-        .from('logros_alumno')
-        .upsert(
-          { alumno_id: alumno.id, tipo_logro: 'racha_7_dias' },
-          { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
-        )
-      if (e4) console.error('[progreso/semana] logro racha_7:', e4)
-    }
+    if (diasRacha >= 3) await otorgarLogro(dbPriv, alumno.id, 'racha_3_dias')
+    if (diasRacha >= 7) await otorgarLogro(dbPriv, alumno.id, 'racha_7_dias')
 
-    return NextResponse.json({ ok: true, ya_existia: false, diasRacha })
-  } catch {
+    return NextResponse.json({ ok: true, ya_existia: yaExistiaProgreso, diasRacha })
+  } catch (e) {
+    console.error('[progreso/semana] excepción:', e)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
