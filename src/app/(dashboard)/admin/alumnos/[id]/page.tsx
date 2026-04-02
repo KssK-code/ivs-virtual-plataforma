@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText } from 'lucide-react'
+import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText, StickyNote, Save, LockOpen, CheckCircle2 } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
 interface AlumnoDetalle {
@@ -10,6 +10,7 @@ interface AlumnoDetalle {
   matricula: string
   meses_desbloqueados: number
   created_at: string
+  notas_admin: string | null
   usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
   plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
   pagos: { id: string; monto: number; mes_desbloqueado: number; metodo_pago: string; referencia: string | null; created_at: string }[]
@@ -75,6 +76,10 @@ export default function AlumnoDetallePage() {
   const [docEdits, setDocEdits] = useState<Record<string, { estado: DocEstado; comentario: string }>>({})
   const [savingDoc, setSavingDoc] = useState<string | null>(null)
 
+  // Notas del admin
+  const [notas, setNotas] = useState('')
+  const [savingNotas, setSavingNotas] = useState(false)
+
   const cargar = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -86,6 +91,9 @@ export default function AlumnoDetallePage() {
       if (!alumnoRes.ok) throw new Error('Alumno no encontrado')
       const alumnoData = await alumnoRes.json()
       setAlumno(alumnoData)
+      if (alumnoData.notas_admin !== undefined) {
+        setNotas(alumnoData.notas_admin ?? '')
+      }
       const docsData: DocumentoAdmin[] = docsRes.ok ? await docsRes.json() : []
       setDocumentos(docsData)
       // Inicializar edits con valores actuales
@@ -163,11 +171,16 @@ export default function AlumnoDetallePage() {
     const nuevoEstado = !alumno.usuario.activo
     setTogglingActivo(true)
     try {
-      await fetch(`/api/admin/alumnos/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/admin/alumnos/${id}/activar`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo: nuevoEstado }),
       })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error ?? 'Error al cambiar estado', 'error')
+        return
+      }
       await cargar()
       showToast(
         nuevoEstado
@@ -175,6 +188,8 @@ export default function AlumnoDetallePage() {
           : `Alumno ${alumno.usuario.nombre_completo} desactivado`,
         nuevoEstado ? 'success' : 'info'
       )
+    } catch {
+      showToast('Error inesperado', 'error')
     } finally {
       setTogglingActivo(false)
     }
@@ -198,6 +213,24 @@ export default function AlumnoDetallePage() {
       showToast('Error inesperado', 'error')
     } finally {
       setSavingDoc(null)
+    }
+  }
+
+  async function handleGuardarNotas() {
+    setSavingNotas(true)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}/notas`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notas }),
+      })
+      const data = await res.json()
+      if (!res.ok) { showToast(data.error ?? 'Error al guardar notas', 'error'); return }
+      showToast('✓ Notas guardadas', 'success')
+    } catch {
+      showToast('Error inesperado al guardar notas', 'error')
+    } finally {
+      setSavingNotas(false)
     }
   }
 
@@ -236,7 +269,7 @@ export default function AlumnoDetallePage() {
           </button>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{alumno.usuario.nombre_completo}</h2>
+              <h1 className="text-xl font-bold text-gray-900">{alumno.usuario.nombre_completo}</h1>
               <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
                 {alumno.matricula}
               </span>
@@ -297,16 +330,26 @@ export default function AlumnoDetallePage() {
               {alumno.meses_desbloqueados} de {alumno.plan.duracion_meses} meses desbloqueados
             </p>
           </div>
-          <button
-            onClick={() => { setModalPago(true); setDesbloquearError(null) }}
-            disabled={todosBloqueados}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: todosBloqueados ? 'rgba(91,108,255,0.1)' : '#5B6CFF', color: todosBloqueados ? '#7B8AFF' : '#fff' }}
-            onMouseEnter={e => { if (!todosBloqueados) e.currentTarget.style.background = '#7B8AFF' }}
-            onMouseLeave={e => { if (!todosBloqueados) e.currentTarget.style.background = '#5B6CFF' }}
-          >
-            🔓 {todosBloqueados ? 'Todos los meses desbloqueados' : `Abrir Mes ${alumno.meses_desbloqueados + 1}`}
-          </button>
+          {todosBloqueados ? (
+            <div
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#22C55E' }}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Todos los meses desbloqueados
+            </div>
+          ) : (
+            <button
+              onClick={() => { setModalPago(true); setDesbloquearError(null) }}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-all shadow-lg"
+              style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 20px rgba(58,175,169,0.4)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#2D8C87'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#3AAFA9'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <LockOpen className="w-5 h-5" />
+              Abrir Mes {alumno.meses_desbloqueados + 1}
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -402,6 +445,37 @@ export default function AlumnoDetallePage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Notas del Admin */}
+      <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
+        <div className="flex items-center gap-2">
+          <StickyNote className="w-4 h-4" style={{ color: '#F59E0B' }} />
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Notas internas</h3>
+          <span className="text-xs" style={{ color: '#475569' }}>(Solo visibles para admins)</span>
+        </div>
+        <textarea
+          rows={4}
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          placeholder="Escribe notas sobre este alumno (motivos de contacto, observaciones, seguimiento, etc.)..."
+          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
+          style={{ ...INPUT_STYLE, minHeight: 100 }}
+          onFocus={e => { e.currentTarget.style.border = '1px solid #3AAFA9' }}
+          onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleGuardarNotas}
+            disabled={savingNotas}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60"
+            style={{ background: '#3AAFA9', color: '#fff' }}
+            onMouseEnter={e => { if (!savingNotas) e.currentTarget.style.background = '#2D8C87' }}
+            onMouseLeave={e => { if (!savingNotas) e.currentTarget.style.background = '#3AAFA9' }}
+          >
+            {savingNotas ? <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</> : <><Save className="w-4 h-4" />Guardar notas</>}
+          </button>
+        </div>
       </div>
 
       {/* Documentos */}
@@ -661,12 +735,12 @@ export default function AlumnoDetallePage() {
             {/* Mensaje */}
             <div
               className="rounded-xl p-4 mb-4 text-center"
-              style={{ background: 'rgba(91,108,255,0.08)', border: '1px solid rgba(91,108,255,0.2)' }}
+              style={{ background: 'rgba(58,175,169,0.08)', border: '1px solid rgba(58,175,169,0.2)' }}
             >
               <p className="text-4xl mb-2">🔓</p>
               <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
                 ¿Confirmas abrir el{' '}
-                <span style={{ color: '#7B8AFF' }}>Mes {alumno.meses_desbloqueados + 1}</span>
+                <span style={{ color: '#3AAFA9' }}>Mes {alumno.meses_desbloqueados + 1}</span>
                 {' '}para
               </p>
               <p className="text-sm font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
@@ -694,9 +768,9 @@ export default function AlumnoDetallePage() {
                 onClick={handleDesbloquear}
                 disabled={submitting}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 transition-all"
-                style={{ background: '#5B6CFF', color: '#fff' }}
-                onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#7B8AFF' }}
-                onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = '#5B6CFF' }}
+                style={{ background: '#3AAFA9', color: '#fff' }}
+                onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#2D8C87' }}
+                onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = '#3AAFA9' }}
               >
                 {submitting ? <><Loader2 className="w-4 h-4 animate-spin" />Desbloqueando...</> : 'Confirmar'}
               </button>
