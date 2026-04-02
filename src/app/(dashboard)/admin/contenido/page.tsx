@@ -117,18 +117,15 @@ export default function ContenidoPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className="flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold flex-shrink-0"
-                        style={{ background: abierto ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.06)', color: abierto ? '#5B6CFF' : '#94A3B8' }}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg text-lg flex-shrink-0"
+                        style={{ background: abierto ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.06)' }}
                       >
-                        {mes.numero}
+                        {mes.titulo === 'Demo' ? '🎓' : mes.titulo === 'Preparatoria' ? '📚' : '🏫'}
                       </span>
                       <div>
                         <p className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>
-                          Mes {mes.numero}
+                          {mes.titulo}
                         </p>
-                        {mes.titulo && (
-                          <p className="text-xs" style={{ color: '#94A3B8' }}>{mes.titulo}</p>
-                        )}
                       </div>
                       <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(91,108,255,0.1)', color: '#7B8AFF' }}>
                         {mes.materias?.length ?? 0} materias
@@ -155,9 +152,11 @@ export default function ContenidoPage() {
                                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                                   style={{ background: mat.color_hex || '#5B6CFF' }}
                                 />
-                                <span className="font-mono text-xs font-semibold" style={{ color: '#7B8AFF' }}>
-                                  {mat.codigo}
-                                </span>
+                                {mat.codigo && (
+                                  <span className="font-mono text-xs font-semibold" style={{ color: '#7B8AFF' }}>
+                                    {mat.codigo}
+                                  </span>
+                                )}
                               </div>
                               <button
                                 onClick={() => router.push(`/admin/contenido/${mat.id}`)}

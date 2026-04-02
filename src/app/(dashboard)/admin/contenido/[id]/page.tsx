@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 interface VideoState {
   video_url:   string
@@ -75,37 +73,32 @@ export default function ContenidoDetallePage() {
   const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    const supabase = createClient()
     async function cargar() {
       try {
-        // 1. Materia
-        const { data: mat, error: matErr } = await supabase
-          .from('materias')
-          .select('id, nombre, codigo, color, nivel, descripcion')
-          .eq('id', id)
-          .single()
-        if (matErr || !mat) { setError('Materia no encontrada'); return }
-        setMateria(mat as Materia)
+        const res = await fetch(`/api/admin/contenido/${id}`)
+        const data = await res.json()
+        if (!res.ok || data.error) { setError(data.error ?? 'Materia no encontrada'); return }
 
-        // 2. Meses + semanas (join correcto IVS: materias → meses_contenido → semanas)
-        const { data: mesesData, error: mErr } = await supabase
-          .from('meses_contenido')
-          .select(`
-            id, numero_mes, titulo,
-            semanas ( id, numero_semana, titulo, descripcion, video_url, video_url_2, video_url_3 )
-          `)
-          .eq('materia_id', id)
-          .order('numero_mes')
-        if (mErr) { setError('Error al cargar meses'); return }
+        const mat = data.materia
+        setMateria({
+          id:          mat.id,
+          codigo:      '',
+          nombre:      mat.nombre,
+          color:       mat.color ?? null,
+          nivel:       mat.nivel,
+          descripcion: mat.descripcion ?? null,
+        })
 
         type MesRow = {
           id: string; numero_mes: number; titulo: string
           semanas: Semana[]
         }
-        const mesesOrdenados = ((mesesData ?? []) as unknown as MesRow[]).map(mes => ({
-          ...mes,
-          semanas: (mes.semanas ?? []).sort((a, b) => a.numero_semana - b.numero_semana),
-        }))
+        const mesesOrdenados = ((mat.meses_contenido ?? []) as MesRow[])
+          .sort((a, b) => a.numero_mes - b.numero_mes)
+          .map(mes => ({
+            ...mes,
+            semanas: (mes.semanas ?? []).sort((a, b) => a.numero_semana - b.numero_semana),
+          }))
         setMeses(mesesOrdenados)
 
         // Expandir primer mes por defecto
