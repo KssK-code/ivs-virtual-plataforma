@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight, PlayCircle } from 'lucide-react'
 
 interface VideoState {
   video_url:   string
@@ -55,6 +55,40 @@ function inputStyle(dirty: boolean) {
     outline: 'none',
     fontFamily: 'monospace',
   }
+}
+
+/** Extrae el video ID de una URL youtube.com/watch?v=ID */
+function getYoutubeId(url: string): string | null {
+  if (!url) return null
+  const match = url.match(/[?&]v=([^&]+)/)
+  return match ? match[1] : null
+}
+
+/** Thumbnail del video 1 o placeholder gris */
+function VideoThumbnail({ url }: { url: string }) {
+  const videoId = getYoutubeId(url)
+
+  if (videoId) {
+    return (
+      <img
+        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+        alt="Preview"
+        className="w-32 h-20 object-cover rounded cursor-pointer flex-shrink-0"
+        style={{ border: '1px solid #2A2F3E' }}
+        onClick={() => window.open(url, '_blank')}
+        title="Abrir video en YouTube"
+      />
+    )
+  }
+
+  return (
+    <div
+      className="w-32 h-20 flex items-center justify-center rounded flex-shrink-0"
+      style={{ background: '#1A1F2E', border: '1px solid #2A2F3E' }}
+    >
+      <PlayCircle className="w-7 h-7" style={{ color: '#3A4055' }} />
+    </div>
+  )
 }
 
 export default function ContenidoDetallePage() {
@@ -210,15 +244,12 @@ export default function ContenidoDetallePage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: materia.color || '#5B6CFF' }} />
-            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
-              {materia.codigo}
-            </span>
             <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>
               {materia.nivel}
             </span>
           </div>
-          <h2 className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }}>{materia.nombre}</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{totalSemanas} semanas · Edita las URLs de video por semana</p>
+          <h1 className="text-xl font-bold text-gray-900 mt-1">{materia.nombre}</h1>
+          <p className="text-xs mt-0.5 text-gray-600">{totalSemanas} semanas · Edita las URLs de video por semana</p>
         </div>
       </div>
 
@@ -289,61 +320,67 @@ export default function ContenidoDetallePage() {
                               </p>
                             </div>
 
-                            {/* Campos de video */}
-                            <div className="space-y-2 pl-9">
-                              {(
-                                [
-                                  { field: 'video_url'   as const, label: 'Video 1 (principal)' },
-                                  { field: 'video_url_2' as const, label: 'Video 2'             },
-                                  { field: 'video_url_3' as const, label: 'Video 3'             },
-                                ]
-                              ).map(({ field, label }) => (
-                                <div key={field}>
-                                  <label className="block text-xs mb-1" style={{ color: '#64748B' }}>
-                                    <Video className="inline w-3 h-3 mr-1" style={{ verticalAlign: 'middle' }} />
-                                    {label}
-                                  </label>
-                                  <input
-                                    type="url"
-                                    placeholder="https://www.youtube.com/watch?v=..."
-                                    value={v[field]}
-                                    onChange={e => handleChange(sem.id, field, e.target.value)}
-                                    style={inputStyle(v.dirty && v[field] !== (sem[field] ?? ''))}
-                                  />
-                                </div>
-                              ))}
-                            </div>
+                            {/* Layout: thumbnail izquierda + campos derecha */}
+                            <div className="flex gap-4 items-start">
+                              {/* Thumbnail Video 1 */}
+                              <VideoThumbnail url={v.video_url} />
 
-                            {/* Footer con feedback y botón */}
-                            <div className="flex items-center justify-between pl-9 pt-1">
-                              <div className="text-xs">
-                                {v.error && (
-                                  <span className="flex items-center gap-1" style={{ color: '#EF4444' }}>
-                                    <AlertCircle className="w-3 h-3" /> {v.error}
-                                  </span>
-                                )}
-                                {v.saved && (
-                                  <span className="flex items-center gap-1" style={{ color: '#10B981' }}>
-                                    <Check className="w-3 h-3" /> Guardado
-                                  </span>
-                                )}
+                              {/* Inputs + botón */}
+                              <div className="flex-1 min-w-0 space-y-2">
+                                {(
+                                  [
+                                    { field: 'video_url'   as const, label: 'Video 1 (principal)' },
+                                    { field: 'video_url_2' as const, label: 'Video 2'             },
+                                    { field: 'video_url_3' as const, label: 'Video 3'             },
+                                  ]
+                                ).map(({ field, label }) => (
+                                  <div key={field}>
+                                    <label className="block text-xs mb-1" style={{ color: '#64748B' }}>
+                                      <Video className="inline w-3 h-3 mr-1" style={{ verticalAlign: 'middle' }} />
+                                      {label}
+                                    </label>
+                                    <input
+                                      type="url"
+                                      placeholder="https://www.youtube.com/watch?v=..."
+                                      value={v[field]}
+                                      onChange={e => handleChange(sem.id, field, e.target.value)}
+                                      style={inputStyle(v.dirty && v[field] !== (sem[field] ?? ''))}
+                                    />
+                                  </div>
+                                ))}
+
+                                {/* Footer con feedback y botón */}
+                                <div className="flex items-center justify-between pt-1">
+                                  <div className="text-xs">
+                                    {v.error && (
+                                      <span className="flex items-center gap-1" style={{ color: '#EF4444' }}>
+                                        <AlertCircle className="w-3 h-3" /> {v.error}
+                                      </span>
+                                    )}
+                                    {v.saved && (
+                                      <span className="flex items-center gap-1" style={{ color: '#10B981' }}>
+                                        <Check className="w-3 h-3" /> Guardado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => guardar(sem.id)}
+                                    disabled={v.saving || (!v.dirty && !v.saved)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
+                                    style={v.saved
+                                      ? { background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }
+                                      : { background: v.dirty ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.04)', color: v.dirty ? '#7B8AFF' : '#64748B', border: `1px solid ${v.dirty ? 'rgba(91,108,255,0.4)' : '#2A2F3E'}` }
+                                    }
+                                  >
+                                    {v.saving
+                                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Guardando…</>
+                                      : v.saved
+                                        ? <><Check className="w-3 h-3" /> Guardado</>
+                                        : <><Save className="w-3 h-3" /> Guardar</>
+                                    }
+                                  </button>
+                                </div>
                               </div>
-                              <button
-                                onClick={() => guardar(sem.id)}
-                                disabled={v.saving || (!v.dirty && !v.saved)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
-                                style={v.saved
-                                  ? { background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }
-                                  : { background: v.dirty ? 'rgba(91,108,255,0.2)' : 'rgba(255,255,255,0.04)', color: v.dirty ? '#7B8AFF' : '#64748B', border: `1px solid ${v.dirty ? 'rgba(91,108,255,0.4)' : '#2A2F3E'}` }
-                                }
-                              >
-                                {v.saving
-                                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Guardando…</>
-                                  : v.saved
-                                    ? <><Check className="w-3 h-3" /> Guardado</>
-                                    : <><Save className="w-3 h-3" /> Guardar</>
-                                }
-                              </button>
                             </div>
                           </div>
                         )
