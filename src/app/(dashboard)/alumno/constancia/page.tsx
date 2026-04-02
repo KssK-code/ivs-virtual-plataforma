@@ -33,6 +33,18 @@ function generarFolio() {
   return `CONST-${year}-${rand}`
 }
 
+/** Iniciales estilo MG: primera letra del primer nombre + primera del primer apellido. */
+function inicialesAlumno(nombre: string, apellidos: string, nombreCompleto: string) {
+  const nw = nombre?.trim().split(/\s+/).filter(Boolean)[0]?.[0] ?? ''
+  const aw = apellidos?.trim().split(/\s+/).filter(Boolean)[0]?.[0] ?? ''
+  const pair = (nw + aw).toUpperCase()
+  if (pair.length >= 2) return pair.slice(0, 2)
+  if (pair.length === 1) return pair
+  const parts = nombreCompleto.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return (parts[0]?.[0] ?? 'A').toUpperCase()
+}
+
 const BADGE: Record<Estado, React.CSSProperties> = {
   Acreditada:      { background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' },
   'No acreditada': { background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' },
@@ -207,15 +219,14 @@ export default function ConstanciaPage() {
                   <img
                     src={(datos.foto_url || datos.avatar_url) as string}
                     alt={[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
-                    className="w-24 h-24 rounded-full object-cover"
-                    style={{ border: '2px solid #3AAFA9' }}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-teal-500"
                   />
                 ) : (
                   <div
-                    className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold"
+                    className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold border-4 border-teal-500"
                     style={{ background: '#3AAFA9', color: '#fff' }}
                   >
-                    {((datos.nombre?.[0] ?? '') + (datos.apellidos?.[0] ?? '')).toUpperCase() || datos.nombre_completo[0]?.toUpperCase() || 'A'}
+                    {inicialesAlumno(datos.nombre, datos.apellidos, datos.nombre_completo)}
                   </div>
                 )}
                 <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', maxWidth: 110 }}>

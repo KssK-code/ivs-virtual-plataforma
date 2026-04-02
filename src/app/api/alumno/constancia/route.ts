@@ -37,6 +37,29 @@ export async function GET() {
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
+    // Foto: Mis Documentos usa tipo_documento = 'foto_perfil_doc'; legado opcional 'foto_perfil'
+    const { data: fotoDoc } = await admin
+      .from('documentos_alumno')
+      .select('url_archivo')
+      .eq('alumno_id', user.id)
+      .eq('tipo_documento', 'foto_perfil_doc')
+      .order('fecha_subida', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let urlDesdeDoc = (fotoDoc as { url_archivo?: string } | null)?.url_archivo?.trim() || null
+    if (!urlDesdeDoc) {
+      const { data: fotoLegado } = await admin
+        .from('documentos_alumno')
+        .select('url_archivo')
+        .eq('alumno_id', user.id)
+        .eq('tipo_documento', 'foto_perfil')
+        .order('fecha_subida', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      urlDesdeDoc = (fotoLegado as { url_archivo?: string } | null)?.url_archivo?.trim() || null
+    }
+
     const nombre_completo = [usuario?.nombre, usuario?.apellidos]
       .filter(Boolean)
       .join(' ') || 'Alumno'
@@ -92,7 +115,8 @@ export async function GET() {
       ? Math.round((mesesDesbloqueados / duracionMeses) * 100)
       : 0
 
-    const fotoUrl = usuario?.foto_url?.trim() || null
+    const fotoUrl =
+      urlDesdeDoc || usuario?.foto_url?.trim() || null
 
     return NextResponse.json({
       nombre_completo,
