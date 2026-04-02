@@ -230,7 +230,7 @@ export default function MateriaPage() {
             </span>
             <div className="w-2 h-2 rounded-full" style={{ background: materia.color_hex || '#5B6CFF' }} />
           </div>
-          <SplitTitle text={materia.nombre} className="text-xl font-bold mt-1" style={{ color: '#F1F5F9' }} />
+          <h1 className="text-xl font-bold text-gray-900 mt-1">{materia.nombre}</h1>
         </div>
       </div>
       </FadeIn>
