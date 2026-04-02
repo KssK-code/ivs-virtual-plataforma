@@ -15,7 +15,7 @@ export async function verifyAdmin(
     .eq('id', userId)
     .single()
 
-  if (!usuario || usuario.rol !== 'ADMIN') {
+  if (!usuario || (usuario.rol as string | undefined)?.toUpperCase() !== 'ADMIN') {
     return NextResponse.json({ error: 'Acceso denegado. Se requiere rol ADMIN.' }, { status: 403 })
   }
   return null
