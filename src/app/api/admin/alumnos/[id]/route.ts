@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyAdmin } from '@/lib/supabase/verify-admin'
-
-type UsuariosData = { nombre_completo: string; email: string; activo: boolean }
-type AlumnoRow = {
-  id: string
-  matricula: string
-  meses_desbloqueados: number
-  created_at: string
-  usuario_id: string
-  plan_estudio_id: string
-  usuarios: UsuariosData | UsuariosData[] | null
-  planes_estudio: { id: string; nombre: string; duracion_meses: number; precio_mensual: number } | null
-}
 
 export async function GET(
   _request: NextRequest,
@@ -24,60 +11,88 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const denied = await verifyAdmin(supabase, user.id)
-    if (denied) return denied
+    // Verificar rol ADMIN (normaliza mayúsculas)
+    const { data: usuarioAdmin } = await supabase.from('usuarios').select('rol').eq('id', user.id).single()
+    const rolAdmin = (usuarioAdmin?.rol as string | undefined)?.toUpperCase()
+    if (rolAdmin !== 'ADMIN') return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
-    // Usar service role para bypass de RLS en el join con usuarios
     const admin = createAdminClient()
 
+    console.log('[GET /api/admin/alumnos/[id]] params.id:', params.id)
+
+    // ── Paso 1: obtener fila de alumnos ───────────────────────────────────────
     const { data: alumno, error } = await admin
       .from('alumnos')
-      .select(`
-        *,
-        usuarios (nombre_completo, email, activo),
-        planes_estudio (id, nombre, duracion_meses, precio_mensual)
-      `)
+      .select('*')
       .eq('id', params.id)
       .single()
 
-    if (error || !alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
+    console.log('[GET /api/admin/alumnos/[id]] alumno error:', error?.message ?? null)
+    console.log('[GET /api/admin/alumnos/[id]] alumno keys:', alumno ? Object.keys(alumno) : null)
 
-    const a = alumno as unknown as AlumnoRow
+    if (error || !alumno) {
+      return NextResponse.json({ error: 'Alumno no encontrado', detail: error?.message }, { status: 404 })
+    }
 
-    const { data: pagos } = await supabase
-      .from('pagos')
+    const a = alumno as Record<string, unknown>
+
+    // ── Paso 2: obtener datos del usuario (mismo id) ──────────────────────────
+    const { data: usuario, error: userError } = await admin
+      .from('usuarios')
+      .select('nombre, apellidos, email, foto_url, telefono')
+      .eq('id', params.id)
+      .single()
+
+    console.log('[GET /api/admin/alumnos/[id]] usuario error:', userError?.message ?? null)
+
+    const u = usuario as { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null; telefono?: string } | null
+
+    // ── Paso 3: calificaciones ────────────────────────────────────────────────
+    const { data: calificaciones } = await admin
+      .from('calificaciones')
+      .select('*, materias(nombre, codigo)')
+      .eq('alumno_id', params.id)
+
+    // ── Paso 4: documentos ────────────────────────────────────────────────────
+    const { data: documentos } = await admin
+      .from('documentos')
       .select('*')
       .eq('alumno_id', params.id)
       .order('created_at', { ascending: false })
 
-    const { data: calificaciones } = await supabase
-      .from('calificaciones')
-      .select('*, materias (nombre, codigo)')
-      .eq('alumno_id', params.id)
-
-    const usuariosData = Array.isArray(a.usuarios) ? a.usuarios[0] : a.usuarios
+    const duracion = (a.modalidad as string) === '3_meses' ? 3 : 6
 
     return NextResponse.json({
-      id: a.id,
-      matricula: a.matricula,
-      meses_desbloqueados: a.meses_desbloqueados,
-      created_at: a.created_at,
-      usuario: {
-        id: a.usuario_id,
-        nombre_completo: usuariosData?.nombre_completo ?? '',
-        email: usuariosData?.email ?? '',
-        activo: usuariosData?.activo ?? true,
-      },
+      id:                  a.id,
+      matricula:           a.matricula ?? 'IVS-0000',
+      nivel:               a.nivel ?? null,
+      modalidad:           a.modalidad ?? '6_meses',
+      duracion_meses:      duracion,
+      meses_desbloqueados: a.meses_desbloqueados ?? 0,
+      inscripcion_pagada:  a.inscripcion_pagada ?? false,
+      sindicalizado:       a.sindicalizado ?? false,
+      sindicato:           a.sindicato ?? null,
+      notas_admin:         a.notas_admin ?? '',
+      created_at:          a.created_at,
+      // Objeto plan para compatibilidad con UI existente
       plan: {
-        id: a.planes_estudio?.id ?? a.plan_estudio_id,
-        nombre: a.planes_estudio?.nombre ?? '',
-        duracion_meses: a.planes_estudio?.duracion_meses ?? 0,
-        precio_mensual: a.planes_estudio?.precio_mensual ?? 0,
+        id:             a.id,
+        nombre:         a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria',
+        duracion_meses: duracion,
+        precio_mensual: 0,
       },
-      pagos: pagos ?? [],
+      usuario: {
+        nombre_completo: [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
+        email:           u?.email ?? '—',
+        telefono:        u?.telefono ?? null,
+        foto_url:        u?.foto_url ?? null,
+      },
       calificaciones: calificaciones ?? [],
+      documentos:     documentos ?? [],
+      pagos:          [],
     })
-  } catch {
+  } catch (err) {
+    console.error('[GET /api/admin/alumnos/[id]] excepción:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
