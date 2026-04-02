@@ -182,6 +182,7 @@ export default function AlumnoDetallePage() {
         return
       }
       await cargar()
+      router.refresh()
       showToast(
         nuevoEstado
           ? `✓ Alumno ${alumno.usuario.nombre_completo} activado`

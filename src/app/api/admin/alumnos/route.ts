@@ -33,6 +33,7 @@ export async function GET() {
         nivel,
         modalidad,
         sindicalizado,
+        activo,
         meses_desbloqueados,
         inscripcion_pagada,
         created_at,
@@ -51,7 +52,7 @@ export async function GET() {
     if (!error && data && data.length > 0) {
       type Row = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
-        sindicalizado?: boolean; meses_desbloqueados?: number
+        sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
         inscripcion_pagada?: boolean; created_at: string
         usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null } | null
       }
@@ -63,6 +64,7 @@ export async function GET() {
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
           sindicalizado:        a.sindicalizado ?? false,
+          activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
@@ -84,6 +86,7 @@ export async function GET() {
         nivel,
         modalidad,
         sindicalizado,
+        activo,
         meses_desbloqueados,
         inscripcion_pagada,
         created_at,
@@ -103,7 +106,7 @@ export async function GET() {
     if (!error2 && data2 && data2.length > 0) {
       type Row2 = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
-        sindicalizado?: boolean; meses_desbloqueados?: number
+        sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
         inscripcion_pagada?: boolean; created_at: string; usuario_id?: string
         usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null } | null
       }
@@ -115,6 +118,7 @@ export async function GET() {
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
           sindicalizado:        a.sindicalizado ?? false,
+          activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
@@ -141,7 +145,7 @@ export async function GET() {
     const resultFallback = []
     for (const a of (alumnos ?? []) as {
       id: string; matricula?: string; nivel?: string; modalidad?: string
-      sindicalizado?: boolean; meses_desbloqueados?: number
+      sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
       inscripcion_pagada?: boolean; created_at: string
     }[]) {
       const { data: u } = await admin
@@ -155,6 +159,7 @@ export async function GET() {
         nivel:                a.nivel ?? null,
         modalidad:            a.modalidad ?? '6_meses',
         sindicalizado:        a.sindicalizado ?? false,
+        activo:               a.activo ?? false,
         meses_desbloqueados:  a.meses_desbloqueados ?? 0,
         duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
         inscripcion_pagada:   a.inscripcion_pagada ?? false,

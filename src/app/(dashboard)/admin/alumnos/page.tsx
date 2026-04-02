@@ -87,6 +87,15 @@ export default function AlumnosPage() {
     cargarAlumnos()
   }, [cargarAlumnos])
 
+  // Refrescar al volver a esta pestaña (ej. después de activar/desactivar desde [id])
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') cargarAlumnos()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [cargarAlumnos])
+
   // Pendientes = inscrip no pagada. Badge = sin contactar aún
   const pendientes = alumnos.filter(a => !a.inscripcion_pagada)
   const sinContactar = pendientes.filter(a => !a.contactado_whatsapp).length
