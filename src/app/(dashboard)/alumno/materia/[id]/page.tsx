@@ -80,11 +80,14 @@ export default function MateriaPage() {
     if (guardandoProgreso || semanasCompletadas.has(semanaId)) return
     setGuardandoProgreso(true)
     try {
-      await fetch('/api/alumno/progreso/semana', {
+      const res = await fetch('/api/alumno/progreso/semana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana_id: semanaId }),
       })
+      if (res.ok && typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ivs-logros-update'))
+      }
       const nuevas = new Set([...semanasCompletadas, semanaId])
       setSemanasCompletadas(nuevas)
       if (materia && materia.semanas.every(s => nuevas.has(s.id))) {

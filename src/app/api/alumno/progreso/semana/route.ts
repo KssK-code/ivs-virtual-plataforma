@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
     const { semana_id } = body as { semana_id: string }
     if (!semana_id) return NextResponse.json({ error: 'semana_id requerido' }, { status: 400 })
 
+    console.log('=== PROGRESO SEMANA ===', { semanaId: semana_id, userId: user.id })
+
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
@@ -93,6 +95,8 @@ export async function POST(request: NextRequest) {
 
     if (countErr) console.error('[progreso/semana] count progreso_semanas:', countErr)
 
+    const semanasCompletadas = totalCompletadas ?? 0
+
     console.log(
       '[progreso/semana] semana_id:',
       semana_id,
@@ -101,11 +105,14 @@ export async function POST(request: NextRequest) {
       'ya_existía_progreso:',
       yaExistiaProgreso,
       'total_completadas:',
-      totalCompletadas
+      semanasCompletadas,
+      'usa_service_role:',
+      !!adminDb
     )
 
     // Primera semana completada en la plataforma (idempotente si ya hay fila)
-    if ((totalCompletadas ?? 0) >= 1) {
+    console.log('Evaluando logro primera_semana, semanas completadas:', semanasCompletadas)
+    if (semanasCompletadas >= 1) {
       await otorgarLogro(dbPriv, alumno.id, 'primera_semana')
     }
 

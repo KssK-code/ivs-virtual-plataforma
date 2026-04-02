@@ -140,26 +140,35 @@ export default function AlumnoDashboard() {
     }).finally(() => setLoading(false))
   }, [])
 
-  // Logros + racha
+  // Logros + racha (y refresco al completar semana en otra vista vía evento)
   useEffect(() => {
     if (!perfil) return
-    const sb = createClient()
-    ;(async () => {
-      // FIX #2 logros: usar tipo_logro + fecha_obtenido (columnas IVS reales)
-      const { data } = await sb
+
+    const fetchLogrosYRacha = async () => {
+      const sb = createClient()
+      const { data, error: logrosErr } = await sb
         .from('logros_alumno')
         .select('tipo_logro, fecha_obtenido')
         .eq('alumno_id', perfil.id)
+      if (logrosErr) console.error('[alumno/dashboard] logros_alumno:', logrosErr)
       if (data) setLogros(data as Array<{ tipo_logro: string; fecha_obtenido: string }>)
 
-      // FIX #3 racha: leer de racha_actividad (tabla dedicada)
-      const { data: rachaData } = await sb
+      const { data: rachaData, error: rachaErr } = await sb
         .from('racha_actividad')
         .select('racha_actual')
         .eq('alumno_id', perfil.id)
-        .single()
+        .maybeSingle()
+      if (rachaErr) console.error('[alumno/dashboard] racha_actividad:', rachaErr)
       if (rachaData) setDiasRacha((rachaData as { racha_actual: number }).racha_actual ?? 0)
-    })()
+    }
+
+    void fetchLogrosYRacha()
+
+    const onLogrosUpdate = () => {
+      void fetchLogrosYRacha()
+    }
+    window.addEventListener('ivs-logros-update', onLogrosUpdate)
+    return () => window.removeEventListener('ivs-logros-update', onLogrosUpdate)
   }, [perfil])
 
   // ── Loading skeletons ──────────────────────────────────────────────────────
