@@ -155,7 +155,7 @@ export default function AlumnosPage() {
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Alumnos</h2>
+          <h1 className="text-2xl font-bold text-gray-900">Alumnos</h1>
           <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>
             Gestiona los alumnos registrados en la plataforma
           </p>
