@@ -123,7 +123,7 @@ export default function ContenidoPage() {
                         {mes.titulo === 'Demo' ? '🎓' : mes.titulo === 'Preparatoria' ? '📚' : '🏫'}
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-white font-bold text-lg">
                           {mes.titulo}
                         </p>
                       </div>
@@ -170,10 +170,10 @@ export default function ContenidoPage() {
                               </button>
                             </div>
 
-                            <p className="text-sm font-semibold text-gray-900">{mat.nombre}</p>
+                            <p className="text-white font-semibold">{mat.nombre}</p>
 
                             {mat.descripcion && (
-                              <p className="text-xs line-clamp-2" style={{ color: '#94A3B8' }}>{mat.descripcion}</p>
+                              <p className="text-gray-300 text-sm line-clamp-2">{mat.descripcion}</p>
                             )}
 
                             <div className="flex items-center gap-2 flex-wrap">
