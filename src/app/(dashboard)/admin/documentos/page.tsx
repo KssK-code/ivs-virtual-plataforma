@@ -123,9 +123,7 @@ export default function DocumentosAdminPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: '#E2E8F0' }}>
-            Documentos
-          </h2>
+          <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
           <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>
             Revisión y verificación de documentos de alumnos
           </p>
