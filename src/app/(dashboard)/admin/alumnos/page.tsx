@@ -9,6 +9,7 @@ interface Alumno {
   id: string
   nombre_completo: string
   email: string
+  telefono?: string | null
   activo: boolean
   matricula: string
   plan_nombre: string
@@ -33,9 +34,12 @@ const CARD_STYLE = {
 
 const WA_NUMERO = '5256543225636'
 
-function waContactarUrl(nombre: string) {
-  const texto = `Hola ${nombre} 👋, soy de Control Escolar de IVS Virtual. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
-  return `https://wa.me/${WA_NUMERO}?text=${encodeURIComponent(texto)}`
+function waContactarUrl(nombreAlumno: string, telefonoAlumno?: string | null) {
+  const numero = telefonoAlumno
+    ? '52' + telefonoAlumno.replace(/\D/g, '')
+    : WA_NUMERO
+  const texto = `Hola ${nombreAlumno} 👋, soy de Control Escolar de IVS Virtual. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }
 
 function tiempoRelativo(dateStr: string) {
@@ -67,6 +71,7 @@ export default function AlumnosPage() {
     password: '',
     nivel: '',
     modalidad: '',
+    telefono: '',
   })
 
   const cargarAlumnos = useCallback(async () => {
@@ -124,7 +129,7 @@ export default function AlumnosPage() {
       const nombre = form.nombre_completo
       const matricula = data.matricula ?? ''
       setModalOpen(false)
-      setForm({ nombre_completo: '', email: '', password: '', nivel: '', modalidad: '' })
+      setForm({ nombre_completo: '', email: '', password: '', nivel: '', modalidad: '', telefono: '' })
       await cargarAlumnos()
       showToast(`✓ Alumno ${nombre} creado${matricula ? ` con matrícula ${matricula}` : ''}`, 'success')
     } catch {
@@ -312,7 +317,7 @@ export default function AlumnosPage() {
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                       {/* Botón WhatsApp */}
                       <a
-                        href={waContactarUrl(a.nombre_completo.split(' ')[0])}
+                        href={waContactarUrl(a.nombre_completo.split(' ')[0], a.telefono)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
@@ -524,13 +529,14 @@ export default function AlumnosPage() {
               {[
                 { label: 'Nombre completo', key: 'nombre_completo', type: 'text', placeholder: 'Juan Pérez García' },
                 { label: 'Correo electrónico', key: 'email', type: 'email', placeholder: 'alumno@ejemplo.com' },
+                { label: 'Teléfono (WhatsApp)', key: 'telefono', type: 'tel', placeholder: '3312345678' },
                 { label: 'Contraseña temporal', key: 'password', type: 'password', placeholder: '••••••••' },
               ].map(({ label, key, type, placeholder }) => (
                 <div key={key} className="space-y-1.5">
                   <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>{label}</label>
                   <input
                     type={type}
-                    required
+                    required={key !== 'telefono'}
                     placeholder={placeholder}
                     value={form[key as keyof typeof form]}
                     onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}
