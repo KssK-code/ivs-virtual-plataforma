@@ -14,7 +14,7 @@ export async function GET() {
       .eq('id', user.id)
       .single()
 
-    // ── Alumno ────────────────────────────────────────────────────────────────
+    // ── Alumno (schema nuevo: alumnos.id = user.id) ───────────────────────────
     const { data: alumno } = await supabase
       .from('alumnos')
       .select('matricula, nivel, modalidad, meses_desbloqueados, created_at')
@@ -41,14 +41,18 @@ export async function GET() {
       califMap.set(row.materia_id, row.aprobada)
     }
 
-    // ── Materias de meses desbloqueados ───────────────────────────────────────
+    // ── Materias de meses desbloqueados via meses_contenido ───────────────────
+    // meses_contenido.materia_id → materias.id (many-to-one → materias es objeto único)
     const { data: meses } = await supabase
       .from('meses_contenido')
-      .select('numero, materias(id, codigo, nombre)')
-      .order('numero')
-      .lte('numero', alumno.meses_desbloqueados ?? 0)
+      .select('numero_mes, materias(id, nombre)')
+      .order('numero_mes')
+      .lte('numero_mes', alumno.meses_desbloqueados ?? 0)
 
-    type MesRow = { numero: number; materias: { id: string; codigo: string; nombre: string }[] }
+    type MesRow = {
+      numero_mes: number
+      materias: { id: string; nombre: string } | null
+    }
 
     const materias_cursadas: {
       codigo: string; nombre: string; mes_numero: number
@@ -56,16 +60,16 @@ export async function GET() {
     }[] = []
 
     for (const mes of ((meses ?? []) as unknown as MesRow[])) {
-      for (const mat of (mes.materias ?? [])) {
-        materias_cursadas.push({
-          codigo:     mat.codigo,
-          nombre:     mat.nombre,
-          mes_numero: mes.numero,
-          estado:     califMap.has(mat.id)
-            ? (califMap.get(mat.id) ? 'Acreditada' : 'No acreditada')
-            : 'Pendiente',
-        })
-      }
+      const mat = mes.materias
+      if (!mat) continue
+      materias_cursadas.push({
+        codigo:     '',
+        nombre:     mat.nombre,
+        mes_numero: mes.numero_mes,
+        estado:     califMap.has(mat.id)
+          ? (califMap.get(mat.id) ? 'Acreditada' : 'No acreditada')
+          : 'Pendiente',
+      })
     }
 
     const mesesDesbloqueados = alumno.meses_desbloqueados ?? 0

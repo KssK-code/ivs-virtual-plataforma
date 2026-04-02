@@ -10,15 +10,16 @@ export async function GET() {
 
     const admin = createAdminClient()
 
+    // Schema nuevo: alumnos.id = user.id (no usuario_id)
     const { data: alumno } = await admin
       .from('alumnos')
-      .select('id, planes_estudio(nombre)')
-      .eq('usuario_id', user.id)
+      .select('id')
+      .eq('id', user.id)
       .single()
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
-    const a = alumno as unknown as { id: string; planes_estudio: { nombre: string } | null }
+    const a = alumno as { id: string }
 
     const { data: documentos, error } = await admin
       .from('documentos_alumno')
@@ -29,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({
       documentos: documentos ?? [],
-      plan_nombre: a.planes_estudio?.nombre ?? '',
+      plan_nombre: '',
     })
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
@@ -59,10 +60,11 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
+    // Schema nuevo: alumnos.id = user.id
     const { data: alumnoPost } = await admin
       .from('alumnos')
       .select('id')
-      .eq('usuario_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!alumnoPost) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
