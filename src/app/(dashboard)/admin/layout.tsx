@@ -29,6 +29,7 @@ export default async function AdminLayout({
       role="ADMIN"
       userName={userName}
       pageTitle="Panel de Administración"
+      theme="light"
     >
       {children}
     </DashboardLayout>

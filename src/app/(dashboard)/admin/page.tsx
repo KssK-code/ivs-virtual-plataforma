@@ -1,319 +1,229 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { Users, UserCheck, Clock, FileWarning, Eye } from 'lucide-react'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-const CARD = { background: '#1E2230', border: '1px solid #2A2F3E' }
+// ─── helpers ──────────────────────────────────────────────────────────────────
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// ─── stat card ────────────────────────────────────────────────────────────────
 function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  bg,
-  sub,
+  emoji, label, value, sub, color = '#3AAFA9',
 }: {
-  label: string
-  value: string | number
-  icon: React.ElementType
-  color: string
-  bg: string
-  sub?: string
+  emoji: string; label: string; value: string | number; sub?: string; color?: string
 }) {
   return (
-    <div className="rounded-xl p-5 flex items-center gap-4" style={CARD}>
+    <div
+      className="rounded-2xl p-5 flex flex-col gap-2"
+      style={{ background: '#fff', border: '1px solid #E8F0F7', boxShadow: '0 2px 8px rgba(27,58,87,0.06)' }}
+    >
       <div
-        className="flex items-center justify-center w-12 h-12 rounded-xl flex-shrink-0"
-        style={{ background: bg }}
+        className="flex items-center justify-center w-11 h-11 rounded-xl text-xl"
+        style={{ background: `${color}14` }}
       >
-        <Icon className="w-6 h-6" style={{ color }} />
+        {emoji}
       </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold" style={{ color }}>
-          {value}
-        </p>
-        <p className="text-sm font-medium" style={{ color: '#E2E8F0' }}>
-          {label}
-        </p>
-        {sub && (
-          <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
-            {sub}
-          </p>
-        )}
+      <div className="text-3xl font-bold" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
+        {value}
       </div>
+      <p className="text-sm font-medium" style={{ color: '#6B8FA8' }}>{label}</p>
+      {sub && <p className="text-xs" style={{ color: '#9DB0C0' }}>{sub}</p>}
     </div>
   )
 }
 
-type AlumnoReciente = {
-  id: string
-  nombre_completo: string
-  email: string
-  meses_desbloqueados: number
-  created_at: string
-  matricula: string
+// ─── badge ────────────────────────────────────────────────────────────────────
+function NivelBadge({ nivel }: { nivel?: string | null }) {
+  const isPrepa = nivel === 'preparatoria'
+  return (
+    <span
+      className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+      style={{
+        background: isPrepa ? 'rgba(58,175,169,0.12)' : 'rgba(27,58,87,0.1)',
+        color:      isPrepa ? '#3AAFA9' : '#1B3A57',
+      }}
+    >
+      {isPrepa ? 'Preparatoria' : nivel === 'secundaria' ? 'Secundaria' : 'Sin nivel'}
+    </span>
+  )
 }
 
+// ─── page ─────────────────────────────────────────────────────────────────────
 export default async function AdminDashboardPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = getServiceClient()
 
-  let admin
-  try {
-    admin = createAdminClient()
-  } catch {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-sm" style={{ color: '#EF4444' }}>
-          Error de configuración: falta SUPABASE_SERVICE_ROLE_KEY
-        </p>
-      </div>
-    )
-  }
-
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  const [
-    { count: totalAlumnos },
-    { count: alumnosActivos },
-    { count: pendientesPago },
-    { count: docsPendientes },
-  ] = await Promise.all([
-    admin.from('alumnos').select('*', { count: 'exact', head: true }),
-    admin
-      .from('alumnos')
-      .select('*', { count: 'exact', head: true })
-      .eq('inscripcion_pagada', true),
-    admin
-      .from('alumnos')
-      .select('*', { count: 'exact', head: true })
-      .eq('inscripcion_pagada', false),
-    admin
-      .from('documentos_alumno')
-      .select('*', { count: 'exact', head: true })
-      .eq('estado', 'pendiente'),
-  ])
-
-  // ── Alumnos recientes ────────────────────────────────────────────────────────
-  const { data: rawAlumnos } = await admin
+  // Conteo total de alumnos
+  const { count: totalAlumnos } = await supabase
     .from('alumnos')
-    .select(
-      `
-      id,
-      matricula,
-      meses_desbloqueados,
-      created_at,
-      usuarios ( nombre_completo, email )
-    `
-    )
+    .select('*', { count: 'exact', head: true })
+
+  // Por nivel
+  const { count: totalPrepa } = await supabase
+    .from('alumnos')
+    .select('*', { count: 'exact', head: true })
+    .eq('nivel', 'preparatoria')
+
+  const { count: totalSecundaria } = await supabase
+    .from('alumnos')
+    .select('*', { count: 'exact', head: true })
+    .eq('nivel', 'secundaria')
+
+  // Registros este mes
+  const inicioMes = new Date()
+  inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0)
+  const { count: esteMes } = await supabase
+    .from('alumnos')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', inicioMes.toISOString())
+
+  // Documentos pendientes
+  const { count: docsPendientes } = await supabase
+    .from('documentos')
+    .select('*', { count: 'exact', head: true })
+    .eq('estado', 'pendiente')
+
+  // Últimos 5 alumnos
+  const { data: recientes } = await supabase
+    .from('alumnos')
+    .select('id, matricula, nivel, meses_desbloqueados, modalidad, created_at')
     .order('created_at', { ascending: false })
     .limit(5)
 
-  type RawRow = {
-    id: string
-    matricula: string
-    meses_desbloqueados: number
-    created_at: string
-    usuarios:
-      | { nombre_completo: string; email: string }
-      | { nombre_completo: string; email: string }[]
-      | null
+  // Nombre de usuarios para esos alumnos
+  type AlumnoRow = {
+    id: string; matricula?: string; nivel?: string
+    meses_desbloqueados?: number; modalidad?: string; created_at: string
+  }
+  type AlumnoConNombre = AlumnoRow & { nombre: string; email: string }
+
+  const alumnosConNombre: AlumnoConNombre[] = []
+  for (const a of (recientes ?? []) as AlumnoRow[]) {
+    const { data: u } = await supabase
+      .from('usuarios')
+      .select('nombre, apellidos, email')
+      .eq('id', a.id)
+      .single()
+    const nombre = u ? [u.nombre, u.apellidos].filter(Boolean).join(' ') : '—'
+    const email  = (u as { email?: string } | null)?.email ?? '—'
+    alumnosConNombre.push({ ...a, nombre, email })
   }
 
-  const alumnosRecientes: AlumnoReciente[] = ((rawAlumnos ?? []) as unknown as RawRow[]).map(
-    (row) => {
-      const u = Array.isArray(row.usuarios) ? row.usuarios[0] : row.usuarios
-      return {
-        id: row.id,
-        matricula: row.matricula,
-        meses_desbloqueados: row.meses_desbloqueados,
-        created_at: row.created_at,
-        nombre_completo: u?.nombre_completo ?? '—',
-        email: u?.email ?? '—',
-      }
-    }
-  )
-
-  const stats = [
-    {
-      label: 'Total alumnos',
-      value: totalAlumnos ?? 0,
-      icon: Users,
-      color: '#3AAFA9',
-      bg: 'rgba(58,175,169,0.15)',
-      sub: 'Registrados en la plataforma',
-    },
-    {
-      label: 'Alumnos activos',
-      value: alumnosActivos ?? 0,
-      icon: UserCheck,
-      color: '#22C55E',
-      bg: 'rgba(34,197,94,0.15)',
-      sub: 'Con inscripción pagada',
-    },
-    {
-      label: 'Pendientes de pago',
-      value: pendientesPago ?? 0,
-      icon: Clock,
-      color: '#F59E0B',
-      bg: 'rgba(245,158,11,0.15)',
-      sub: 'Sin inscripción pagada',
-    },
-    {
-      label: 'Docs pendientes',
-      value: docsPendientes ?? 0,
-      icon: FileWarning,
-      color: '#EF4444',
-      bg: 'rgba(239,68,68,0.15)',
-      sub: 'Requieren revisión',
-    },
-  ]
+  const duracion = (a: AlumnoRow) => a.modalidad === '3_meses' ? 3 : 6
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Encabezado */}
       <div>
-        <h2 className="text-2xl font-bold" style={{ color: '#E2E8F0' }}>
-          Panel de Administración
+        <h2 className="text-xl font-bold" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
+          Bienvenido, Administrador 👋
         </h2>
-        <p className="text-sm mt-1" style={{ color: '#64748B' }}>
+        <p className="text-sm mt-1" style={{ color: '#6B8FA8' }}>
           Resumen general de IVS Virtual
         </p>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <StatCard key={s.label} {...s} />
-        ))}
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard emoji="👥" label="Total alumnos"       value={totalAlumnos ?? 0} />
+        <StatCard emoji="🎓" label="Preparatoria"        value={totalPrepa ?? 0}   sub={`${totalSecundaria ?? 0} en Secundaria`} color="#1B3A57" />
+        <StatCard emoji="📅" label="Registros este mes"  value={esteMes ?? 0}      color="#22C55E" />
+        <StatCard emoji="📄" label="Docs. pendientes"    value={docsPendientes ?? 0} color="#F59E0B" />
       </div>
 
-      {/* Alumnos recientes */}
-      <div className="rounded-xl overflow-hidden" style={CARD}>
+      {/* Tabla alumnos recientes */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: '#fff', border: '1px solid #E8F0F7', boxShadow: '0 2px 8px rgba(27,58,87,0.06)' }}
+      >
+        {/* Header tabla */}
         <div
-          className="px-5 py-4 flex items-center justify-between"
-          style={{ borderBottom: '1px solid #2A2F3E' }}
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid #F0F4F8' }}
         >
-          <div>
-            <h3 className="text-base font-semibold" style={{ color: '#E2E8F0' }}>
-              Alumnos recientes
-            </h3>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
-              Últimos 5 registrados
-            </p>
-          </div>
+          <h3 className="text-sm font-bold" style={{ color: '#1B3A57' }}>
+            Alumnos recientes
+          </h3>
           <Link
             href="/admin/alumnos"
-            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-            style={{ color: '#3AAFA9', background: 'rgba(58,175,169,0.1)' }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+            style={{ background: 'rgba(58,175,169,0.1)', color: '#3AAFA9' }}
           >
-            Ver todos
+            Ver todos →
           </Link>
         </div>
 
-        {alumnosRecientes.length === 0 ? (
-          <div className="px-5 py-12 text-center">
-            <Users className="w-8 h-8 mx-auto mb-3" style={{ color: '#2A2F3E' }} />
-            <p className="text-sm" style={{ color: '#64748B' }}>
-              No hay alumnos registrados aún
-            </p>
+        {/* Tabla */}
+        {alumnosConNombre.length === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <p className="text-sm" style={{ color: '#9DB0C0' }}>No hay alumnos registrados aún.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
-                  {[
-                    'Nombre',
-                    'Email',
-                    'Matrícula',
-                    'Meses desbloqueados',
-                    'Fecha registro',
-                    '',
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-3 font-medium text-xs uppercase tracking-wide"
-                      style={{ color: '#64748B' }}
-                    >
-                      {h}
+                <tr style={{ borderBottom: '1px solid #F0F4F8' }}>
+                  {['Nombre', 'Email', 'Nivel', 'Meses', 'Registro'].map(col => (
+                    <th key={col} className="px-5 py-3 text-left text-xs font-semibold"
+                      style={{ color: '#9DB0C0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      {col}
                     </th>
                   ))}
+                  <th className="px-5 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {alumnosRecientes.map((a) => {
-                  const initials = a.nombre_completo
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((n) => n[0] ?? '')
-                    .join('')
-                    .toUpperCase()
-                  return (
-                    <tr
-                      key={a.id}
-                      style={{ borderBottom: '1px solid rgba(42,47,62,0.5)' }}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 text-xs font-bold"
-                            style={{ background: 'rgba(58,175,169,0.2)', color: '#3AAFA9' }}
-                          >
-                            {initials}
-                          </div>
-                          <span
-                            className="font-medium truncate max-w-[160px]"
-                            style={{ color: '#E2E8F0' }}
-                          >
-                            {a.nombre_completo}
-                          </span>
-                        </div>
-                      </td>
-                      <td
-                        className="px-4 py-3 truncate max-w-[200px]"
-                        style={{ color: '#94A3B8' }}
-                      >
-                        {a.email}
-                      </td>
-                      <td
-                        className="px-4 py-3 font-mono text-xs"
-                        style={{ color: '#64748B' }}
-                      >
-                        {a.matricula || '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                {alumnosConNombre.map((a, i) => (
+                  <tr
+                    key={a.id}
+                    style={{ borderBottom: i < alumnosConNombre.length - 1 ? '1px solid #F0F4F8' : 'none' }}
+                  >
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold flex-shrink-0"
                           style={{ background: 'rgba(58,175,169,0.15)', color: '#3AAFA9' }}
                         >
-                          {a.meses_desbloqueados} mes
-                          {a.meses_desbloqueados !== 1 ? 'es' : ''}
+                          {a.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-medium truncate max-w-[140px]" style={{ color: '#1B3A57' }}>
+                          {a.nombre}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#64748B' }}>
-                        {new Date(a.created_at).toLocaleDateString('es-MX', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/alumnos/${a.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                          style={{ background: 'rgba(58,175,169,0.1)', color: '#3AAFA9' }}
-                        >
-                          <Eye className="w-3 h-3" />
-                          Ver
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="truncate max-w-[160px] block" style={{ color: '#6B8FA8' }}>{a.email}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <NivelBadge nivel={a.nivel} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span style={{ color: '#1B3A57', fontVariantNumeric: 'tabular-nums' }}>
+                        {a.meses_desbloqueados ?? 0}
+                        <span style={{ color: '#9DB0C0' }}>/{duracion(a)}</span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5" style={{ color: '#9DB0C0' }}>
+                      {formatDate(a.created_at)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Link
+                        href={`/admin/alumnos/${a.id}`}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                        style={{ background: '#F0F4F8', color: '#1B3A57' }}
+                      >
+                        Ver →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

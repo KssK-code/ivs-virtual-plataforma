@@ -20,11 +20,10 @@ interface NavItem {
 
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ADMIN: [
-    { label: 'Dashboard',     href: '/admin',               icon: LayoutDashboard },
-    { label: 'Alumnos',       href: '/admin/alumnos',       icon: Users           },
-    { label: 'Documentos',    href: '/admin/documentos',    icon: FolderOpen      },
-    { label: 'Reportes',      href: '/admin/reportes',      icon: BarChart3       },
-    { label: 'Configuración', href: '/admin/configuracion', icon: Settings        },
+    { label: 'Dashboard',     href: '/admin',               emoji: '🏠', icon: LayoutDashboard },
+    { label: 'Alumnos',       href: '/admin/alumnos',       emoji: '👥', icon: Users           },
+    { label: 'Documentos',    href: '/admin/documentos',    emoji: '📄', icon: FolderOpen      },
+    { label: 'Configuración', href: '/admin/configuracion', emoji: '⚙️', icon: Settings        },
   ],
   ALUMNO: [
     { label: 'Inicio',             href: '/alumno',                emoji: '🏠', icon: Home          },
@@ -84,13 +83,13 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
 
   const isAlumno = role === 'ALUMNO'
 
-  // ─── sidebar styles based on role ───────────────────────────────────────────
-  const sidebarBg     = isAlumno ? '#1B3A57' : '#181C26'
-  const sidebarBorder = isAlumno ? 'rgba(58,175,169,0.2)' : '#2A2F3E'
-  const activeBg      = isAlumno ? '#3AAFA9' : 'rgba(58,175,169,0.2)'
+  // ─── sidebar styles: mismo tema IVS para ambos roles ────────────────────────
+  const sidebarBg     = '#1B3A57'
+  const sidebarBorder = 'rgba(58,175,169,0.2)'
+  const activeBg      = '#3AAFA9'
   const activeColor   = '#fff'
-  const inactiveColor = isAlumno ? 'rgba(255,255,255,0.65)' : '#94A3B8'
-  const hoverBg       = isAlumno ? 'rgba(58,175,169,0.2)' : 'rgba(58,175,169,0.08)'
+  const inactiveColor = 'rgba(255,255,255,0.65)'
+  const hoverBg       = 'rgba(58,175,169,0.2)'
   const hoverColor    = '#fff'
 
   return (
@@ -174,7 +173,7 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
                   }
                 }}
               >
-                {isAlumno && item.emoji
+                {item.emoji
                   ? <span className="text-base w-4 flex-shrink-0 leading-none">{item.emoji}</span>
                   : <Icon className="w-4 h-4 flex-shrink-0" />
                 }
