@@ -1,30 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { verifyAdmin } from '@/lib/supabase/verify-admin'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // ── Verificar sesión ──────────────────────────────────────────────────────
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const denied = await verifyAdmin(supabase, user.id)
-    if (denied) return denied
+    // ── Verificar rol ADMIN (case-insensitive) ────────────────────────────────
+    const { data: usuarioAdmin } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
 
-    const body = await request.json()
-    const { monto, metodo_pago, referencia } = body
+    const esAdmin = (usuarioAdmin?.rol as string | undefined)?.toLowerCase() === 'admin'
+    if (!esAdmin) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
-    if (!monto || !metodo_pago) {
-      return NextResponse.json({ error: 'Monto y método de pago son requeridos' }, { status: 400 })
-    }
+    // ── Usar service role para saltarse RLS ───────────────────────────────────
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    // Obtener alumno con su plan
-    const { data: alumno, error: fetchError } = await supabase
+    // ── Obtener alumno ────────────────────────────────────────────────────────
+    const { data: alumno, error: fetchError } = await admin
       .from('alumnos')
-      .select('id, meses_desbloqueados, planes_estudio!inner ( duracion_meses )')
+      .select('id, meses_desbloqueados, modalidad')
       .eq('id', params.id)
       .single()
 
@@ -32,41 +39,26 @@ export async function POST(
       return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
     }
 
-    type AlumnoConPlan = { meses_desbloqueados: number; planes_estudio: { duracion_meses: number } }
-    const alumnoData = alumno as unknown as AlumnoConPlan
-    const duracionMeses = alumnoData.planes_estudio.duracion_meses
-    const mesesActuales = alumnoData.meses_desbloqueados
+    const a = alumno as { id: string; meses_desbloqueados: number; modalidad?: string }
+    const duracion = a.modalidad === '3_meses' ? 3 : 6
 
-    if (mesesActuales >= duracionMeses) {
-      return NextResponse.json({ error: 'El alumno ya tiene todos los meses desbloqueados' }, { status: 400 })
+    if (a.meses_desbloqueados >= duracion) {
+      return NextResponse.json({ error: 'Todos los meses ya están desbloqueados' }, { status: 400 })
     }
 
-    const nuevoMes = mesesActuales + 1
+    const nuevoMes = a.meses_desbloqueados + 1
 
-    // Incrementar meses_desbloqueados
-    const { error: updateError } = await supabase
+    // ── Desbloquear siguiente mes ─────────────────────────────────────────────
+    const { error: updateError } = await admin
       .from('alumnos')
       .update({ meses_desbloqueados: nuevoMes })
       .eq('id', params.id)
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-    // Registrar pago
-    const { error: pagoError } = await supabase
-      .from('pagos')
-      .insert({
-        alumno_id: params.id,
-        monto: Number(monto),
-        mes_desbloqueado: nuevoMes,
-        metodo_pago,
-        referencia: referencia || null,
-        registrado_por: user.id,
-      })
-
-    if (pagoError) return NextResponse.json({ error: pagoError.message }, { status: 500 })
-
     return NextResponse.json({ success: true, meses_desbloqueados: nuevoMes })
-  } catch {
+  } catch (err) {
+    console.error('[POST /api/admin/alumnos/[id]/desbloquear-mes]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

@@ -10,11 +10,11 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Obtener alumno
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
-      .select('id')
-      .eq('usuario_id', user.id)
+      .select('id, meses_desbloqueados')
+      .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })

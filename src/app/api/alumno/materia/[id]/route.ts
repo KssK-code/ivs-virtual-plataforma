@@ -12,11 +12,11 @@ export async function GET(
 
     const DEMO_MATERIA_ID = 'e3f004d8-4451-4a65-9c91-bac3f87d2378' // TUT101
 
-    // Obtener alumno para verificar acceso (incluye inscripcion_pagada para modo demo)
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id, meses_desbloqueados, inscripcion_pagada')
-      .eq('usuario_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
@@ -73,10 +73,8 @@ export async function GET(
       evaluaciones: { id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number; activa: boolean }[]
     }
 
-    // Ordenar semanas por número
     const semanas = (m.semanas ?? []).sort((a, b) => a.numero - b.numero)
 
-    // Para cada evaluación activa, obtener intentos usados
     const evaluacionesConIntentos = await Promise.all(
       (m.evaluaciones ?? [])
         .filter(e => e.activa)
@@ -87,7 +85,6 @@ export async function GET(
             .eq('alumno_id', alumno.id)
             .eq('evaluacion_id', ev.id)
 
-          // Verificar si aprobó
           const { data: aprobado } = await supabase
             .from('intentos_evaluacion')
             .select('calificacion, aprobado')
