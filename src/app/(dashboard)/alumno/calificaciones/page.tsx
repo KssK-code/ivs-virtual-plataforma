@@ -117,7 +117,7 @@ export default function CalificacionesPage() {
 
       <FadeIn delay={0}>
         <div>
-          <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Mis Calificaciones</h2>
+          <h2 className="text-xl font-bold text-gray-900">Mis Calificaciones</h2>
           <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Estado de acreditación por materia</p>
         </div>
       </FadeIn>

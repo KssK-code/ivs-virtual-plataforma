@@ -156,7 +156,7 @@ export default function DocumentosPage() {
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
       <div>
-        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Mis Documentos</h2>
+        <h2 className="text-xl font-bold text-gray-900">Mis Documentos</h2>
         <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Sube y administra tus documentos escolares</p>
       </div>
 
@@ -175,7 +175,7 @@ export default function DocumentosPage() {
                   <DocIcon tipo={tipo} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#F1F5F9' }}>
+                  <p className="text-sm font-semibold truncate text-gray-900">
                     {TIPO_LABEL[tipo]}
                   </p>
                   {doc ? (

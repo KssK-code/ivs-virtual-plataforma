@@ -4,7 +4,7 @@ export default function PagarPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>
+        <h1 className="text-xl font-bold text-gray-900">
           Pagos y Acceso
         </h1>
         <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>

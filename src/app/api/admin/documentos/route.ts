@@ -26,7 +26,10 @@ export async function GET() {
       .select('id, alumno_id, tipo, nombre_archivo, estado, comentario_admin, subido_en')
       .order('subido_en', { ascending: false })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error('[GET /api/admin/documentos] Error fetching documentos_alumno:', error.message, error.code)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     type DocRow = {
       id: string
