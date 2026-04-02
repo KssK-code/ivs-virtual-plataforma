@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
     // Si ya existía, no re-evaluar logros
     if (ya_existia) return NextResponse.json({ ok: true, ya_existia: true })
 
+    // Logros y racha: RLS en producción suele no permitir INSERT al alumno → usar service role
+    let adminDb: ReturnType<typeof createAdminClient> | null = null
+    try {
+      adminDb = createAdminClient()
+    } catch {
+      adminDb = null
+    }
+    const dbPriv = adminDb ?? supabase
+
     // ── Verificar logros ──────────────────────────────────────────────────────
 
     // Contar total de semanas completadas por el alumno
@@ -53,14 +63,15 @@ export async function POST(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('alumno_id', alumno.id)
 
-    // FIX #2 logros: usar tipo_logro (no tipo), sin metadata
+    // tipo_logro + onConflict (columna real en IVS; no usar "tipo")
     if ((totalCompletadas ?? 0) === 1) {
-      await supabase
+      const { error: e1 } = await dbPriv
         .from('logros_alumno')
         .upsert(
           { alumno_id: alumno.id, tipo_logro: 'primera_semana' },
           { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
+      if (e1) console.error('[progreso/semana] logro primera_semana:', e1)
     }
 
     // FIX #2 logros: semanas.mes_id → meses_contenido.materia_id (no semanas.materia_id)
@@ -109,12 +120,13 @@ export async function POST(request: NextRequest) {
           .in('semana_id', semIds)
 
         if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
-          await supabase
+          const { error: e2 } = await dbPriv
             .from('logros_alumno')
             .upsert(
               { alumno_id: alumno.id, tipo_logro: 'materia_completada' },
               { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
             )
+          if (e2) console.error('[progreso/semana] logro materia_completada:', e2)
         }
       }
     }
@@ -147,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaMax = Math.max(diasRacha, prev?.racha_maxima ?? 0)
 
-    await supabase
+    const { error: erRacha } = await dbPriv
       .from('racha_actividad')
       .upsert(
         {
@@ -158,23 +170,26 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: 'alumno_id', ignoreDuplicates: false }
       )
+    if (erRacha) console.error('[progreso/semana] racha_actividad:', erRacha)
 
     // Logros de racha (usan tipo_logro)
     if (diasRacha >= 3) {
-      await supabase
+      const { error: e3 } = await dbPriv
         .from('logros_alumno')
         .upsert(
           { alumno_id: alumno.id, tipo_logro: 'racha_3_dias' },
           { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
+      if (e3) console.error('[progreso/semana] logro racha_3:', e3)
     }
     if (diasRacha >= 7) {
-      await supabase
+      const { error: e4 } = await dbPriv
         .from('logros_alumno')
         .upsert(
           { alumno_id: alumno.id, tipo_logro: 'racha_7_dias' },
           { onConflict: 'alumno_id,tipo_logro', ignoreDuplicates: true }
         )
+      if (e4) console.error('[progreso/semana] logro racha_7:', e4)
     }
 
     return NextResponse.json({ ok: true, ya_existia: false, diasRacha })

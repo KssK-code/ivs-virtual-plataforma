@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  generateWeekQuizWithAnthropic,
+  shouldRegenerateTemplateQuiz,
+} from '@/lib/quiz/generate-week-quiz'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // Conversión entre letra IVS ('a'/'b'/'c') e índice (0/1/2) que usa el componente
 const LETTER_TO_IDX = { a: 0, b: 1, c: 2 } as const
@@ -23,13 +31,83 @@ export async function GET(
 
     const { semanaId } = params
 
+    // Contexto de la semana (para regenerar plantillas genéricas con IA)
+    const { data: semCtx } = await supabase
+      .from('semanas')
+      .select(`
+        id,
+        numero_semana,
+        titulo,
+        descripcion,
+        contenido,
+        meses_contenido (
+          titulo,
+          materias ( nombre )
+        )
+      `)
+      .eq('id', semanaId)
+      .single()
+
+    type SemCtx = {
+      id: string
+      numero_semana: number
+      titulo: string
+      descripcion: string | null
+      contenido: string | null
+      meses_contenido: { titulo: string; materias: { nombre: string } | null } | null
+    }
+    const ctx = semCtx as SemCtx | null
+    const mc = ctx?.meses_contenido
+    const matRel = mc?.materias
+    const matNombre = Array.isArray(matRel) ? matRel[0]?.nombre : matRel?.nombre
+    const materiaNombre = matNombre ?? 'la materia'
+
     // FIX #2 quiz: usar opcion_a/b/c en lugar de opciones[]
     // explicacion es opcional — existe si se ejecutó la migración ADD COLUMN
-    const { data: rawPreguntas } = await supabase
+    let { data: rawPreguntas } = await supabase
       .from('quiz_semana')
       .select('id, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta, orden, explicacion')
       .eq('semana_id', semanaId)
       .order('orden')
+
+    if (
+      ctx &&
+      shouldRegenerateTemplateQuiz((rawPreguntas ?? []) as { pregunta: string }[]) &&
+      process.env.ANTHROPIC_API_KEY
+    ) {
+      try {
+        const admin = createAdminClient()
+        const generated = await generateWeekQuizWithAnthropic({
+          materiaNombre,
+          semanaNumero: ctx.numero_semana,
+          semanaTitulo: ctx.titulo,
+          semanaDescripcion: [ctx.descripcion, mc?.titulo].filter(Boolean).join(' — ') || '',
+          contenidoSnippet: ctx.contenido ?? '',
+        })
+        await admin.from('quiz_semana').delete().eq('semana_id', semanaId)
+        const inserts = generated.map((q, i) => ({
+          semana_id:          semanaId,
+          pregunta:           q.pregunta,
+          opcion_a:           q.opcion_a,
+          opcion_b:           q.opcion_b,
+          opcion_c:           q.opcion_c,
+          respuesta_correcta: q.respuesta_correcta,
+          orden:              i + 1,
+          explicacion:        q.explicacion ?? null,
+        }))
+        const { error: insErr } = await admin.from('quiz_semana').insert(inserts)
+        if (!insErr) {
+          const refetch = await supabase
+            .from('quiz_semana')
+            .select('id, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta, orden, explicacion')
+            .eq('semana_id', semanaId)
+            .order('orden')
+          rawPreguntas = refetch.data
+        }
+      } catch (e) {
+        console.error('[quiz] regeneración IA:', e)
+      }
+    }
 
     type QuizRow = {
       id: string; pregunta: string

@@ -551,10 +551,23 @@ CREATE POLICY "logros: admin gestiona"
   ON public.logros_alumno FOR ALL
   USING (public.es_admin());
 
+-- El alumno puede registrar sus propios logros (p. ej. al completar semanas)
+CREATE POLICY "logros: insertar propios"
+  ON public.logros_alumno FOR INSERT
+  WITH CHECK (alumno_id = auth.uid());
+
 -- ── POLÍTICAS: RACHA ─────────────────────────────────────────
 CREATE POLICY "racha: ver propia"
   ON public.racha_actividad FOR SELECT
   USING (alumno_id = auth.uid() OR public.es_admin());
+
+CREATE POLICY "racha: insertar propia"
+  ON public.racha_actividad FOR INSERT
+  WITH CHECK (alumno_id = auth.uid());
+
+CREATE POLICY "racha: actualizar propia"
+  ON public.racha_actividad FOR UPDATE
+  USING (alumno_id = auth.uid());
 
 -- ── POLÍTICAS: GLOSARIO ──────────────────────────────────────
 CREATE POLICY "glosario: lectura autenticados"

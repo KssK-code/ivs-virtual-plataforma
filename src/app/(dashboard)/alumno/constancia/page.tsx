@@ -92,8 +92,8 @@ export default function ConstanciaPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center', width: '100%', maxWidth: 780, margin: '0 auto' }}>
 
-        {/* ── Botones de acción ── */}
-        <div style={{ display: 'flex', gap: 12, alignSelf: 'flex-start' }}>
+        {/* ── Botones de acción (ocultos al imprimir) ── */}
+        <div className="no-print" style={{ display: 'flex', gap: 12, alignSelf: 'flex-start' }}>
           <button
             onClick={() => window.print()}
             style={{
@@ -143,12 +143,15 @@ export default function ConstanciaPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-ivs.jpg" alt="IVS" style={{ height: 60, width: 'auto' }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{
-                  fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
-                  background: 'linear-gradient(135deg, #1B3A57, #3AAFA9, #4ECDC4)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text', lineHeight: 1.1,
-                }}>IVS Instituto Virtual Superior</span>
+                <span
+                  className="constancia-print-title-gradient"
+                  style={{
+                    fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
+                    background: 'linear-gradient(135deg, #1B3A57, #3AAFA9, #4ECDC4)',
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text', lineHeight: 1.1,
+                  }}
+                >IVS Instituto Virtual Superior</span>
                 <span style={{ fontSize: 9, letterSpacing: '0.2em', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', marginTop: 4 }}>
                   Incorporado a la SEP &nbsp;·&nbsp; CCT: 09GBD0002D
                 </span>
@@ -369,15 +372,42 @@ export default function ConstanciaPage() {
         </div>
       </div>
 
-      {/* Estilos de impresión */}
+      {/* Impresión/PDF del navegador: Next anida bajo body; visibility evita página en blanco */}
       <style>{`
         @media print {
-          body > *:not(#constancia-print) { display: none !important; }
+          @page { margin: 12mm; size: A4; }
+          .no-print {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          html, body {
+            background: #fff !important;
+            height: auto !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #constancia-print,
+          #constancia-print * {
+            visibility: visible;
+          }
           #constancia-print {
-            box-shadow: none !important;
-            border-radius: 0 !important;
+            position: absolute;
+            left: 0;
+            top: 0;
             width: 100% !important;
             max-width: 100% !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            background: #fff !important;
+            color: #0f172a !important;
+          }
+          .constancia-print-title-gradient {
+            background: none !important;
+            -webkit-text-fill-color: #1B3A57 !important;
+            color: #1B3A57 !important;
           }
         }
       `}</style>
