@@ -55,43 +55,61 @@ export async function POST(request: NextRequest) {
 
     const alumno = alumnoData as { id: string }
 
-    const { data: existente } = await supabase
-      .from('progreso_semanas')
-      .select('id')
-      .eq('alumno_id', alumno.id)
-      .eq('semana_id', semana_id)
-      .maybeSingle()
-
-    const yaExistiaProgreso = !!existente
-
-    const { error: upsertError } = await supabase
-      .from('progreso_semanas')
-      .upsert(
-        { alumno_id: alumno.id, semana_id },
-        { onConflict: 'alumno_id,semana_id', ignoreDuplicates: true }
-      )
-
-    if (upsertError) {
-      console.error('[progreso/semana] upsert progreso_semanas:', upsertError)
-      return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
-    }
-
     let adminDb: SupabaseClient | null = null
     try {
       adminDb = createAdminClient()
     } catch (e) {
       console.warn(
-        '[progreso/semana] createAdminClient falló — logros/racha usan cliente de sesión (puede fallar por RLS).',
+        '[progreso/semana] createAdminClient falló — progreso/logros/racha usan cliente de sesión (puede fallar por RLS).',
         e
       )
     }
-    const dbPriv = adminDb ?? supabase
+    const dbProg = adminDb ?? supabase
+    const dbPriv = dbProg
 
-    // Contar con el mismo cliente que inserta logros (evita discrepancias por RLS)
+    const { data: existente } = await dbProg
+      .from('progreso_semanas')
+      .select('id, completada')
+      .eq('alumno_id', alumno.id)
+      .eq('semana_id', semana_id)
+      .maybeSingle()
+
+    const yaCompletadaAntes = existente?.completada === true
+
+    const fechaCompletada = new Date().toISOString()
+    console.log('[progreso/semana] upsert progreso_semanas', {
+      alumno_id: alumno.id,
+      semana_id,
+      completada: true,
+      usa_service_role: !!adminDb,
+    })
+
+    const { data: progresoGuardado, error: upsertError } = await dbProg
+      .from('progreso_semanas')
+      .upsert(
+        {
+          alumno_id: alumno.id,
+          semana_id,
+          completada: true,
+          fecha_completada: fechaCompletada,
+        },
+        { onConflict: 'alumno_id,semana_id' }
+      )
+      .select('id, completada, fecha_completada')
+      .maybeSingle()
+
+    if (upsertError) {
+      console.error('[progreso/semana] upsert progreso_semanas:', upsertError)
+      return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
+    }
+    console.log('[progreso/semana] fila guardada:', progresoGuardado)
+
+    // Contar semanas marcadas como completadas (misma fuente que la UI)
     const { count: totalCompletadas, error: countErr } = await dbPriv
       .from('progreso_semanas')
       .select('id', { count: 'exact', head: true })
       .eq('alumno_id', alumno.id)
+      .eq('completada', true)
 
     if (countErr) console.error('[progreso/semana] count progreso_semanas:', countErr)
 
@@ -102,8 +120,8 @@ export async function POST(request: NextRequest) {
       semana_id,
       'alumno:',
       alumno.id,
-      'ya_existía_progreso:',
-      yaExistiaProgreso,
+      'ya_completada_antes:',
+      yaCompletadaAntes,
       'total_completadas:',
       semanasCompletadas,
       'usa_service_role:',
@@ -156,6 +174,7 @@ export async function POST(request: NextRequest) {
           .from('progreso_semanas')
           .select('id', { count: 'exact', head: true })
           .eq('alumno_id', alumno.id)
+          .eq('completada', true)
           .in('semana_id', semIds)
 
         if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
@@ -213,7 +232,11 @@ export async function POST(request: NextRequest) {
     if (diasRacha >= 3) await otorgarLogro(dbPriv, alumno.id, 'racha_3_dias')
     if (diasRacha >= 7) await otorgarLogro(dbPriv, alumno.id, 'racha_7_dias')
 
-    return NextResponse.json({ ok: true, ya_existia: yaExistiaProgreso, diasRacha })
+    return NextResponse.json({
+      ok: true,
+      ya_completada_antes: yaCompletadaAntes,
+      diasRacha,
+    })
   } catch (e) {
     console.error('[progreso/semana] excepción:', e)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

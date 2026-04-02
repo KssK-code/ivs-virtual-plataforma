@@ -85,7 +85,16 @@ export default function MateriaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana_id: semanaId }),
       })
-      if (res.ok && typeof window !== 'undefined') {
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        console.error('[materia] marcarSemana POST progreso', {
+          status: res.status,
+          semanaId,
+          body: errBody,
+        })
+        return
+      }
+      if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('ivs-logros-update'))
       }
       const nuevas = new Set([...semanasCompletadas, semanaId])
@@ -93,8 +102,8 @@ export default function MateriaPage() {
       if (materia && materia.semanas.every(s => nuevas.has(s.id))) {
         setMateriaAcreditada(true)
       }
-    } catch {
-      // silencioso — no bloquear al alumno
+    } catch (e) {
+      console.error('[materia] marcarSemana', e)
     } finally {
       setGuardandoProgreso(false)
     }
