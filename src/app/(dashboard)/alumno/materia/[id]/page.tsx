@@ -146,15 +146,9 @@ export default function MateriaPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: alumnoData } = await supabase
-        .from('alumnos')
-        .select('id')
-        .eq('usuario_id', user.id)
-        .single()
-      if (!alumnoData) return
-
-      const { id: aId } = alumnoData as { id: string }
-      setAlumnoId(aId)
+      // En IVS: alumnos.id = user.id (no usuario_id)
+      setAlumnoId(user.id)
+      const aId = user.id
 
       const { data: progreso } = await supabase
         .from('progreso_semanas')

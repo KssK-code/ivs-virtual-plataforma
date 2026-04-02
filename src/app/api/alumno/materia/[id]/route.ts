@@ -10,105 +10,159 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const DEMO_MATERIA_ID = 'e3f004d8-4451-4a65-9c91-bac3f87d2378' // TUT101
-
-    // Obtener alumno (schema nuevo: alumnos.id = user.id)
+    // ── 1. Alumno: nivel + meses desbloqueados ────────────────────────────────
     const { data: alumnoData } = await supabase
       .from('alumnos')
-      .select('id, meses_desbloqueados, inscripcion_pagada')
+      .select('nivel, meses_desbloqueados')
       .eq('id', user.id)
       .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
-    const alumno = alumnoData as { id: string; meses_desbloqueados: number; inscripcion_pagada: boolean }
+    const alumno = alumnoData as { nivel: string; meses_desbloqueados: number }
+    const mesesDesbloqueados = alumno.meses_desbloqueados ?? 0
 
-    // Verificar que la materia pertenece a un mes desbloqueado
-    const { data: mesData } = await supabase
+    // ── 2. Materia ────────────────────────────────────────────────────────────
+    const { data: materiaData } = await supabase
       .from('materias')
-      .select('mes_contenido_id, meses_contenido(numero)')
+      .select('id, nombre, descripcion, nivel, icono, color, activa')
       .eq('id', params.id)
       .single()
 
-    if (!mesData) return NextResponse.json({ error: 'Materia no encontrada' }, { status: 404 })
+    if (!materiaData) return NextResponse.json({ error: 'Materia no encontrada' }, { status: 404 })
 
-    const mes = mesData as unknown as {
-      mes_contenido_id: string
-      meses_contenido: { numero: number } | null
+    const materia = materiaData as {
+      id: string; nombre: string; descripcion: string | null
+      nivel: string; icono: string | null; color: string | null; activa: boolean
     }
 
-    const numeroMes = mes.meses_contenido?.numero ?? 0
-    const esDemo = !alumno.inscripcion_pagada && alumno.meses_desbloqueados === 0
-    const esMateriaDemo = params.id === DEMO_MATERIA_ID
+    // ── 3. Control de acceso ──────────────────────────────────────────────────
+    // Materias demo: siempre accesibles
+    // Materias del nivel del alumno: accesibles si meses_desbloqueados > 0
+    // El acceso es por nivel completo — NO materia por materia
+    const esDemo       = materia.nivel === 'demo'
+    const esMismoNivel = materia.nivel === alumno.nivel
+    const tieneAcceso  = esDemo || (esMismoNivel && mesesDesbloqueados > 0)
 
-    if (numeroMes > alumno.meses_desbloqueados) {
-      // Permitir acceso a TUT101 en modo demo
-      if (!(esDemo && esMateriaDemo)) {
-        return NextResponse.json({ error: 'No tienes acceso a esta materia' }, { status: 403 })
-      }
+    if (!tieneAcceso) {
+      const motivo = !esMismoNivel
+        ? 'Esta materia no corresponde a tu nivel'
+        : 'Aún no tienes meses desbloqueados. Contacta a tu administrador.'
+      return NextResponse.json({ error: motivo }, { status: 403 })
     }
 
-    // Obtener materia completa con semanas y evaluaciones
-    const { data: materia, error } = await supabase
-      .from('materias')
-      .select('*, semanas(*), evaluaciones(id, titulo, titulo_en, tipo, intentos_max, activa)')
-      .eq('id', params.id)
-      .single()
+    // ── 4. Meses del contenido → Semanas ──────────────────────────────────────
+    const { data: mesesData } = await supabase
+      .from('meses_contenido')
+      .select(`
+        id, numero_mes, titulo, descripcion,
+        semanas ( id, numero_semana, titulo, descripcion, video_url, tiempo_estimado_minutos )
+      `)
+      .eq('materia_id', params.id)
+      .order('numero_mes')
 
-    if (error || !materia) return NextResponse.json({ error: 'Materia no encontrada' }, { status: 404 })
-
-    const m = materia as unknown as {
-      id: string
-      codigo: string
-      nombre: string
-      nombre_en: string
-      color_hex: string
-      descripcion: string
-      descripcion_en: string
-      objetivo: string
-      temario: string[]
-      bibliografia: Record<string, string>[]
-      bibliografia_en?: Record<string, string>[]
-      semanas: { id: string; numero: number; titulo: string; titulo_en?: string; contenido: string; contenido_en: string; url_en: string; videos: { titulo: string; titulo_en?: string; url: string; url_en?: string; duracion: string }[] }[]
-      evaluaciones: { id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number; activa: boolean }[]
+    type SemanaRow = {
+      id: string; numero_semana: number; titulo: string
+      descripcion: string | null; video_url: string | null; tiempo_estimado_minutos: number
+    }
+    type MesRow = {
+      id: string; numero_mes: number; titulo: string; descripcion: string | null
+      semanas: SemanaRow[]
     }
 
-    const semanas = (m.semanas ?? []).sort((a, b) => a.numero - b.numero)
+    const meses = ((mesesData ?? []) as unknown as MesRow[]).map(mes => ({
+      ...mes,
+      semanas: (mes.semanas ?? []).sort((a, b) => a.numero_semana - b.numero_semana),
+    }))
 
-    const evaluacionesConIntentos = await Promise.all(
-      (m.evaluaciones ?? [])
-        .filter(e => e.activa)
-        .map(async (ev) => {
-          const { count } = await supabase
-            .from('intentos_evaluacion')
-            .select('id', { count: 'exact', head: true })
-            .eq('alumno_id', alumno.id)
-            .eq('evaluacion_id', ev.id)
-
-          const { data: aprobado } = await supabase
-            .from('intentos_evaluacion')
-            .select('calificacion, aprobado')
-            .eq('alumno_id', alumno.id)
-            .eq('evaluacion_id', ev.id)
-            .eq('aprobado', true)
-            .limit(1)
-            .single()
-
-          return {
-            ...ev,
-            intentos_usados: count ?? 0,
-            aprobada: !!aprobado,
-            calificacion_aprobatoria: aprobado?.calificacion ?? null,
-          }
-        })
+    // Aplanar: todas las semanas de todos los meses en orden
+    const semanas = meses.flatMap(mes =>
+      mes.semanas.map(s => ({
+        id:          s.id,
+        // Compatibilidad con la página (usa .numero y .titulo)
+        numero:      s.numero_semana,
+        titulo:      s.titulo,
+        titulo_en:   s.titulo,
+        contenido:   s.descripcion ?? '',
+        contenido_en: s.descripcion ?? '',
+        url_en:      '',
+        videos:      s.video_url
+          ? [{
+              titulo:    s.titulo,
+              titulo_en: s.titulo,
+              url:       s.video_url,
+              url_en:    s.video_url,
+              duracion:  s.tiempo_estimado_minutos
+                ? `${s.tiempo_estimado_minutos} min`
+                : '',
+            }]
+          : [],
+      }))
     )
 
+    // ── 5. Evaluaciones + intentos del alumno ─────────────────────────────────
+    const { data: evalData } = await supabase
+      .from('evaluaciones')
+      .select('id, titulo, descripcion, tiempo_limite_minutos, intentos_permitidos, activa')
+      .eq('materia_id', params.id)
+      .eq('activa', true)
+
+    type EvalRow = {
+      id: string; titulo: string; descripcion: string | null
+      tiempo_limite_minutos: number; intentos_permitidos: number; activa: boolean
+    }
+
+    const evaluaciones = await Promise.all(
+      ((evalData ?? []) as unknown as EvalRow[]).map(async ev => {
+        const { count: intentosUsados } = await supabase
+          .from('intentos_evaluacion')
+          .select('id', { count: 'exact', head: true })
+          .eq('alumno_id', user.id)
+          .eq('evaluacion_id', ev.id)
+
+        const { data: aprobado } = await supabase
+          .from('intentos_evaluacion')
+          .select('puntaje')
+          .eq('alumno_id', user.id)
+          .eq('evaluacion_id', ev.id)
+          .eq('acreditado', true)
+          .limit(1)
+          .single()
+
+        return {
+          id:                       ev.id,
+          titulo:                   ev.titulo,
+          titulo_en:                ev.titulo,
+          tipo:                     'final',
+          intentos_max:             ev.intentos_permitidos,
+          intentos_usados:          intentosUsados ?? 0,
+          aprobada:                 !!aprobado,
+          calificacion_aprobatoria: aprobado?.puntaje ?? null,
+          activa:                   ev.activa,
+        }
+      })
+    )
+
+    // ── 6. Respuesta con forma compatible con la página ───────────────────────
     return NextResponse.json({
-      ...m,
+      id:              materia.id,
+      codigo:          '',
+      nombre:          materia.nombre,
+      nombre_en:       materia.nombre,
+      color_hex:       materia.color ?? '#3AAFA9',
+      descripcion:     materia.descripcion ?? '',
+      descripcion_en:  materia.descripcion ?? '',
+      objetivo:        materia.descripcion ?? '',
+      objetivo_en:     materia.descripcion ?? '',
+      temario:         [],
+      temario_en:      [],
+      bibliografia:    [],
+      bibliografia_en: [],
       semanas,
-      evaluaciones: evaluacionesConIntentos,
+      evaluaciones,
     })
-  } catch {
+  } catch (err) {
+    console.error('[api/alumno/materia/[id]]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
