@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight, PlayCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Check, AlertCircle, Video, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface VideoState {
   video_url:   string
@@ -64,32 +64,6 @@ function getYoutubeId(url: string): string | null {
   return match ? match[1] : null
 }
 
-/** Thumbnail del video 1 o placeholder gris */
-function VideoThumbnail({ url }: { url: string }) {
-  const videoId = getYoutubeId(url)
-
-  if (videoId) {
-    return (
-      <img
-        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-        alt="Preview"
-        className="w-32 h-20 object-cover rounded cursor-pointer flex-shrink-0"
-        style={{ border: '1px solid #2A2F3E' }}
-        onClick={() => window.open(url, '_blank')}
-        title="Abrir video en YouTube"
-      />
-    )
-  }
-
-  return (
-    <div
-      className="w-32 h-20 flex items-center justify-center rounded flex-shrink-0"
-      style={{ background: '#1A1F2E', border: '1px solid #2A2F3E' }}
-    >
-      <PlayCircle className="w-7 h-7" style={{ color: '#3A4055' }} />
-    </div>
-  )
-}
 
 export default function ContenidoDetallePage() {
   const router  = useRouter()
@@ -288,7 +262,7 @@ export default function ContenidoDetallePage() {
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-left" style={{ color: '#F1F5F9' }}>
-                        Mes {mes.numero_mes}{mes.titulo ? ` — ${mes.titulo}` : ''}
+                        {mes.titulo || `Mes ${mes.numero_mes}`}
                       </p>
                       <p className="text-xs" style={{ color: '#64748B' }}>{mes.semanas.length} semanas</p>
                     </div>
@@ -320,34 +294,58 @@ export default function ContenidoDetallePage() {
                               </p>
                             </div>
 
-                            {/* Layout: thumbnail izquierda + campos derecha */}
-                            <div className="flex gap-4 items-start">
-                              {/* Thumbnail Video 1 */}
-                              <VideoThumbnail url={v.video_url} />
-
-                              {/* Inputs + botón */}
-                              <div className="flex-1 min-w-0 space-y-2">
-                                {(
-                                  [
-                                    { field: 'video_url'   as const, label: 'Video 1 (principal)' },
-                                    { field: 'video_url_2' as const, label: 'Video 2'             },
-                                    { field: 'video_url_3' as const, label: 'Video 3'             },
-                                  ]
-                                ).map(({ field, label }) => (
-                                  <div key={field}>
-                                    <label className="block text-xs mb-1" style={{ color: '#64748B' }}>
-                                      <Video className="inline w-3 h-3 mr-1" style={{ verticalAlign: 'middle' }} />
-                                      {label}
-                                    </label>
-                                    <input
-                                      type="url"
-                                      placeholder="https://www.youtube.com/watch?v=..."
-                                      value={v[field]}
-                                      onChange={e => handleChange(sem.id, field, e.target.value)}
-                                      style={inputStyle(v.dirty && v[field] !== (sem[field] ?? ''))}
-                                    />
+                            {/* 3 thumbnails en fila */}
+                            <div className="flex gap-2 mb-1">
+                              {([v.video_url, v.video_url_2, v.video_url_3] as string[]).map((url, i) => {
+                                const vid = getYoutubeId(url)
+                                return (
+                                  <div key={i} className="flex-1">
+                                    <p className="text-xs mb-1" style={{ color: '#64748B' }}>Video {i + 1}</p>
+                                    {vid ? (
+                                      <img
+                                        src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`}
+                                        alt={`Preview video ${i + 1}`}
+                                        className="w-full h-20 object-cover rounded cursor-pointer"
+                                        style={{ border: '1px solid #2A2F3E' }}
+                                        onClick={() => window.open(url, '_blank')}
+                                        title="Abrir en YouTube"
+                                      />
+                                    ) : (
+                                      <div
+                                        className="w-full h-20 rounded flex items-center justify-center text-xs"
+                                        style={{ background: '#1A1F2E', border: '1px solid #2A2F3E', color: '#4B5563' }}
+                                      >
+                                        Sin video
+                                      </div>
+                                    )}
                                   </div>
-                                ))}
+                                )
+                              })}
+                            </div>
+
+                            {/* Inputs + botón */}
+                            <div className="space-y-2">
+                              {(
+                                [
+                                  { field: 'video_url'   as const, label: 'Video 1 (principal)' },
+                                  { field: 'video_url_2' as const, label: 'Video 2'             },
+                                  { field: 'video_url_3' as const, label: 'Video 3'             },
+                                ]
+                              ).map(({ field, label }) => (
+                                <div key={field}>
+                                  <label className="block text-xs mb-1" style={{ color: '#64748B' }}>
+                                    <Video className="inline w-3 h-3 mr-1" style={{ verticalAlign: 'middle' }} />
+                                    {label}
+                                  </label>
+                                  <input
+                                    type="url"
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    value={v[field]}
+                                    onChange={e => handleChange(sem.id, field, e.target.value)}
+                                    style={inputStyle(v.dirty && v[field] !== (sem[field] ?? ''))}
+                                  />
+                                </div>
+                              ))}
 
                                 {/* Footer con feedback y botón */}
                                 <div className="flex items-center justify-between pt-1">
@@ -380,7 +378,6 @@ export default function ContenidoDetallePage() {
                                     }
                                   </button>
                                 </div>
-                              </div>
                             </div>
                           </div>
                         )
