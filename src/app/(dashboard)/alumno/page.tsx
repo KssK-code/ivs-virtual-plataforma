@@ -342,7 +342,7 @@ export default function AlumnoDashboard() {
               Familiarízate con la plataforma, tu plan de estudio y la metodología.
             </p>
           </div>
-          <Link href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
+          <Link href="/alumno/materia/f0551b82-1c3e-4286-bfb4-878842bc6eff"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
             style={{ background: '#3AAFA9', color: '#fff' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
