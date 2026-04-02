@@ -108,21 +108,33 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
         style={{ width: 260, background: sidebarBg, borderRight: `1px solid ${sidebarBorder}` }}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between px-5 py-5"
+        <div className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
           <div className="flex items-center gap-3">
+            {/* Logo real IVS */}
             <div style={{
-              background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 3,
-              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.95)',
+              borderRadius: 10,
+              padding: '4px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}>
-              <Image src="/logo-ivs.jpg" alt="IVS" width={34} height={34}
-                style={{ borderRadius: 7, objectFit: 'contain', display: 'block' }} />
+              <Image
+                src="/logo-ivs.jpg"
+                alt="IVS Virtual"
+                width={0}
+                height={40}
+                sizes="100vw"
+                style={{ height: 40, width: 'auto', display: 'block', objectFit: 'contain' }}
+              />
             </div>
             <div>
-              <p className="text-sm font-bold leading-none" style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
+              <p className="text-sm font-bold leading-tight"
+                style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
                 IVS Virtual
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em' }}>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em' }}>
                 INSTITUTO
               </p>
             </div>
