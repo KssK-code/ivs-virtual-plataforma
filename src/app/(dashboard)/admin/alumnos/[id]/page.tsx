@@ -171,11 +171,16 @@ export default function AlumnoDetallePage() {
     const nuevoEstado = !alumno.usuario.activo
     setTogglingActivo(true)
     try {
-      await fetch(`/api/admin/alumnos/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/admin/alumnos/${id}/activar`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo: nuevoEstado }),
       })
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error ?? 'Error al cambiar estado', 'error')
+        return
+      }
       await cargar()
       showToast(
         nuevoEstado
@@ -183,6 +188,8 @@ export default function AlumnoDetallePage() {
           : `Alumno ${alumno.usuario.nombre_completo} desactivado`,
         nuevoEstado ? 'success' : 'info'
       )
+    } catch {
+      showToast('Error inesperado', 'error')
     } finally {
       setTogglingActivo(false)
     }
@@ -262,7 +269,7 @@ export default function AlumnoDetallePage() {
           </button>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>{alumno.usuario.nombre_completo}</h2>
+              <h1 className="text-xl font-bold text-gray-900">{alumno.usuario.nombre_completo}</h1>
               <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
                 {alumno.matricula}
               </span>

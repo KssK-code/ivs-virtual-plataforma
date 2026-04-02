@@ -81,11 +81,13 @@ export async function GET(
         duracion_meses: duracion,
         precio_mensual: 0,
       },
+      activo: Boolean(a.activo),
       usuario: {
         nombre_completo: [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
         email:           u?.email ?? '—',
         telefono:        u?.telefono ?? null,
         foto_url:        u?.foto_url ?? null,
+        activo:          Boolean(a.activo),
       },
       calificaciones: calificaciones ?? [],
       documentos:     documentos ?? [],
