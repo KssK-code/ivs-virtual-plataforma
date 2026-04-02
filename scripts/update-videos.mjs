@@ -127,14 +127,24 @@ async function main() {
   console.log(`\nMaterias: ${materias.length}${nivelArg ? ` (nivel=${nivelArg})` : ''}`)
   materias.forEach(m => console.log(`  [${m.nivel}] ${m.nombre}`))
 
-  // 2. Reunir todas las semanas con su nombre de materia
+  // 2. Detectar si existen columnas multi-video en la BD
+  const multiVideo = await hasMultiVideoColumns()
+  if (multiVideo) {
+    console.log('🎬 Modo multi-video: actualizando video_url, video_url_2, video_url_3')
+  }
+
+  // 3. Reunir todas las semanas con su nombre de materia
   // Join: materias → meses_contenido → semanas
   const todasSemanas = []
+  const videoSelect = multiVideo
+    ? 'id,numero_semana,titulo,video_url,video_url_2,video_url_3'
+    : 'id,numero_semana,titulo,video_url'
+
   for (const materia of materias) {
     const meses = await supa(`meses_contenido?materia_id=eq.${materia.id}&select=id`)
     for (const mes of (meses || [])) {
       const rows = await supa(
-        `semanas?mes_id=eq.${mes.id}&select=id,numero_semana,titulo,video_url&order=numero_semana`
+        `semanas?mes_id=eq.${mes.id}&select=${videoSelect}&order=numero_semana`
       )
       for (const s of (rows || [])) {
         todasSemanas.push({ ...s, materiaNombre: materia.nombre, nivel: materia.nivel })
@@ -142,15 +152,20 @@ async function main() {
     }
   }
 
-  // Filtrar: saltar semanas que ya tienen video bueno (watch?v=)
+  // Filtrar: saltar semanas que ya tienen todos los videos necesarios
+  //   - Sin columnas multi-video: saltar si video_url tiene watch?v=
+  //   - Con columnas multi-video: saltar solo si los 3 tienen watch?v=
+  const goodUrl = url => (url || '').includes('watch?v=')
   const semanas = todasSemanas.filter(s => {
-    const url = s.video_url || ''
-    return !url.includes('watch?v=')
+    if (multiVideo) {
+      return !(goodUrl(s.video_url) && goodUrl(s.video_url_2) && goodUrl(s.video_url_3))
+    }
+    return !goodUrl(s.video_url)
   })
   const omitidas = todasSemanas.length - semanas.length
 
   console.log(`\nSemanas totales    : ${todasSemanas.length}`)
-  console.log(`⏭  Ya con video    : ${omitidas} (watch?v= — se saltan)`)
+  console.log(`⏭  Ya completas    : ${omitidas} (se saltan)`)
   console.log(`Semanas a procesar : ${semanas.length}`)
   const unidades = semanas.length * 100
   console.log(`Cuota YouTube      : ~${unidades} unidades (límite diario: 10,000)`)
@@ -158,12 +173,6 @@ async function main() {
     console.warn(`⚠  ATENCIÓN: supera el límite diario. Se detendrá si la cuota se agota.\n`)
   } else {
     console.log()
-  }
-
-  // 3. Detectar si existen columnas multi-video en la BD
-  const multiVideo = await hasMultiVideoColumns()
-  if (multiVideo) {
-    console.log('🎬 Modo multi-video: actualizando video_url, video_url_2, video_url_3\n')
   }
 
   // 4. Buscar video y actualizar video_url (+ video_url_2/3 si existen columnas)
