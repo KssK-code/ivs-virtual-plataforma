@@ -100,6 +100,8 @@ export default function AlumnoDashboard() {
   const [logros,             setLogros]             = useState<Array<{ tipo_logro: string; fecha_obtenido: string }>>([])
   const [diasRacha,          setDiasRacha]          = useState(0)
   const [loading,            setLoading]            = useState(true)
+  /** Primera materia del plan (orden) con acceso; IVS entra directo a materia, no a /mes/[n] */
+  const [primeraMateriaId,    setPrimeraMateriaId]   = useState<string | null>(null)
 
   // Toast on redirect
   useEffect(() => {
@@ -119,7 +121,8 @@ export default function AlumnoDashboard() {
       fetch('/api/alumno/perfil').then(r => r.json()),
       fetch('/api/alumno/meses').then(r => r.json()),
       fetch('/api/alumno/calificaciones').then(r => r.json()),
-    ]).then(([p, m, c]) => {
+      fetch('/api/alumno/materias').then(r => r.json()),
+    ]).then(([p, m, c, mat]) => {
       setPerfil(p)
       if (m?.demo === true) {
         setDemo(true); setMeses([])
@@ -127,6 +130,13 @@ export default function AlumnoDashboard() {
         setDemo(false); setMeses(Array.isArray(m) ? m : [])
       }
       setMateriasAcreditadas(c?.resumen?.materias_acreditadas ?? 0)
+
+      type MatRow = { id: string; orden?: number; disponible?: boolean }
+      const list = Array.isArray(mat?.materias) ? (mat.materias as MatRow[]) : []
+      const primera = [...list]
+        .filter(x => x.disponible)
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0]
+      setPrimeraMateriaId(primera?.id ?? null)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -270,7 +280,11 @@ export default function AlumnoDashboard() {
 
         {!demo && mesActivo > 0 && (
           <button
-            onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
+            type="button"
+            onClick={() => {
+              if (primeraMateriaId) router.push(`/alumno/materia/${primeraMateriaId}`)
+              else router.push('/alumno/materias')
+            }}
             className="relative z-10 flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm flex-shrink-0 transition-all"
             style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}

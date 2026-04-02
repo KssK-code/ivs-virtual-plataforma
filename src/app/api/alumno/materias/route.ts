@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+function nivelCanon(raw: string | null | undefined): 'secundaria' | 'preparatoria' {
+  const s = (raw ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .trim()
+  if (s === 'secundaria' || s.includes('secund')) return 'secundaria'
+  if (s === 'preparatoria' || s.includes('prepa')) return 'preparatoria'
+  return 'preparatoria'
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -16,8 +27,9 @@ export async function GET() {
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
-    const nivel              = (alumno as { nivel: string; meses_desbloqueados: number }).nivel
-    const mesesDesbloqueados = (alumno as { nivel: string; meses_desbloqueados: number }).meses_desbloqueados ?? 0
+    const nivelRaw           = (alumno as { nivel: string | null; meses_desbloqueados: number }).nivel
+    const nivel              = nivelCanon(nivelRaw)
+    const mesesDesbloqueados = (alumno as { meses_desbloqueados: number }).meses_desbloqueados ?? 0
 
     // ── Materias del nivel del alumno con meses y semanas ───────────────────
     const { data: materias, error } = await supabase

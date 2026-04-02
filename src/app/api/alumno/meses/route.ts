@@ -3,6 +3,18 @@ import { createClient } from '@/lib/supabase/server'
 
 const DEMO_MATERIA_ID = 'e3f004d8-4451-4a65-9c91-bac3f87d2378' // TUT101 — Tutoría de ingreso I
 
+/** Normaliza texto de BD (mayúsculas, typos) al CHECK de materias.nivel */
+function nivelCanon(raw: string | null | undefined): 'secundaria' | 'preparatoria' {
+  const s = (raw ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .trim()
+  if (s === 'secundaria' || s.includes('secund')) return 'secundaria'
+  if (s === 'preparatoria' || s.includes('prepa')) return 'preparatoria'
+  return 'preparatoria'
+}
+
 type MesMateriaRow = {
   id: string
   numero_mes: number
@@ -28,7 +40,7 @@ export async function GET() {
     let inscripcionPagada  = false
     let duracionMeses      = 0
     let alumnoEncontrado   = false
-    let nivelAlumno        = 'preparatoria' as string
+    let nivelAlumno: 'secundaria' | 'preparatoria' = 'preparatoria'
 
     const { data: a2 } = await supabase
       .from('alumnos')
@@ -47,7 +59,7 @@ export async function GET() {
       mesesDesbloqueados = row.meses_desbloqueados ?? 0
       inscripcionPagada  = row.inscripcion_pagada  ?? false
       duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
-      if (row.nivel === 'secundaria' || row.nivel === 'preparatoria') nivelAlumno = row.nivel
+      nivelAlumno        = nivelCanon(row.nivel)
     }
 
     if (!alumnoEncontrado) {
@@ -68,7 +80,7 @@ export async function GET() {
         mesesDesbloqueados = row.meses_desbloqueados ?? 0
         inscripcionPagada  = row.inscripcion_pagada  ?? false
         duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
-        if (row.nivel === 'secundaria' || row.nivel === 'preparatoria') nivelAlumno = row.nivel
+        nivelAlumno        = nivelCanon(row.nivel)
       }
     }
 
@@ -80,7 +92,35 @@ export async function GET() {
       return NextResponse.json({ demo: true, materia_demo_id: DEMO_MATERIA_ID })
     }
 
-    // Solo meses de materias del mismo nivel que el alumno (evita mezclar Prepa / Secundaria)
+    // IDs de materias del nivel del alumno (filtro por columna; el filtro embebido .eq('materias.nivel') a veces no aplica bien en PostgREST)
+    const { data: matsNivel, error: matsErr } = await supabase
+      .from('materias')
+      .select('id')
+      .eq('nivel', nivelAlumno)
+      .eq('activa', true)
+
+    const materiaIds = [...new Set((matsNivel ?? []).map((r: { id: string }) => r.id))]
+
+    if (matsErr || materiaIds.length === 0) {
+      const mesesFicticios = Array.from({ length: duracionMeses || 6 }, (_, i) => ({
+        id:           `mes-ficticio-${i + 1}`,
+        numero:       i + 1,
+        numero_mes:   i + 1,
+        titulo:       `Mes ${i + 1}`,
+        materias:     [] as Array<{
+          id: string
+          codigo: string
+          nombre: string
+          nombre_en: string
+          color_hex: string
+          descripcion: string
+          descripcion_en: string
+        }>,
+        desbloqueado: (i + 1) <= mesesDesbloqueados,
+      }))
+      return NextResponse.json(mesesFicticios)
+    }
+
     const { data: mesesRaw, error: mesesError } = await supabase
       .from('meses_contenido')
       .select(`
@@ -88,7 +128,8 @@ export async function GET() {
         numero_mes,
         titulo,
         descripcion,
-        materias!inner (
+        materia_id,
+        materias (
           id,
           nombre,
           color,
@@ -97,8 +138,7 @@ export async function GET() {
           activa
         )
       `)
-      .eq('materias.nivel', nivelAlumno)
-      .eq('materias.activa', true)
+      .in('materia_id', materiaIds)
       .lte('numero_mes', duracionMeses)
       .order('numero_mes')
 
@@ -137,6 +177,9 @@ export async function GET() {
     for (const row of mesesRaw as unknown as MesMateriaRow[]) {
       const m = row.materias
       if (!m) continue
+      // Doble chequeo: no mezclar niveles aunque materia_id estuviera mal enlazado
+      if (nivelCanon(m.nivel) !== nivelAlumno) continue
+      if (m.activa === false) continue
       const n = row.numero_mes
       if (!byMonth.has(n)) byMonth.set(n, { titulos: [], materias: [] })
       const g = byMonth.get(n)!
@@ -154,6 +197,18 @@ export async function GET() {
     }
 
     const sortedMonths = [...byMonth.keys()].sort((a, b) => a - b)
+
+    if (sortedMonths.length === 0) {
+      const mesesFicticios = Array.from({ length: duracionMeses || 6 }, (_, i) => ({
+        id:           `mes-ficticio-${i + 1}`,
+        numero:       i + 1,
+        numero_mes:   i + 1,
+        titulo:       `Mes ${i + 1}`,
+        materias:     [] as MatOut[],
+        desbloqueado: (i + 1) <= mesesDesbloqueados,
+      }))
+      return NextResponse.json(mesesFicticios)
+    }
 
     const result = sortedMonths.map(numero_mes => {
       const g = byMonth.get(numero_mes)!
