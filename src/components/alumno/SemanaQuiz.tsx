@@ -11,6 +11,7 @@ interface Pregunta {
   pregunta: string
   opciones: string[]
   respuesta_correcta: number
+  explicacion?: string   // opcional — se muestra cuando la BD lo provee
   orden: number
 }
 
@@ -250,11 +251,14 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
               color: '#CBD5E1',
             }}
           >
-            <span className="font-semibold">
-              {seleccionada === pregunta.respuesta_correcta
-                ? '✓ ¡Correcto!'
-                : '✗ Incorrecto'}
+            <span className="font-semibold mr-1">
+              {seleccionada === pregunta.respuesta_correcta ? '✓' : '✗'}
             </span>
+            {pregunta.explicacion
+              ? pregunta.explicacion
+              : seleccionada === pregunta.respuesta_correcta
+                ? '¡Correcto!'
+                : 'Incorrecto'}
           </div>
         )}
       </div>

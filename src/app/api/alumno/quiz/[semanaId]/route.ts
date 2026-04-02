@@ -17,9 +17,10 @@ export async function GET(
     const { semanaId } = params
 
     // FIX #2 quiz: usar opcion_a/b/c en lugar de opciones[]
+    // explicacion es opcional — existe si se ejecutó la migración ADD COLUMN
     const { data: rawPreguntas } = await supabase
       .from('quiz_semana')
-      .select('id, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta, orden')
+      .select('id, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta, orden, explicacion')
       .eq('semana_id', semanaId)
       .order('orden')
 
@@ -27,6 +28,7 @@ export async function GET(
       id: string; pregunta: string
       opcion_a: string; opcion_b: string; opcion_c: string
       respuesta_correcta: string; orden: number | null
+      explicacion?: string | null
     }
 
     // Mapear al formato del componente (opciones[] + respuesta_correcta como índice)
@@ -36,6 +38,7 @@ export async function GET(
       opciones:           [p.opcion_a, p.opcion_b, p.opcion_c],
       respuesta_correcta: LETTER_TO_IDX[p.respuesta_correcta as keyof typeof LETTER_TO_IDX] ?? 0,
       orden:              p.orden ?? 0,
+      explicacion:        p.explicacion ?? undefined,
     }))
 
     if (preguntas.length === 0) {
