@@ -30,7 +30,7 @@ export function Header({ pageTitle, userName, avatarUrl, theme = 'dark', onMenuT
     .join('')
     .toUpperCase()
 
-  const headerBg     = isLight ? 'rgba(255,255,255,0.9)' : 'rgba(11,13,17,0.8)'
+  const headerBg     = isLight ? '#ffffff'               : 'rgba(11,13,17,0.8)'
   const headerBorder = isLight ? '#EEF2F7'                : '#2A2F3E'
   const titleColor   = isLight ? '#1B3A57'                : '#F1F5F9'
   const dateColor    = isLight ? '#7A92A9'                : '#475569'

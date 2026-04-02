@@ -23,7 +23,7 @@ function StatCard({
   return (
     <div
       className="rounded-2xl p-5 flex flex-col gap-2"
-      style={{ background: '#fff', border: '1px solid #E8F0F7', boxShadow: '0 2px 8px rgba(27,58,87,0.06)' }}
+      style={{ background: '#fff', border: '1px solid #E8F0F7', borderTop: '3px solid #3AAFA9', boxShadow: '0 2px 8px rgba(27,58,87,0.06)' }}
     >
       <div
         className="flex items-center justify-center w-11 h-11 rounded-xl text-xl"
