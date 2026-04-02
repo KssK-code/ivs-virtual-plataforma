@@ -69,8 +69,11 @@ export async function GET() {
     const result = ((materias ?? []) as unknown as MateriaRow[]).map(mat => {
       const meses        = mat.meses_contenido ?? []
       const totalSemanas = meses.reduce((acc, mes) => acc + (mes.semanas?.length ?? 0), 0)
-      // Materia disponible si el alumno tiene al menos 1 mes desbloqueado
-      const disponible   = mesesDesbloqueados > 0
+      // Mes mínimo requerido para acceder a esta materia
+      const mesMinimoRequerido = meses.length > 0
+        ? Math.min(...meses.map(m => m.numero_mes))
+        : 999
+      const disponible = mesesDesbloqueados >= mesMinimoRequerido
 
       return {
         id:             mat.id,
