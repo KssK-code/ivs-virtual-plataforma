@@ -1,17 +1,22 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verificar sesión con el cliente de usuario
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
 
+    // Usar admin client para todas las queries de BD (bypassa RLS)
+    const admin = createAdminClient()
+
     // ── 1. Alumno: nivel + meses desbloqueados ────────────────────────────────
-    const { data: alumnoData } = await supabase
+    const { data: alumnoData } = await admin
       .from('alumnos')
       .select('nivel, meses_desbloqueados')
       .eq('id', user.id)
@@ -20,10 +25,9 @@ export async function GET(
     if (!alumnoData) return Response.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
     const alumno = alumnoData as { nivel: string; meses_desbloqueados: number }
-    const mesesDesbloqueados = alumno.meses_desbloqueados ?? 0
 
     // ── 2. Materia ────────────────────────────────────────────────────────────
-    const { data: materiaData } = await supabase
+    const { data: materiaData } = await admin
       .from('materias')
       .select('id, nombre, descripcion, nivel, icono, color, activa')
       .eq('id', params.id)
@@ -48,7 +52,7 @@ export async function GET(
     }
 
     // ── 4. Meses del contenido → Semanas ──────────────────────────────────────
-    const { data: mesesData } = await supabase
+    const { data: mesesData } = await admin
       .from('meses_contenido')
       .select(`
         id, numero_mes, titulo, descripcion,
@@ -98,7 +102,7 @@ export async function GET(
     )
 
     // ── 5. Evaluaciones + intentos del alumno ─────────────────────────────────
-    const { data: evalData } = await supabase
+    const { data: evalData } = await admin
       .from('evaluaciones')
       .select('id, titulo, descripcion, tiempo_limite_minutos, intentos_permitidos, activa')
       .eq('materia_id', params.id)
@@ -111,13 +115,13 @@ export async function GET(
 
     const evaluaciones = await Promise.all(
       ((evalData ?? []) as unknown as EvalRow[]).map(async ev => {
-        const { count: intentosUsados } = await supabase
+        const { count: intentosUsados } = await admin
           .from('intentos_evaluacion')
           .select('id', { count: 'exact', head: true })
           .eq('alumno_id', user.id)
           .eq('evaluacion_id', ev.id)
 
-        const { data: aprobado } = await supabase
+        const { data: aprobado } = await admin
           .from('intentos_evaluacion')
           .select('puntaje')
           .eq('alumno_id', user.id)
