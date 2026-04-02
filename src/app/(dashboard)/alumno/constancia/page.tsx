@@ -139,21 +139,8 @@ export default function ConstanciaPage() {
           }}>
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="cert-hg" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#1B3A57" />
-                    <stop offset="100%" stopColor="#3AAFA9" />
-                  </linearGradient>
-                </defs>
-                <polygon points="26,3 48,15 48,37 26,49 4,37 4,15" fill="#0f172a" stroke="url(#cert-hg)" strokeWidth="1.5" />
-                <polygon points="26,10 41,18.5 41,33.5 26,42 11,33.5 11,18.5" fill="none" stroke="#3AAFA9" strokeWidth="0.8" opacity="0.45" />
-                <line x1="26" y1="10" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
-                <line x1="11" y1="18.5" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
-                <line x1="41" y1="18.5" x2="26" y2="26" stroke="#3AAFA9" strokeWidth="0.6" opacity="0.35" />
-                <circle cx="26" cy="26" r="4.5" fill="none" stroke="#4ECDC4" strokeWidth="1.2" />
-                <circle cx="26" cy="26" r="1.5" fill="#4ECDC4" />
-              </svg>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-ivs.jpg" alt="IVS" style={{ height: 60, width: 'auto' }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{
                   fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',

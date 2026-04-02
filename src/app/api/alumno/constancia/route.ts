@@ -35,7 +35,7 @@ export async function GET() {
       foto_url?: string | null; avatar_url?: string | null
     } | null
 
-    const nombreCompleto = [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || user.email || 'Alumno'
+    const nombreCompleto = [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || 'Alumno'
     const avatarUrl = u?.foto_url ?? u?.avatar_url ?? null
 
     // ── Calificaciones ────────────────────────────────────────────────────────
