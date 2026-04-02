@@ -61,6 +61,7 @@ export default function ConstanciaPage() {
   const [datos, setDatos] = useState<DatosConstancia | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fotoFalloCarga, setFotoFalloCarga] = useState(false)
   const folioRef = useRef<string>('')
 
   useEffect(() => {
@@ -74,6 +75,11 @@ export default function ConstanciaPage() {
       .catch(() => setError('Error al cargar los datos'))
       .finally(() => setLoading(false))
   }, [])
+
+  const fotoSrc = datos ? (datos.foto_url || datos.avatar_url || null) : null
+  useEffect(() => {
+    setFotoFalloCarga(false)
+  }, [fotoSrc])
 
   const folio = folioRef.current
 
@@ -214,12 +220,13 @@ export default function ConstanciaPage() {
 
               {/* Foto del alumno */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                {(datos.foto_url || datos.avatar_url) ? (
+                {fotoSrc && !fotoFalloCarga ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={(datos.foto_url || datos.avatar_url) as string}
+                    src={fotoSrc}
                     alt={[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
                     className="w-24 h-24 rounded-full object-cover border-4 border-teal-500"
+                    onError={() => setFotoFalloCarga(true)}
                   />
                 ) : (
                   <div
