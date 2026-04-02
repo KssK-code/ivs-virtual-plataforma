@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+function buildNombre(nombre?: string | null, apellidos?: string | null, fallback?: string | null) {
+  return [nombre, apellidos].filter(Boolean).join(' ') || fallback || 'Alumno'
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -8,11 +12,6 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
     console.log('[perfil] user.id:', user.id, '| user.email:', user.email)
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    function buildNombre(nombre?: string | null, apellidos?: string | null, fallback?: string | null) {
-      return [nombre, apellidos].filter(Boolean).join(' ') || fallback || 'Alumno'
-    }
 
     // ── Intentar con schema antiguo: alumnos.usuario_id ──────────────────────
     const { data, error } = await supabase
