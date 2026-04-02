@@ -1,10 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import gsap from 'gsap'
-import { useGSAP } from '@gsap/react'
-
-gsap.registerPlugin(useGSAP)
 
 interface BadgesGridProps {
   logros: Array<{ tipo_logro: string; fecha_obtenido: string }>
@@ -146,23 +143,46 @@ function formatFecha(iso: string, lang: string) {
 export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
   const [hoveredTipo, setHoveredTipo] = useState<string | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  /** Tipos que ya mostramos animados (evita re-lanzar gsap.from en todo el grid al sumar un logro). */
+  const yaAnimadosRef = useRef<Set<string>>(new Set())
 
   const logroMap = new Map(logros.map(l => [l.tipo_logro, l.fecha_obtenido]))
   const obtenidos = logros.length
 
-  useGSAP(() => {
-    if (!gridRef.current) return
-    const badges = gridRef.current.querySelectorAll('.badge-obtenido')
-    if (badges.length === 0) return
-    gsap.from(badges, {
-      scale: 3,
-      opacity: 0,
-      rotation: -15,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: 'back.out(1.7)',
+  const tiposActuales = logros.map(l => l.tipo_logro).sort().join('|')
+  useLayoutEffect(() => {
+    const root = gridRef.current
+    if (!root) return
+
+    const actuales = new Set(logros.map(l => l.tipo_logro))
+    const recién = [...actuales].filter(t => !yaAnimadosRef.current.has(t))
+    if (recién.length === 0) {
+      yaAnimadosRef.current = actuales
+      return
+    }
+
+    recién.forEach((tipo, i) => {
+      const el = root.querySelector(`[data-badge-tipo="${tipo}"]`) as HTMLElement | null
+      if (el) {
+        gsap.killTweensOf(el)
+        gsap.fromTo(
+          el,
+          { scale: 0.82, opacity: 0 },
+          {
+            scale: 1,
+            opacity: 1,
+            duration: 0.45,
+            delay: i * 0.06,
+            ease: 'back.out(1.4)',
+            clearProps: 'transform,opacity',
+          }
+        )
+      }
+      yaAnimadosRef.current.add(tipo)
     })
-  }, { scope: gridRef, dependencies: [logros] })
+
+    for (const t of actuales) yaAnimadosRef.current.add(t)
+  }, [tiposActuales, logros])
 
   return (
     <div className="space-y-4">
@@ -191,10 +211,11 @@ export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
           return (
             <div
               key={badge.tipo}
+              data-badge-tipo={badge.tipo}
               className={[
-                'relative flex flex-col items-center text-center gap-2 rounded-xl p-4 transition-all duration-200 cursor-default select-none',
+                'relative flex flex-col items-center text-center gap-2 rounded-xl p-4 transition-all duration-200 cursor-default select-none overflow-hidden',
                 obtenido
-                  ? `badge-obtenido bg-white shadow-md ${accent.border}`
+                  ? `badge-obtenido border bg-white shadow-md ${accent.border}`
                   : 'bg-gray-800 border border-gray-700',
               ].join(' ')}
               onMouseEnter={() => setHoveredTipo(badge.tipo)}
