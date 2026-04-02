@@ -108,7 +108,7 @@ export default function MesPage() {
                     <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
                       {mat.codigo}
                     </span>
-                    <h3 className="text-sm font-semibold mt-2 text-gray-900">{mat.nombre}</h3>
+                    <h3 className="text-sm font-semibold mt-2 text-gray-100">{mat.nombre}</h3>
                   </div>
                 </div>
                 {mat.descripcion && (

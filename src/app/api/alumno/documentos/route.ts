@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 /** Fila canónica para el frontend (migration-documentos.sql) */
 type DocFront = {
   id: string
@@ -15,8 +18,9 @@ type DocFront = {
   revisado_en?: string | null
 }
 
-function mapDocumentoRow(row: Record<string, unknown>): DocFront {
-  if (row.tipo != null && typeof row.tipo === 'string') {
+function mapDocumentoRow(row: Record<string, unknown>): DocFront | null {
+  if (row?.id == null || row?.alumno_id == null) return null
+  if (row.tipo != null && typeof row.tipo === 'string' && row.tipo.length > 0) {
     return {
       id:               String(row.id),
       alumno_id:        String(row.alumno_id),
@@ -63,12 +67,12 @@ export async function GET() {
 
     const { data: alumno, error: alumnoErr } = await admin
       .from('alumnos')
-      .select('id, nivel')
+      .select('id')
       .eq('id', user.id)
       .maybeSingle()
 
     if (alumnoErr) {
-      console.error('[api/alumno/documentos GET] alumno:', alumnoErr.message)
+      console.error('[api/alumno/documentos GET] alumno:', alumnoErr.message, alumnoErr.code)
       return NextResponse.json({ error: alumnoErr.message }, { status: 500 })
     }
 
@@ -76,7 +80,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
     }
 
-    const a = alumno as { id: string; nivel?: string | null }
+    const a = alumno as { id: string }
+    let nivel: string | null = null
+    const { data: rowNivel, error: nivelErr } = await admin
+      .from('alumnos')
+      .select('nivel')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (!nivelErr && rowNivel && typeof (rowNivel as { nivel?: string }).nivel !== 'undefined') {
+      nivel = (rowNivel as { nivel: string | null }).nivel ?? null
+    }
 
     const { data: rawDocs, error: docErr } = await admin
       .from('documentos_alumno')
@@ -88,9 +101,10 @@ export async function GET() {
       return NextResponse.json({ error: docErr.message }, { status: 500 })
     }
 
-    const documentos = (rawDocs ?? []).map(r => mapDocumentoRow(r as Record<string, unknown>))
+    const documentos = (rawDocs ?? [])
+      .map(r => mapDocumentoRow(r as Record<string, unknown>))
+      .filter((d): d is DocFront => d != null)
 
-    const nivel = a.nivel ?? null
     const planNombre =
       nivel === 'preparatoria' ? 'Preparatoria'
       : nivel === 'secundaria' ? 'Secundaria'

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET() {
   try {
@@ -7,19 +11,29 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // ── Usuario ───────────────────────────────────────────────────────────────
-    const { data: usuario } = await supabase
+    const admin = createAdminClient()
+
+    const { data: usuario, error: usuarioErr } = await admin
       .from('usuarios')
       .select('nombre, apellidos, email, foto_url')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    // ── Alumno (schema nuevo: alumnos.id = user.id) ───────────────────────────
-    const { data: alumno } = await supabase
+    if (usuarioErr) {
+      console.error('[api/alumno/constancia] usuario:', usuarioErr.message)
+      return NextResponse.json({ error: usuarioErr.message }, { status: 500 })
+    }
+
+    const { data: alumno, error: alumnoErr } = await admin
       .from('alumnos')
       .select('matricula, nivel, modalidad, meses_desbloqueados, created_at')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
+
+    if (alumnoErr) {
+      console.error('[api/alumno/constancia] alumno:', alumnoErr.message)
+      return NextResponse.json({ error: alumnoErr.message }, { status: 500 })
+    }
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
@@ -29,8 +43,7 @@ export async function GET() {
 
     const duracionMeses = alumno.modalidad === '3_meses' ? 3 : 6
 
-    // ── Calificaciones ────────────────────────────────────────────────────────
-    const { data: califs } = await supabase
+    const { data: califs } = await admin
       .from('calificaciones')
       .select('materia_id, acreditado')
       .eq('alumno_id', user.id)
@@ -41,9 +54,7 @@ export async function GET() {
       califMap.set(row.materia_id, row.acreditado)
     }
 
-    // ── Materias de meses desbloqueados via meses_contenido ───────────────────
-    // meses_contenido.materia_id → materias.id (many-to-one → materias es objeto único)
-    const { data: meses } = await supabase
+    const { data: meses } = await admin
       .from('meses_contenido')
       .select('numero_mes, materias(id, nombre)')
       .order('numero_mes')
@@ -55,7 +66,10 @@ export async function GET() {
     }
 
     const materias_cursadas: {
-      codigo: string; nombre: string; mes_numero: number
+      materia_id: string
+      codigo: string
+      nombre_materia: string
+      mes_numero: number
       estado: 'Acreditada' | 'No acreditada' | 'Pendiente'
     }[] = []
 
@@ -63,10 +77,11 @@ export async function GET() {
       const mat = mes.materias
       if (!mat) continue
       materias_cursadas.push({
-        codigo:     '',
-        nombre:     mat.nombre,
-        mes_numero: mes.numero_mes,
-        estado:     califMap.has(mat.id)
+        materia_id:     mat.id,
+        codigo:         '',
+        nombre_materia: mat.nombre,
+        mes_numero:     mes.numero_mes,
+        estado:         califMap.has(mat.id)
           ? (califMap.get(mat.id) ? 'Acreditada' : 'No acreditada')
           : 'Pendiente',
       })
@@ -77,11 +92,13 @@ export async function GET() {
       ? Math.round((mesesDesbloqueados / duracionMeses) * 100)
       : 0
 
+    const fotoUrl = usuario?.foto_url?.trim() || null
+
     return NextResponse.json({
       nombre_completo,
       nombre:              usuario?.nombre   ?? '',
       apellidos:           usuario?.apellidos ?? '',
-      foto_url:            usuario?.foto_url  ?? null,
+      foto_url:            fotoUrl,
       matricula:           alumno.matricula   ?? 'IVS-0000',
       nivel:               alumno.nivel       ?? null,
       modalidad:           alumno.modalidad   ?? '6_meses',
@@ -90,7 +107,7 @@ export async function GET() {
       plan_nombre:         duracionMeses === 3 ? '3 Meses' : '6 Meses',
       porcentaje_avance,
       fecha_inscripcion:   alumno.created_at,
-      avatar_url:          usuario?.foto_url ?? null,
+      avatar_url:          fotoUrl,
       materias_cursadas,
     })
   } catch (err) {

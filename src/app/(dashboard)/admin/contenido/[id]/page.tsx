@@ -261,7 +261,7 @@ export default function ContenidoDetallePage() {
                       {mes.numero_mes}
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-left text-gray-900">
+                      <p className="text-sm font-semibold text-left text-gray-100">
                         {mes.titulo || `Mes ${mes.numero_mes}`}
                       </p>
                       <p className="text-xs" style={{ color: '#64748B' }}>{mes.semanas.length} semanas</p>
@@ -289,7 +289,7 @@ export default function ContenidoDetallePage() {
                               >
                                 {sem.numero_semana}
                               </span>
-                              <p className="text-sm font-semibold flex-1 min-w-0 text-gray-900">
+                              <p className="text-sm font-semibold flex-1 min-w-0 text-gray-100">
                                 {sem.titulo}
                               </p>
                             </div>

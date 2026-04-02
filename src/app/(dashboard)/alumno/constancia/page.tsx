@@ -22,6 +22,7 @@ interface DatosConstancia {
   meses_desbloqueados: number
   duracion_meses: number
   porcentaje_avance: number
+  foto_url?: string | null
   avatar_url?: string | null
   materias_cursadas: MateriaCursada[]
 }
@@ -198,20 +199,19 @@ export default function ConstanciaPage() {
 
               {/* Foto del alumno */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                {datos.avatar_url ? (
+                {(datos.foto_url || datos.avatar_url) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={datos.avatar_url}
+                    src={(datos.foto_url || datos.avatar_url) as string}
                     alt={[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
-                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3AAFA9' }}
+                    className="w-24 h-24 rounded-full object-cover"
+                    style={{ border: '2px solid #3AAFA9' }}
                   />
                 ) : (
-                  <div style={{
-                    width: 90, height: 90, borderRadius: '50%',
-                    background: '#3AAFA9', color: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 28, fontWeight: 700,
-                  }}>
+                  <div
+                    className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold"
+                    style={{ background: '#3AAFA9', color: '#fff' }}
+                  >
                     {((datos.nombre?.[0] ?? '') + (datos.apellidos?.[0] ?? '')).toUpperCase() || datos.nombre_completo[0]?.toUpperCase() || 'A'}
                   </div>
                 )}
