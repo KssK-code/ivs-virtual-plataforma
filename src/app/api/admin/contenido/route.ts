@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
 
 export async function GET() {
@@ -11,47 +12,86 @@ export async function GET() {
     const denied = await verifyAdmin(supabase, user.id)
     if (denied) return denied
 
-    const { data: meses, error } = await supabase
-      .from('meses_contenido')
-      .select('*, materias(id, codigo, nombre, color_hex, descripcion)')
-      .order('numero')
+    // Usar admin client para bypass RLS
+    const admin = createAdminClient()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Columnas reales del schema IVS (sin 'codigo' ni 'color_hex')
+    const { data: materias, error: matErr } = await admin
+      .from('materias')
+      .select('id, nombre, descripcion, nivel, orden, color, activa')
+      .order('orden')
 
-    type MateriaRow = { id: string; codigo: string; nombre: string; color_hex: string; descripcion: string }
-    type MesRow = { id: string; numero: number; titulo: string; materias: MateriaRow[] }
+    if (matErr) return NextResponse.json({ error: matErr.message }, { status: 500 })
 
-    let totalMaterias = 0
-    let totalSemanas = 0
-    let totalEvaluaciones = 0
+    type MateriaRow = {
+      id: string; nombre: string; descripcion: string | null
+      nivel: string; orden: number | null; color: string | null; activa: boolean
+    }
 
-    const mesesConStats = await Promise.all(
-      ((meses ?? []) as unknown as MesRow[]).map(async (mes) => {
-        const materiasConStats = await Promise.all(
-          (mes.materias ?? []).map(async (mat) => {
-            const [{ count: semCount }, { count: evCount }] = await Promise.all([
-              supabase.from('semanas').select('*', { count: 'exact', head: true }).eq('materia_id', mat.id),
-              supabase.from('evaluaciones').select('*', { count: 'exact', head: true }).eq('materia_id', mat.id),
-            ])
-            totalMaterias++
-            totalSemanas += semCount ?? 0
-            totalEvaluaciones += evCount ?? 0
-            return {
-              ...mat,
-              num_semanas: semCount ?? 0,
-              num_evaluaciones: evCount ?? 0,
-            }
-          })
-        )
-        return { id: mes.id, numero: mes.numero, titulo: mes.titulo, materias: materiasConStats }
+    let totalMaterias = 0, totalSemanas = 0, totalEvaluaciones = 0
+
+    const materiasConStats = await Promise.all(
+      ((materias ?? []) as unknown as MateriaRow[]).map(async (mat) => {
+        // Join correcto IVS: materias → meses_contenido → semanas
+        const { data: mesesIds } = await admin
+          .from('meses_contenido')
+          .select('id')
+          .eq('materia_id', mat.id)
+
+        const mesIds = (mesesIds ?? []).map(m => m.id)
+
+        let semCount = 0
+        if (mesIds.length > 0) {
+          const { count } = await admin
+            .from('semanas')
+            .select('*', { count: 'exact', head: true })
+            .in('mes_id', mesIds)
+          semCount = count ?? 0
+        }
+
+        const { count: evCount } = await admin
+          .from('evaluaciones')
+          .select('*', { count: 'exact', head: true })
+          .eq('materia_id', mat.id)
+
+        totalMaterias++
+        totalSemanas    += semCount
+        totalEvaluaciones += evCount ?? 0
+
+        return {
+          id:               mat.id,
+          codigo:           '',                      // IVS no tiene 'codigo' — vacío para compatibilidad UI
+          nombre:           mat.nombre,
+          color_hex:        mat.color ?? '#5B6CFF',  // IVS usa 'color', mapeamos a color_hex para el frontend
+          descripcion:      mat.descripcion ?? '',
+          nivel:            mat.nivel,
+          num_semanas:      semCount,
+          num_evaluaciones: evCount ?? 0,
+        }
       })
     )
 
+    // Agrupar por nivel para el acordeón del frontend (reemplaza agrupación por mes)
+    const NIVELES = ['demo', 'preparatoria', 'secundaria']
+    const meses = NIVELES
+      .map((nivel, i) => {
+        const materiasNivel = materiasConStats.filter(m => m.nivel === nivel)
+        if (materiasNivel.length === 0) return null
+        return {
+          id:       `nivel-${nivel}`,
+          numero:   i + 1,
+          titulo:   nivel.charAt(0).toUpperCase() + nivel.slice(1),
+          materias: materiasNivel,
+        }
+      })
+      .filter(Boolean)
+
     return NextResponse.json({
-      meses: mesesConStats,
+      meses,
       stats: { totalMaterias, totalSemanas, totalEvaluaciones },
     })
-  } catch {
+  } catch (err) {
+    console.error('[GET /api/admin/contenido]', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
