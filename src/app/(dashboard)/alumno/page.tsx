@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  Lock, BookOpen, TrendingUp, GraduationCap,
-  Bell, Flame, CheckCircle2, ChevronRight, Star,
+  GraduationCap, Bell, CheckCircle2, ChevronRight,
 } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
@@ -49,50 +48,33 @@ function getFechaLarga() {
   return `${dias[d.getDay()]}, ${d.getDate()} de ${MESES_ES[d.getMonth()]} de ${d.getFullYear()}`
 }
 
-// ─── Circle Progress ──────────────────────────────────────────────────────────
-function CircleProgress({ pct, size = 72, stroke = 7 }: { pct: number; size?: number; stroke?: number }) {
-  const r    = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
-  const off  = circ - (pct / 100) * circ
-  return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E8F4F4" strokeWidth={stroke} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#3AAFA9" strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
-        style={{ transition: 'stroke-dashoffset 1.2s ease' }} />
-    </svg>
-  )
-}
-
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({
-  icon, iconBg, iconColor, label, value, sub, extra,
+  emoji, label, value, sub, extra, accentColor = '#3AAFA9',
 }: {
-  icon:       React.ReactNode
-  iconBg:     string
-  iconColor:  string
-  label:      string
-  value:      React.ReactNode
-  sub?:       string
-  extra?:     React.ReactNode
+  emoji:       string
+  label:       string
+  value:       React.ReactNode
+  sub?:        string
+  extra?:      React.ReactNode
+  accentColor?: string
 }) {
   return (
-    <div className="rounded-2xl p-4 sm:p-5 flex flex-col gap-3"
+    <div className="rounded-2xl p-4 sm:p-5 flex flex-col items-center text-center gap-2"
       style={{ background: '#fff', border: '1px solid #EEF2F7', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9DB0C0' }}>
-          {label}
-        </p>
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: iconBg }}>
-          <span style={{ color: iconColor }}>{icon}</span>
-        </div>
+      {/* Emoji icon */}
+      <div className="flex items-center justify-center w-12 h-12 rounded-2xl text-2xl"
+        style={{ background: `${accentColor}14` }}>
+        {emoji}
       </div>
-      <div>
-        <div className="text-2xl font-bold" style={{ color: '#1B3A57' }}>{value}</div>
-        {sub && <p className="text-xs mt-1" style={{ color: '#9DB0C0' }}>{sub}</p>}
+      {/* Big value */}
+      <div className="text-3xl font-bold leading-tight" style={{ color: '#1B3A57' }}>
+        {value}
       </div>
-      {extra}
+      {/* Label */}
+      <p className="text-xs font-medium" style={{ color: '#9DB0C0' }}>{label}</p>
+      {sub && <p className="text-xs" style={{ color: accentColor }}>{sub}</p>}
+      {extra && <div className="w-full mt-1">{extra}</div>}
     </div>
   )
 }
@@ -292,57 +274,47 @@ export default function AlumnoDashboard() {
 
       {/* ── Stats 4 cards ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Progreso general */}
         <StatCard
-          icon={<TrendingUp className="w-4 h-4" />}
-          iconBg="rgba(58,175,169,0.1)" iconColor="#3AAFA9"
+          emoji="📈"
           label="Progreso general"
-          value={
-            <div className="flex items-center gap-3">
-              <CircleProgress pct={porcentaje} />
-              <span>{porcentaje}<span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>%</span></span>
+          value={`${porcentaje}%`}
+          sub={`${mesActivo} de ${perfil.duracion_meses || 6} meses`}
+          accentColor="#3AAFA9"
+          extra={
+            <div className="h-1.5 rounded-full overflow-hidden w-full" style={{ background: '#EEF2F7' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${porcentaje}%`, background: '#3AAFA9' }} />
             </div>
           }
-          sub={`${mesActivo} de ${perfil.duracion_meses} meses`}
         />
-
-        {/* Card 2: Racha activa */}
         <StatCard
-          icon={<Flame className="w-4 h-4" />}
-          iconBg="rgba(245,158,11,0.1)" iconColor="#F59E0B"
-          label="Racha activa"
-          value={
-            <span>{diasRacha} <span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>días</span></span>
-          }
-          sub={diasRacha > 0 ? '¡Sigue así! 🔥' : 'Comienza hoy'}
+          emoji="🔥"
+          label="Días de racha"
+          value={diasRacha}
+          sub={diasRacha > 0 ? '¡Sigue así!' : 'Comienza hoy'}
+          accentColor="#F59E0B"
         />
-
-        {/* Card 3: Materias */}
         <StatCard
-          icon={<BookOpen className="w-4 h-4" />}
-          iconBg="rgba(99,102,241,0.1)" iconColor="#6366F1"
-          label="Materias"
+          emoji="📚"
+          label="Materias activas"
           value={materiasAcreditadas}
-          sub="materias acreditadas"
+          sub="acreditadas"
+          accentColor="#6366F1"
           extra={
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#EEF2F7' }}>
+            <div className="h-1.5 rounded-full overflow-hidden w-full" style={{ background: '#EEF2F7' }}>
               <div className="h-full rounded-full transition-all duration-700"
                 style={{ width: `${Math.min(100, (materiasAcreditadas / 10) * 100)}%`, background: '#6366F1' }} />
             </div>
           }
         />
-
-        {/* Card 4: Logros */}
         <StatCard
-          icon={<Star className="w-4 h-4" />}
-          iconBg="rgba(16,185,129,0.1)" iconColor="#10B981"
-          label="Logros"
-          value={
-            <span>{logrosCount} <span className="text-sm font-normal" style={{ color: '#9DB0C0' }}>/ 8</span></span>
-          }
-          sub="badges obtenidos"
+          emoji="⭐"
+          label="Logros obtenidos"
+          value={`${logrosCount}/8`}
+          sub={logrosCount > 0 ? `¡${logrosCount} desbloqueados!` : 'Sigue estudiando'}
+          accentColor="#10B981"
           extra={
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#EEF2F7' }}>
+            <div className="h-1.5 rounded-full overflow-hidden w-full" style={{ background: '#EEF2F7' }}>
               <div className="h-full rounded-full transition-all duration-700"
                 style={{ width: `${(logrosCount / 8) * 100}%`, background: '#10B981' }} />
             </div>
@@ -350,107 +322,104 @@ export default function AlumnoDashboard() {
         />
       </div>
 
-      {/* ── Materia DEMO ──────────────────────────────────────────────────── */}
+      {/* ── Materia DEMO (banner, no oculta los meses) ──────────────────── */}
       {demo && (
-        <div>
-          <SectionTitle>Materia de demostración</SectionTitle>
-          <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
-            style={{ background: '#fff', border: '1.5px solid rgba(58,175,169,0.25)', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
-            <div className="flex-1 min-w-0 space-y-1">
-              <p className="text-xs font-mono font-bold" style={{ color: '#3AAFA9' }}>TUT101</p>
-              <p className="text-base font-bold" style={{ color: '#1B3A57' }}>Tutoría de ingreso I</p>
-              <p className="text-sm" style={{ color: '#7A92A9' }}>
-                Familiarízate con la plataforma, tu plan de estudio y la metodología del bachillerato virtual.
-              </p>
-            </div>
-            <Link href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
-              style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.25)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}>
-              Explorar materia →
-            </Link>
+        <div className="rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{ background: '#fff', border: '1.5px solid rgba(58,175,169,0.25)', boxShadow: '0 1px 8px rgba(27,58,87,0.06)' }}>
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-xs font-mono font-bold" style={{ color: '#3AAFA9' }}>TUT101</p>
+            <p className="text-base font-bold" style={{ color: '#1B3A57' }}>Tutoría de ingreso I</p>
+            <p className="text-sm" style={{ color: '#7A92A9' }}>
+              Familiarízate con la plataforma, tu plan de estudio y la metodología.
+            </p>
           </div>
+          <Link href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
+            style={{ background: '#3AAFA9', color: '#fff' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}>
+            Explorar demo →
+          </Link>
         </div>
       )}
 
-      {/* ── Meses del programa ────────────────────────────────────────────── */}
-      {!demo && (
-        <div>
-          <SectionTitle>Meses del programa</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {meses.map(mes => {
-              const completado = mes.desbloqueado && mes.numero < mesActivo
-              const activo     = mes.desbloqueado && mes.numero === mesActivo
-              const bloqueado  = !mes.desbloqueado
+      {/* ── Meses del programa (siempre visible) ─────────────────────────── */}
+      {(() => {
+        // Si no hay meses de la API, generar 6 placeholders
+        const duracion = perfil.duracion_meses || 6
+        const mesesDisplay: Mes[] = meses.length > 0
+          ? meses
+          : Array.from({ length: duracion }, (_, i) => ({
+              id:          `placeholder-${i + 1}`,
+              numero:      i + 1,
+              titulo:      `Mes ${i + 1}`,
+              desbloqueado: !demo && (i + 1) <= mesActivo,
+              materias:    [],
+            }))
 
-              return (
-                <div
-                  key={mes.id}
-                  onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
-                  className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-3"
-                  style={{
-                    background:  bloqueado  ? '#F1F5F9'
-                               : completado ? '#F0FDF4'
-                               : '#fff',
-                    border:      bloqueado  ? '1.5px solid #E2E8F0'
-                               : completado ? '1.5px solid #86EFAC'
-                               : '1.5px solid #3AAFA9',
-                    opacity:     bloqueado  ? 0.7 : 1,
-                    cursor:      bloqueado  ? 'default' : 'pointer',
-                    boxShadow:   activo     ? '0 4px 20px rgba(58,175,169,0.18)' : 'none',
-                  }}
-                  onMouseEnter={e => {
-                    if (!bloqueado) (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
-                  }}
-                  onMouseLeave={e => {
-                    if (!bloqueado) (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="text-3xl font-bold leading-none block"
-                        style={{ color: bloqueado ? '#C0CDD8' : completado ? '#16A34A' : '#3AAFA9' }}>
+        return (
+          <div>
+            <SectionTitle>Meses del programa</SectionTitle>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+              {mesesDisplay.map(mes => {
+                const completado = mes.desbloqueado && mes.numero < mesActivo
+                const activo     = mes.desbloqueado && mes.numero === mesActivo
+                const bloqueado  = !mes.desbloqueado
+
+                return (
+                  <div
+                    key={mes.id}
+                    onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
+                    className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-2"
+                    style={{
+                      background:  bloqueado  ? '#F8FAFB'
+                                 : completado ? '#F0FDF4'
+                                 : '#fff',
+                      border:      bloqueado  ? '1.5px solid #E2E8F0'
+                                 : completado ? '1.5px solid #86EFAC'
+                                 : '1.5px solid #3AAFA9',
+                      opacity:     bloqueado  ? 0.65 : 1,
+                      cursor:      bloqueado  ? 'default' : 'pointer',
+                      boxShadow:   activo     ? '0 4px 20px rgba(58,175,169,0.2)' : 'none',
+                    }}
+                    onMouseEnter={e => {
+                      if (!bloqueado) (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="text-3xl font-bold leading-none"
+                        style={{ color: bloqueado ? '#C8D8E8' : completado ? '#16A34A' : '#3AAFA9' }}>
                         {mes.numero < 10 ? `0${mes.numero}` : mes.numero}
                       </span>
-                      <p className="text-sm font-semibold mt-1"
-                        style={{ color: bloqueado ? '#9DB0C0' : completado ? '#15803D' : '#1B3A57' }}>
-                        {mes.titulo || `Mes ${mes.numero}`}
-                      </p>
+                      <div className="flex-shrink-0">
+                        {bloqueado  && <span className="text-lg">🔒</span>}
+                        {completado && <CheckCircle2 className="w-5 h-5" style={{ color: '#22C55E' }} />}
+                        {activo     && (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(58,175,169,0.15)', color: '#3AAFA9' }}>
+                            ACTIVO
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-shrink-0 mt-0.5">
-                      {bloqueado  && <Lock className="w-5 h-5" style={{ color: '#C0CDD8' }} />}
-                      {completado && <CheckCircle2 className="w-5 h-5" style={{ color: '#22C55E' }} />}
-                      {activo     && (
-                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full"
-                          style={{ background: 'rgba(58,175,169,0.12)', color: '#3AAFA9' }}>
-                          ▶ Activo
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Materias count + progress bar */}
-                  <div>
-                    <p className="text-xs mb-1.5" style={{ color: bloqueado ? '#B0C4D4' : '#7A92A9' }}>
-                      {(mes.materias ?? []).length} materias
+                    <p className="text-sm font-semibold"
+                      style={{ color: bloqueado ? '#B0C4D4' : completado ? '#15803D' : '#1B3A57' }}>
+                      {mes.titulo || `Mes ${mes.numero}`}
                     </p>
-                    <div className="h-1.5 rounded-full overflow-hidden"
-                      style={{ background: bloqueado ? '#E2E8F0' : 'rgba(58,175,169,0.12)' }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width:      completado ? '100%' : activo ? `${Math.min(100, (materiasAcreditadas / Math.max(1, (mes.materias ?? []).length)) * 100)}%` : '0%',
-                          background: completado ? '#22C55E' : '#3AAFA9',
-                        }}
-                      />
-                    </div>
+                    <p className="text-xs"
+                      style={{ color: bloqueado ? '#C8D8E8' : '#9DB0C0' }}>
+                      {bloqueado ? 'Bloqueado' : completado ? 'Completado ✓' : 'En progreso'}
+                    </p>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Logros / Badges ───────────────────────────────────────────────── */}
       <div className="rounded-2xl p-5 sm:p-6"

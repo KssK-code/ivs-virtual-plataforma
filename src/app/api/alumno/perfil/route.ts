@@ -10,7 +10,7 @@ export async function GET() {
     // ── Intentar con schema antiguo: alumnos.usuario_id ──────────────────────
     const { data, error } = await supabase
       .from('alumnos')
-      .select('*, planes_estudio(nombre, duracion_meses), usuarios(nombre_completo, email, avatar_url)')
+      .select('*, planes_estudio(nombre, duracion_meses), usuarios(nombre, apellidos, nombre_completo, email, avatar_url)')
       .eq('usuario_id', user.id)
       .single()
 
@@ -22,8 +22,14 @@ export async function GET() {
         inscripcion_pagada?: boolean
         nivel?: string
         planes_estudio: { nombre: string; duracion_meses: number } | null
-        usuarios: { nombre_completo: string; email: string; avatar_url?: string | null } | null
+        usuarios: { nombre?: string; apellidos?: string; nombre_completo?: string; email: string; avatar_url?: string | null } | null
       }
+      // Combinar nombre + apellidos si nombre_completo no existe
+      const nombreCompleto = a.usuarios?.nombre_completo
+        ?? (a.usuarios?.nombre ? `${a.usuarios.nombre} ${a.usuarios.apellidos ?? ''}`.trim() : null)
+        ?? user.email
+        ?? 'Alumno'
+
       return NextResponse.json({
         id:                  a.id,
         matricula:           a.matricula ?? 'IVS-0000',
@@ -32,7 +38,7 @@ export async function GET() {
         nivel:               a.nivel ?? null,
         plan_nombre:         a.planes_estudio?.nombre ?? '',
         duracion_meses:      a.planes_estudio?.duracion_meses ?? 0,
-        nombre_completo:     a.usuarios?.nombre_completo ?? user.email ?? 'Alumno',
+        nombre_completo:     nombreCompleto,
         email:               a.usuarios?.email ?? user.email ?? '',
         avatar_url:          a.usuarios?.avatar_url ?? null,
       })
