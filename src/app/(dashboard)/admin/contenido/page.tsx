@@ -70,7 +70,7 @@ export default function ContenidoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold" style={{ color: '#F1F5F9' }}>Contenido Académico</h2>
+        <h2 className="text-xl font-bold text-gray-900">Contenido Académico</h2>
         <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>
           Materias y contenido cargado en la plataforma
         </p>
@@ -123,7 +123,7 @@ export default function ContenidoPage() {
                         {mes.titulo === 'Demo' ? '🎓' : mes.titulo === 'Preparatoria' ? '📚' : '🏫'}
                       </span>
                       <div>
-                        <p className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>
+                        <p className="text-sm font-semibold text-gray-900">
                           {mes.titulo}
                         </p>
                       </div>
@@ -170,7 +170,7 @@ export default function ContenidoPage() {
                               </button>
                             </div>
 
-                            <p className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>{mat.nombre}</p>
+                            <p className="text-sm font-semibold text-gray-900">{mat.nombre}</p>
 
                             {mat.descripcion && (
                               <p className="text-xs line-clamp-2" style={{ color: '#94A3B8' }}>{mat.descripcion}</p>

@@ -338,7 +338,7 @@ export default function AlumnoDetallePage() {
       {/* Info General */}
       <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información General</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Información General</h3>
           {/* Badge inscripción pagada / Botón marcar pagada */}
           {alumno.inscripcion_pagada ? (
             <span
@@ -373,7 +373,7 @@ export default function AlumnoDetallePage() {
       <div className="rounded-xl p-5 space-y-4" style={CARD_STYLE}>
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Progreso de Meses</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Progreso de Meses</h3>
             <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
               {alumno.meses_desbloqueados} de {alumno.plan.duracion_meses} meses desbloqueados
             </p>
@@ -423,7 +423,7 @@ export default function AlumnoDetallePage() {
       {/* Historial de Pagos */}
       <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Historial de Pagos</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Historial de Pagos</h3>
         </div>
         {alumno.pagos.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>Sin pagos registrados</div>
@@ -456,7 +456,7 @@ export default function AlumnoDetallePage() {
       {/* Calificaciones */}
       <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Calificaciones</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Calificaciones</h3>
         </div>
         {alumno.calificaciones.length === 0 ? (
           <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>Sin calificaciones registradas</div>
@@ -499,7 +499,7 @@ export default function AlumnoDetallePage() {
       <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
         <div className="flex items-center gap-2">
           <StickyNote className="w-4 h-4" style={{ color: '#F59E0B' }} />
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Notas internas</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Notas internas</h3>
           <span className="text-xs" style={{ color: '#475569' }}>(Solo visibles para admins)</span>
         </div>
         <textarea
@@ -530,7 +530,7 @@ export default function AlumnoDetallePage() {
       <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
         <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
           <FileText className="w-4 h-4" style={{ color: '#7B8AFF' }} />
-          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Documentos del Alumno</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Documentos del Alumno</h3>
         </div>
         <div className="divide-y" style={{ borderColor: '#2A2F3E' }}>
           {DOC_TIPOS.map(tipo => {
@@ -625,7 +625,7 @@ export default function AlumnoDetallePage() {
           <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Resetear Contraseña</h3>
+                <h3 className="text-lg font-bold text-gray-900">Resetear Contraseña</h3>
                 <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
                   Alumno: {alumno.usuario.nombre_completo}
                 </p>
@@ -767,7 +767,7 @@ export default function AlumnoDetallePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
           <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Confirmar pago</h3>
+              <h3 className="text-lg font-bold text-gray-900">Confirmar pago</h3>
               <button
                 onClick={() => setModalInscripcion(false)}
                 className="p-1.5 rounded-lg"
@@ -783,11 +783,11 @@ export default function AlumnoDetallePage() {
               style={{ background: 'rgba(91,108,255,0.08)', border: '1px solid rgba(91,108,255,0.2)' }}
             >
               <p className="text-4xl mb-2">💳</p>
-              <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+              <p className="text-sm font-medium text-gray-900">
                 ¿Confirmas que el alumno pagó su inscripción de{' '}
                 <span style={{ color: '#7B8AFF' }}>$399</span>?
               </p>
-              <p className="text-sm font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
+              <p className="text-sm font-bold mt-0.5 text-gray-900">
                 {alumno.usuario.nombre_completo}
               </p>
             </div>
@@ -828,7 +828,7 @@ export default function AlumnoDetallePage() {
           <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Confirmar desbloqueo</h3>
+              <h3 className="text-lg font-bold text-gray-900">Confirmar desbloqueo</h3>
               <button
                 onClick={() => { setModalPago(false); setDesbloquearError(null) }}
                 className="p-1.5 rounded-lg"
@@ -846,12 +846,12 @@ export default function AlumnoDetallePage() {
               style={{ background: 'rgba(58,175,169,0.08)', border: '1px solid rgba(58,175,169,0.2)' }}
             >
               <p className="text-4xl mb-2">🔓</p>
-              <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+              <p className="text-sm font-medium text-gray-900">
                 ¿Confirmas abrir el{' '}
                 <span style={{ color: '#3AAFA9' }}>Mes {alumno.meses_desbloqueados + 1}</span>
                 {' '}para
               </p>
-              <p className="text-sm font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
+              <p className="text-sm font-bold mt-0.5 text-gray-900">
                 {alumno.usuario.nombre_completo}?
               </p>
             </div>
