@@ -32,7 +32,7 @@ export async function GET() {
         matricula,
         nivel,
         modalidad,
-        sindicalizado,
+        es_sindicalizado,
         activo,
         meses_desbloqueados,
         inscripcion_pagada,
@@ -52,7 +52,7 @@ export async function GET() {
     if (!error && data && data.length > 0) {
       type Row = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
-        sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
+        es_sindicalizado?: boolean; sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
         inscripcion_pagada?: boolean; created_at: string
         usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null } | null
       }
@@ -63,7 +63,7 @@ export async function GET() {
           matricula:            a.matricula ?? 'IVS-0000',
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
-          sindicalizado:        a.sindicalizado ?? false,
+          sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
           activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
@@ -117,7 +117,7 @@ export async function GET() {
           matricula:            a.matricula ?? 'IVS-0000',
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
-          sindicalizado:        a.sindicalizado ?? false,
+          sindicalizado:        Boolean(a.sindicalizado),
           activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
@@ -145,7 +145,7 @@ export async function GET() {
     const resultFallback = []
     for (const a of (alumnos ?? []) as {
       id: string; matricula?: string; nivel?: string; modalidad?: string
-      sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
+      es_sindicalizado?: boolean; sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
       inscripcion_pagada?: boolean; created_at: string
     }[]) {
       const { data: u } = await admin
@@ -158,7 +158,7 @@ export async function GET() {
         matricula:            a.matricula ?? 'IVS-0000',
         nivel:                a.nivel ?? null,
         modalidad:            a.modalidad ?? '6_meses',
-        sindicalizado:        a.sindicalizado ?? false,
+        sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
         activo:               a.activo ?? false,
         meses_desbloqueados:  a.meses_desbloqueados ?? 0,
         duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,

@@ -13,13 +13,13 @@ export async function GET() {
     // Schema nuevo: alumnos.id = user.id (no usuario_id)
     const { data: alumno } = await admin
       .from('alumnos')
-      .select('id')
+      .select('id, nivel')
       .eq('id', user.id)
       .single()
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
-    const a = alumno as { id: string }
+    const a = alumno as { id: string; nivel?: string | null }
 
     const { data: documentos, error } = await admin
       .from('documentos_alumno')
@@ -28,9 +28,16 @@ export async function GET() {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    const nivel = a.nivel ?? null
+    const planNombre =
+      nivel === 'preparatoria' ? 'Preparatoria'
+      : nivel === 'secundaria' ? 'Secundaria'
+      : ''
+
     return NextResponse.json({
       documentos: documentos ?? [],
-      plan_nombre: '',
+      plan_nombre: planNombre,
+      nivel,
     })
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

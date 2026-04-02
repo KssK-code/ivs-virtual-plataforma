@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
+
+function nombreCompleto(u: { nombre?: string | null; apellidos?: string | null } | null | undefined) {
+  return [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—'
+}
 
 export async function GET() {
   try {
@@ -11,46 +16,58 @@ export async function GET() {
     const denied = await verifyAdmin(supabase, user.id)
     if (denied) return denied
 
-    // Total alumnos
-    const { count: totalAlumnos } = await supabase
+    const admin = createAdminClient()
+
+    const { count: totalAlumnos } = await admin
       .from('alumnos')
       .select('*', { count: 'exact', head: true })
 
-    // Alumnos activos (join con usuarios)
-    const { data: alumnosData } = await supabase
+    const { data: alumnosData } = await admin
       .from('alumnos')
-      .select('meses_desbloqueados, usuarios(activo)')
+      .select('id, meses_desbloqueados, activo')
 
-    type AlumnoR = { meses_desbloqueados: number; usuarios: { activo: boolean } | null }
-    const alumnosList = (alumnosData ?? []) as unknown as AlumnoR[]
-    const alumnosActivos = alumnosList.filter(a => a.usuarios?.activo !== false).length
+    type AlumnoR = { id: string; meses_desbloqueados: number; activo: boolean }
+    const alumnosList = (alumnosData ?? []) as AlumnoR[]
+    const alumnosActivos = alumnosList.filter(a => a.activo !== false).length
     const promMeses = alumnosList.length > 0
       ? alumnosList.reduce((s, a) => s + (a.meses_desbloqueados ?? 0), 0) / alumnosList.length
       : 0
 
-    // Total ingresos
-    const { data: pagosData } = await supabase.from('pagos').select('monto, alumno_id, metodo_pago, created_at, alumnos(usuarios(nombre_completo))')
-    type PagoR = { monto: number; alumno_id: string; metodo_pago: string; created_at: string; alumnos: { usuarios: { nombre_completo: string } | null } | null }
-    const pagosList = (pagosData ?? []) as unknown as PagoR[]
+    const { data: pagosData } = await admin
+      .from('pagos')
+      .select('monto, alumno_id, metodo_pago, created_at')
+
+    type PagoRow = { monto: number; alumno_id: string; metodo_pago: string; created_at: string }
+    const pagosList = (pagosData ?? []) as PagoRow[]
+
+    const pagosAlumnoIds = [...new Set(pagosList.map(p => p.alumno_id))]
+    const { data: usuariosPagos } = pagosAlumnoIds.length > 0
+      ? await admin.from('usuarios').select('id, nombre, apellidos').in('id', pagosAlumnoIds)
+      : { data: [] as { id: string; nombre?: string; apellidos?: string }[] }
+
+    const uMap = new Map((usuariosPagos ?? []).map(u => [u.id, u]))
+
     const totalIngresos = pagosList.reduce((s, p) => s + (p.monto ?? 0), 0)
 
-    // Pagos recientes (últimos 20)
     const pagosRecientes = pagosList
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 20)
       .map(p => ({
-        alumno: p.alumnos?.usuarios?.nombre_completo ?? '—',
+        alumno: nombreCompleto(uMap.get(p.alumno_id)),
         monto: p.monto,
         metodo_pago: p.metodo_pago,
         created_at: p.created_at,
       }))
 
-    // Rendimiento por materia
-    const { data: califs } = await supabase
+    const { data: califs } = await admin
       .from('calificaciones')
-      .select('materia_id, aprobada, materias(codigo, nombre)')
+      .select('materia_id, acreditado, materias(nombre)')
 
-    type CalifR = { materia_id: string; aprobada: boolean; materias: { codigo: string; nombre: string } | null }
+    type CalifR = {
+      materia_id: string
+      acreditado: boolean
+      materias: { nombre: string } | null
+    }
     const califsList = (califs ?? []) as unknown as CalifR[]
 
     const materiaMap = new Map<string, { codigo: string; nombre: string; aprobados: number; reprobados: number }>()
@@ -58,14 +75,14 @@ export async function GET() {
       if (!c.materia_id) continue
       if (!materiaMap.has(c.materia_id)) {
         materiaMap.set(c.materia_id, {
-          codigo: c.materias?.codigo ?? '',
+          codigo: '',
           nombre: c.materias?.nombre ?? '',
           aprobados: 0,
           reprobados: 0,
         })
       }
       const entry = materiaMap.get(c.materia_id)!
-      if (c.aprobada) entry.aprobados++
+      if (c.acreditado) entry.aprobados++
       else entry.reprobados++
     }
 

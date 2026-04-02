@@ -19,17 +19,12 @@ export async function GET(
 
     const admin = createAdminClient()
 
-    console.log('[GET /api/admin/alumnos/[id]] params.id:', params.id)
-
     // ── Paso 1: obtener fila de alumnos ───────────────────────────────────────
     const { data: alumno, error } = await admin
       .from('alumnos')
       .select('*')
       .eq('id', params.id)
       .single()
-
-    console.log('[GET /api/admin/alumnos/[id]] alumno error:', error?.message ?? null)
-    console.log('[GET /api/admin/alumnos/[id]] alumno keys:', alumno ? Object.keys(alumno) : null)
 
     if (error || !alumno) {
       return NextResponse.json({ error: 'Alumno no encontrado', detail: error?.message }, { status: 404 })
@@ -38,28 +33,37 @@ export async function GET(
     const a = alumno as Record<string, unknown>
 
     // ── Paso 2: obtener datos del usuario (mismo id) ──────────────────────────
-    const { data: usuario, error: userError } = await admin
+    const { data: usuario } = await admin
       .from('usuarios')
       .select('nombre, apellidos, email, foto_url, telefono')
       .eq('id', params.id)
       .single()
 
-    console.log('[GET /api/admin/alumnos/[id]] usuario error:', userError?.message ?? null)
-
     const u = usuario as { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null; telefono?: string } | null
 
-    // ── Paso 3: calificaciones ────────────────────────────────────────────────
-    const { data: calificaciones } = await admin
+    // ── Paso 3: calificaciones (IVS: acreditado; materias sin columna codigo) ───
+    const { data: calificacionesRaw } = await admin
       .from('calificaciones')
-      .select('*, materias(nombre, codigo)')
+      .select('id, acreditado, materia_id, evaluacion_id, materias(nombre)')
       .eq('alumno_id', params.id)
+
+    const calificaciones = (calificacionesRaw ?? []).map((row: Record<string, unknown>) => {
+      const m = row.materias as { nombre?: string } | null | undefined
+      const acreditado = Boolean(row.acreditado)
+      return {
+        id:                  row.id,
+        calificacion_final:  acreditado ? 100 : 0,
+        aprobada:            acreditado,
+        materias:            { nombre: m?.nombre ?? '—', codigo: '' },
+      }
+    })
 
     // ── Paso 4: documentos ────────────────────────────────────────────────────
     const { data: documentos } = await admin
-      .from('documentos')
+      .from('documentos_alumno')
       .select('*')
       .eq('alumno_id', params.id)
-      .order('created_at', { ascending: false })
+      .order('subido_en', { ascending: false })
 
     const duracion = (a.modalidad as string) === '3_meses' ? 3 : 6
 
@@ -71,7 +75,7 @@ export async function GET(
       duracion_meses:      duracion,
       meses_desbloqueados: a.meses_desbloqueados ?? 0,
       inscripcion_pagada:  a.inscripcion_pagada ?? false,
-      sindicalizado:       a.sindicalizado ?? false,
+      sindicalizado:       Boolean(a.es_sindicalizado ?? a.sindicalizado),
       sindicato:           a.sindicato ?? null,
       notas_admin:         a.notas_admin ?? '',
       created_at:          a.created_at,

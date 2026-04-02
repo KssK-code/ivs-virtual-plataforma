@@ -40,8 +40,15 @@ export async function GET(
       return NextResponse.json({ error: 'Esta evaluación no está disponible' }, { status: 403 })
     }
 
-    // FIX #4: acceso por nivel completo (meses_desbloqueados > 0), sin chequeo por numero_mes
-    if (alumno.meses_desbloqueados <= 0) {
+    const { data: matAcceso } = await supabase
+      .from('materias')
+      .select('nivel')
+      .eq('id', ev.materia_id)
+      .maybeSingle()
+
+    const esMateriaDemo = (matAcceso as { nivel?: string } | null)?.nivel === 'demo'
+
+    if (!esMateriaDemo && alumno.meses_desbloqueados <= 0) {
       return NextResponse.json({ error: 'No tienes meses desbloqueados' }, { status: 403 })
     }
 

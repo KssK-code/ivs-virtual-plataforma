@@ -196,15 +196,18 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
             let borderColor = '#2A2F3E'
             let textColor = '#94A3B8'
 
+            // Solo estilizar la opción que eligió el alumno (no “revelar” la correcta sola).
             if (yaRespondida) {
-              if (esCorrecta) {
-                bg = 'rgba(16,185,129,0.1)'
-                borderColor = '#10B981'
-                textColor = '#86EFAC'
-              } else if (esSeleccionada) {
-                bg = 'rgba(239,68,68,0.1)'
-                borderColor = '#EF4444'
-                textColor = '#FCA5A5'
+              if (esSeleccionada) {
+                if (esCorrecta) {
+                  bg = 'rgba(16,185,129,0.1)'
+                  borderColor = '#10B981'
+                  textColor = '#86EFAC'
+                } else {
+                  bg = 'rgba(239,68,68,0.1)'
+                  borderColor = '#EF4444'
+                  textColor = '#FCA5A5'
+                }
               }
             } else if (esSeleccionada) {
               bg = 'rgba(99,102,241,0.15)'
@@ -227,7 +230,14 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
               >
                 <span
                   className="font-semibold mr-2"
-                  style={{ color: esCorrecta && yaRespondida ? '#10B981' : '#6366F1' }}
+                  style={{
+                    color:
+                      yaRespondida && esSeleccionada && esCorrecta
+                        ? '#10B981'
+                        : yaRespondida && esSeleccionada
+                          ? '#EF4444'
+                          : '#6366F1',
+                  }}
                 >
                   {String.fromCharCode(65 + i)}.
                 </span>

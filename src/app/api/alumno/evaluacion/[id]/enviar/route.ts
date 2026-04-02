@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const IDX_TO_LETTER = ['a', 'b', 'c', 'd'] as const
 
@@ -42,7 +43,15 @@ export async function POST(
       return NextResponse.json({ error: 'Esta evaluación no está disponible' }, { status: 403 })
     }
 
-    if (alumno.meses_desbloqueados <= 0) {
+    const { data: matAcceso } = await supabase
+      .from('materias')
+      .select('nivel')
+      .eq('id', ev.materia_id)
+      .maybeSingle()
+
+    const esMateriaDemo = (matAcceso as { nivel?: string } | null)?.nivel === 'demo'
+
+    if (!esMateriaDemo && alumno.meses_desbloqueados <= 0) {
       return NextResponse.json({ error: 'No tienes meses desbloqueados' }, { status: 403 })
     }
 
@@ -127,6 +136,23 @@ export async function POST(
 
     if (intentoError) {
       return NextResponse.json({ error: intentoError.message }, { status: 500 })
+    }
+
+    if (acreditado && ev.materia_id) {
+      const admin = createAdminClient()
+      const { error: califErr } = await admin.from('calificaciones').upsert(
+        {
+          alumno_id:          alumno.id,
+          materia_id:         ev.materia_id,
+          evaluacion_id:      params.id,
+          acreditado:         true,
+          fecha_acreditacion: new Date().toISOString(),
+        },
+        { onConflict: 'alumno_id,materia_id' }
+      )
+      if (califErr) {
+        console.error('[evaluacion/enviar] calificaciones upsert:', califErr.message)
+      }
     }
 
     // Logro: primer examen

@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 const LETTER_TO_IDX = { a: 0, b: 1, c: 2 } as const
 const IDX_TO_LETTER = ['a', 'b', 'c'] as const
 
+/** Normaliza mayúsculas, espacios y evita que '' caiga en índice 0 (bug “siempre la A”). */
+function normalizeQuizLetra(raw: string | null | undefined): 'a' | 'b' | 'c' | null {
+  const c = String(raw ?? '').trim().toLowerCase().charAt(0)
+  if (c === 'a' || c === 'b' || c === 'c') return c
+  return null
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { semanaId: string } }
@@ -32,14 +39,17 @@ export async function GET(
     }
 
     // Mapear al formato del componente (opciones[] + respuesta_correcta como índice)
-    const preguntas = ((rawPreguntas ?? []) as unknown as QuizRow[]).map(p => ({
-      id:                 p.id,
-      pregunta:           p.pregunta,
-      opciones:           [p.opcion_a, p.opcion_b, p.opcion_c],
-      respuesta_correcta: LETTER_TO_IDX[p.respuesta_correcta as keyof typeof LETTER_TO_IDX] ?? 0,
-      orden:              p.orden ?? 0,
-      explicacion:        p.explicacion ?? undefined,
-    }))
+    const preguntas = ((rawPreguntas ?? []) as unknown as QuizRow[]).map(p => {
+      const letra = normalizeQuizLetra(p.respuesta_correcta)
+      return {
+        id:                 p.id,
+        pregunta:           p.pregunta,
+        opciones:           [p.opcion_a, p.opcion_b, p.opcion_c],
+        respuesta_correcta: letra != null ? LETTER_TO_IDX[letra] : 0,
+        orden:              p.orden ?? 0,
+        explicacion:        p.explicacion ?? undefined,
+      }
+    })
 
     if (preguntas.length === 0) {
       return NextResponse.json({ preguntas: [], respuesta_previa: null })
@@ -61,7 +71,8 @@ export async function GET(
       let fechaMax = ''
       for (const r of (respuestasExistentes ?? [])) {
         const row = r as { quiz_id: string; respuesta: string; correcta: boolean; fecha: string }
-        respMap[row.quiz_id] = LETTER_TO_IDX[row.respuesta as keyof typeof LETTER_TO_IDX] ?? -1
+        const rl = normalizeQuizLetra(row.respuesta)
+        respMap[row.quiz_id] = rl != null ? LETTER_TO_IDX[rl] : -1
         if (row.fecha > fechaMax) fechaMax = row.fecha
       }
       respuesta_previa = { respuestas: respMap, completado_en: fechaMax }
@@ -115,11 +126,12 @@ export async function POST(
       .map(p => {
         const selectedIdx = respuestas[p.id] ?? -1
         const respLetra   = selectedIdx >= 0 ? (IDX_TO_LETTER[selectedIdx] ?? null) : null
+        const correctLetra = normalizeQuizLetra(p.respuesta_correcta)
         return {
           alumno_id: user.id,
           quiz_id:   p.id,
           respuesta: respLetra,
-          correcta:  respLetra === p.respuesta_correcta,
+          correcta:  correctLetra != null && respLetra === correctLetra,
         }
       })
 

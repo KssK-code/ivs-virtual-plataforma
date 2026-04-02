@@ -29,10 +29,9 @@ export async function POST(
       return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
     }
 
-    // Obtener usuario_id del alumno
     const { data: alumno, error: alumnoError } = await supabase
       .from('alumnos')
-      .select('usuario_id')
+      .select('id')
       .eq('id', params.id)
       .single()
 
@@ -40,10 +39,10 @@ export async function POST(
       return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
     }
 
-    // Actualizar contraseña con service role
+    // IVS: alumnos.id = auth.users.id
     const admin = createAdminClient()
     const { error: updateError } = await admin.auth.admin.updateUserById(
-      (alumno as { usuario_id: string }).usuario_id,
+      (alumno as { id: string }).id,
       { password: newPassword }
     )
 

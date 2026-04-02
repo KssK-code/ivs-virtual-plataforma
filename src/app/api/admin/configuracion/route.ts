@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ESCUELA_CONFIG } from '@/lib/config'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
 
@@ -12,11 +13,13 @@ export async function GET() {
     const denied = await verifyAdmin(supabase, user.id)
     if (denied) return denied
 
-    const { count: totalMaterias } = await supabase
+    const admin = createAdminClient()
+
+    const { count: totalMaterias } = await admin
       .from('materias')
       .select('*', { count: 'exact', head: true })
 
-    const { count: totalPlanes } = await supabase
+    const { count: totalPlanes } = await admin
       .from('planes_estudio')
       .select('*', { count: 'exact', head: true })
       .eq('activo', true)

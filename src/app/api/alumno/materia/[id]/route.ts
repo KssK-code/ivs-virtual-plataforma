@@ -129,7 +129,7 @@ export async function GET(
           .eq('evaluacion_id', ev.id)
           .eq('acreditado', true)
           .limit(1)
-          .single()
+          .maybeSingle()
 
         return {
           id:                       ev.id,

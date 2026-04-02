@@ -7,46 +7,44 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // ── Resolver alumno_id y duracion (schema antiguo o nuevo) ────────────────
+    // ── Resolver alumno_id y duracion (IVS: preferir alumnos.id = user.id) ─────
     let alumnoId:        string | null = null
     let mesesDesbloqueados             = 0
     let duracionMeses                  = 0
 
-    // Intento 1: schema antiguo (alumnos.usuario_id)
-    const { data: a1 } = await supabase
+    const { data: aNuevo } = await supabase
       .from('alumnos')
-      .select('id, meses_desbloqueados, planes_estudio(duracion_meses)')
-      .eq('usuario_id', user.id)
-      .single()
+      .select('id, meses_desbloqueados, modalidad')
+      .eq('id', user.id)
+      .maybeSingle()
 
-    if (a1) {
-      const row = a1 as unknown as {
+    if (aNuevo) {
+      const row = aNuevo as unknown as {
         id: string
         meses_desbloqueados: number
-        planes_estudio: { duracion_meses: number } | null
+        modalidad?: string
       }
       alumnoId           = row.id
       mesesDesbloqueados = row.meses_desbloqueados ?? 0
-      duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
+      duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
     }
 
-    // Intento 2: schema nuevo (alumnos.id = user.id)
     if (!alumnoId) {
-      const { data: a2 } = await supabase
+      const { data: a1 } = await supabase
         .from('alumnos')
-        .select('id, meses_desbloqueados, modalidad')
-        .eq('id', user.id)
-        .single()
+        .select('id, meses_desbloqueados, planes_estudio(duracion_meses)')
+        .eq('usuario_id', user.id)
+        .maybeSingle()
 
-      if (a2) {
-        const row = a2 as unknown as {
+      if (a1) {
+        const row = a1 as unknown as {
           id: string
           meses_desbloqueados: number
-          modalidad?: string
+          planes_estudio: { duracion_meses: number } | null
         }
         alumnoId           = row.id
         mesesDesbloqueados = row.meses_desbloqueados ?? 0
-        duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
+        duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
       }
     }
 
@@ -66,13 +64,13 @@ export async function GET() {
     // ── Calificaciones registradas ────────────────────────────────────────────
     const { data: califs } = await supabase
       .from('calificaciones')
-      .select('materia_id, aprobada')
+      .select('materia_id, acreditado')
       .eq('alumno_id', alumnoId)
 
     const califMap = new Map<string, boolean>()
     for (const c of (califs ?? [])) {
-      const row = c as { materia_id: string; aprobada: boolean }
-      califMap.set(row.materia_id, row.aprobada)
+      const row = c as { materia_id: string; acreditado: boolean }
+      califMap.set(row.materia_id, row.acreditado)
     }
 
     // ── Materias del plan via meses_contenido ─────────────────────────────────

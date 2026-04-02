@@ -9,49 +9,47 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    // ── Resolver datos del alumno (schema antiguo o nuevo) ────────────────────
+    // ── Resolver datos del alumno (IVS: preferir alumnos.id = user.id) ────────
     let mesesDesbloqueados = 0
     let inscripcionPagada  = false
     let duracionMeses      = 0
     let alumnoEncontrado   = false
 
-    // Intento 1: schema antiguo (alumnos.usuario_id)
-    const { data: a1 } = await supabase
+    const { data: a2 } = await supabase
       .from('alumnos')
-      .select('meses_desbloqueados, inscripcion_pagada, planes_estudio(duracion_meses)')
-      .eq('usuario_id', user.id)
-      .single()
+      .select('meses_desbloqueados, inscripcion_pagada, modalidad')
+      .eq('id', user.id)
+      .maybeSingle()
 
-    if (a1) {
-      alumnoEncontrado  = true
-      const row = a1 as unknown as {
+    if (a2) {
+      alumnoEncontrado = true
+      const row = a2 as unknown as {
         meses_desbloqueados: number
         inscripcion_pagada: boolean
-        planes_estudio: { duracion_meses: number } | null
+        modalidad?: string
       }
       mesesDesbloqueados = row.meses_desbloqueados ?? 0
       inscripcionPagada  = row.inscripcion_pagada  ?? false
-      duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
+      duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
     }
 
-    // Intento 2: schema nuevo (alumnos.id = user.id)
     if (!alumnoEncontrado) {
-      const { data: a2 } = await supabase
+      const { data: a1 } = await supabase
         .from('alumnos')
-        .select('meses_desbloqueados, inscripcion_pagada, modalidad')
-        .eq('id', user.id)
-        .single()
+        .select('meses_desbloqueados, inscripcion_pagada, planes_estudio(duracion_meses)')
+        .eq('usuario_id', user.id)
+        .maybeSingle()
 
-      if (a2) {
-        alumnoEncontrado = true
-        const row = a2 as unknown as {
+      if (a1) {
+        alumnoEncontrado  = true
+        const row = a1 as unknown as {
           meses_desbloqueados: number
           inscripcion_pagada: boolean
-          modalidad?: string
+          planes_estudio: { duracion_meses: number } | null
         }
         mesesDesbloqueados = row.meses_desbloqueados ?? 0
         inscripcionPagada  = row.inscripcion_pagada  ?? false
-        duracionMeses      = row.modalidad === '3_meses' ? 3 : 6
+        duracionMeses      = row.planes_estudio?.duracion_meses ?? 6
       }
     }
 
