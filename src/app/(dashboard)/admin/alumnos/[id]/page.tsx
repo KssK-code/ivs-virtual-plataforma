@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText, StickyNote, Save, LockOpen, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText, StickyNote, Save, LockOpen, CheckCircle2, CreditCard } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
 interface AlumnoDetalle {
   id: string
   matricula: string
   meses_desbloqueados: number
+  inscripcion_pagada: boolean
   created_at: string
   notas_admin: string | null
   usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
@@ -65,6 +66,8 @@ export default function AlumnoDetallePage() {
   const [submitting, setSubmitting] = useState(false)
   const [resettingPass, setResettingPass] = useState(false)
   const [togglingActivo, setTogglingActivo] = useState(false)
+  const [marcandoInscripcion, setMarcandoInscripcion] = useState(false)
+  const [modalInscripcion, setModalInscripcion] = useState(false)
   const [desbloquearError, setDesbloquearError] = useState<string | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
   const [resetSuccess, setResetSuccess] = useState<string | null>(null)
@@ -196,6 +199,26 @@ export default function AlumnoDetallePage() {
     }
   }
 
+  async function handleMarcarInscripcion() {
+    setMarcandoInscripcion(true)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}/inscripcion`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (!res.ok) { showToast(data.error ?? 'Error al marcar inscripción', 'error'); return }
+      setModalInscripcion(false)
+      await cargar()
+      router.refresh()
+      showToast(`✓ Inscripción de ${alumno?.usuario.nombre_completo} marcada como pagada`, 'success')
+    } catch {
+      showToast('Error inesperado', 'error')
+    } finally {
+      setMarcandoInscripcion(false)
+    }
+  }
+
   async function handleGuardarDoc(docId: string) {
     const edit = docEdits[docId]
     if (!edit) return
@@ -314,7 +337,31 @@ export default function AlumnoDetallePage() {
 
       {/* Info General */}
       <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
-        <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información General</h3>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Información General</h3>
+          {/* Badge inscripción pagada / Botón marcar pagada */}
+          {alumno.inscripcion_pagada ? (
+            <span
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-semibold"
+              style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)' }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Inscripción pagada
+            </span>
+          ) : (
+            <button
+              onClick={() => setModalInscripcion(true)}
+              disabled={marcandoInscripcion}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-60"
+              style={{ background: 'rgba(91,108,255,0.12)', color: '#7B8AFF', border: '1px solid rgba(91,108,255,0.25)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(91,108,255,0.22)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(91,108,255,0.12)' }}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Marcar inscripción pagada
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div><p style={{ color: '#94A3B8' }}>Plan de estudio</p><p className="mt-0.5 font-medium" style={{ color: '#F1F5F9' }}>{alumno.plan.nombre}</p></div>
           <div><p style={{ color: '#94A3B8' }}>Duración total</p><p className="mt-0.5 font-medium" style={{ color: '#F1F5F9' }}>{alumno.plan.duracion_meses} meses</p></div>
@@ -711,6 +758,66 @@ export default function AlumnoDetallePage() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Inscripción Pagada */}
+      {modalInscripcion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold" style={{ color: '#F1F5F9' }}>Confirmar pago</h3>
+              <button
+                onClick={() => setModalInscripcion(false)}
+                className="p-1.5 rounded-lg"
+                style={{ color: '#94A3B8' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div
+              className="rounded-xl p-4 mb-4 text-center"
+              style={{ background: 'rgba(91,108,255,0.08)', border: '1px solid rgba(91,108,255,0.2)' }}
+            >
+              <p className="text-4xl mb-2">💳</p>
+              <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+                ¿Confirmas que el alumno pagó su inscripción de{' '}
+                <span style={{ color: '#7B8AFF' }}>$399</span>?
+              </p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
+                {alumno.usuario.nombre_completo}
+              </p>
+            </div>
+            <p className="text-xs mb-4 text-center" style={{ color: '#64748B' }}>
+              Esto solo marca el pago. Los meses se desbloquean manualmente.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setModalInscripcion(false)}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #2A2F3E' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleMarcarInscripcion}
+                disabled={marcandoInscripcion}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60 transition-all"
+                style={{ background: '#5B6CFF', color: '#fff' }}
+                onMouseEnter={e => { if (!marcandoInscripcion) e.currentTarget.style.background = '#4A5AE0' }}
+                onMouseLeave={e => { if (!marcandoInscripcion) e.currentTarget.style.background = '#5B6CFF' }}
+              >
+                {marcandoInscripcion
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+                  : <><CheckCircle2 className="w-4 h-4" /> Confirmar pago</>
+                }
+              </button>
+            </div>
           </div>
         </div>
       )}
