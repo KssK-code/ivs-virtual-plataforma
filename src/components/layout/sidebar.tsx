@@ -123,9 +123,8 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
               <Image
                 src="/logo-ivs.jpg"
                 alt="IVS Virtual"
-                width={0}
+                width={56}
                 height={40}
-                sizes="100vw"
                 style={{ height: 40, width: 'auto', display: 'block', objectFit: 'contain' }}
               />
             </div>
