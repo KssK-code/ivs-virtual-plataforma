@@ -302,6 +302,7 @@ export default function ContenidoDetallePage() {
                                   <div key={i} className="flex-1">
                                     <p className="text-xs mb-1" style={{ color: '#64748B' }}>Video {i + 1}</p>
                                     {vid ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
                                       <img
                                         src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`}
                                         alt={`Preview video ${i + 1}`}
