@@ -22,7 +22,7 @@
 import https from 'https'
 
 // ── Credenciales ──────────────────────────────────────────────────────────────
-const YOUTUBE_API_KEY  = 'AIzaSyC7-byoIitePLaQVTj1yCmKoJ_zgUEqW0Q'
+const DEFAULT_YOUTUBE_API_KEY = 'AIzaSyC7-byoIitePLaQVTj1yCmKoJ_zgUEqW0Q'
 const SUPABASE_HOST    = 'xxfwcnroshgirbdquffh.supabase.co'
 const SUPABASE_SVC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4ZndjbnJvc2hnaXJiZHF1ZmZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTA3MTgyMCwiZXhwIjoyMDkwNjQ3ODIwfQ.Fo4YhCH6a5rin7fdc5SlFrPn8Xx_KSoX94o14Kfw3Vw'
 const DELAY_MS         = 300  // 300 ms entre búsquedas → ~200/min máx
@@ -31,6 +31,11 @@ const DELAY_MS         = 300  // 300 ms entre búsquedas → ~200/min máx
 const nivelArg = (() => {
   const idx = process.argv.indexOf('--nivel')
   return idx !== -1 ? process.argv[idx + 1] : null
+})()
+
+const YOUTUBE_API_KEY = (() => {
+  const idx = process.argv.indexOf('--key')
+  return idx !== -1 ? process.argv[idx + 1] : DEFAULT_YOUTUBE_API_KEY
 })()
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -99,6 +104,16 @@ async function youtubeSearch(query) {
   return result
 }
 
+// ── Detect multi-video columns ────────────────────────────────────────────────
+async function hasMultiVideoColumns() {
+  try {
+    const result = await supa('semanas?select=video_url_2&limit=1')
+    return Array.isArray(result)
+  } catch {
+    return false
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   // 1. Obtener materias (filtradas por nivel si se indicó)
@@ -145,7 +160,13 @@ async function main() {
     console.log()
   }
 
-  // 3. Buscar video y actualizar video_url
+  // 3. Detectar si existen columnas multi-video en la BD
+  const multiVideo = await hasMultiVideoColumns()
+  if (multiVideo) {
+    console.log('🎬 Modo multi-video: actualizando video_url, video_url_2, video_url_3\n')
+  }
+
+  // 4. Buscar video y actualizar video_url (+ video_url_2/3 si existen columnas)
   let updated = 0, sinResultados = 0, errores = 0
 
   for (let i = 0; i < semanas.length; i++) {
@@ -166,15 +187,21 @@ async function main() {
         continue
       }
 
-      const item     = result.items[0]
-      const videoId  = item.id.videoId
-      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
-      const titulo   = item.snippet.title.substring(0, 55)
+      const mkUrl = item => `https://www.youtube.com/watch?v=${item.id.videoId}`
+      const patchBody = { video_url: mkUrl(result.items[0]) }
+      if (multiVideo) {
+        if (result.items[1]) patchBody.video_url_2 = mkUrl(result.items[1])
+        if (result.items[2]) patchBody.video_url_3 = mkUrl(result.items[2])
+      }
+      const titulo = result.items[0].snippet.title.substring(0, 55)
 
-      const r = await patch(`semanas?id=eq.${s.id}`, { video_url: videoUrl })
+      const r = await patch(`semanas?id=eq.${s.id}`, patchBody)
 
       if (r.status >= 200 && r.status < 300) {
-        console.log(`✓ ${videoId}  ${titulo}`)
+        const extra = multiVideo
+          ? ` (+${[result.items[1], result.items[2]].filter(Boolean).length} más)`
+          : ''
+        console.log(`✓ ${result.items[0].id.videoId}${extra}  ${titulo}`)
         updated++
       } else {
         console.log(`✗ Supabase ${r.status}: ${r.body.substring(0, 60)}`)

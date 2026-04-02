@@ -339,7 +339,6 @@ export default function LandingPage() {
                 <li>✓ Soporte por WhatsApp</li>
                 <li>✓ Certificado oficial SEP</li>
               </ul>
-              <div className="precio-certif">+ $4,750–$5,590 certificación (única vez)</div>
               <WaButton />
             </div>
 
@@ -360,7 +359,6 @@ export default function LandingPage() {
                 <li>✓ Soporte prioritario WhatsApp</li>
                 <li>✓ Certificado oficial SEP</li>
               </ul>
-              <div className="precio-certif">+ $4,750–$5,590 certificación (única vez)</div>
               <WaButton />
             </div>
           </div>

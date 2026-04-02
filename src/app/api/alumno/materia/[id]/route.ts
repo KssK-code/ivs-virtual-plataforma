@@ -56,7 +56,7 @@ export async function GET(
       .from('meses_contenido')
       .select(`
         id, numero_mes, titulo, descripcion,
-        semanas ( id, numero_semana, titulo, descripcion, contenido, video_url, tiempo_estimado_minutos )
+        semanas ( id, numero_semana, titulo, descripcion, contenido, video_url, video_url_2, video_url_3, tiempo_estimado_minutos )
       `)
       .eq('materia_id', params.id)
       .order('numero_mes')
@@ -64,7 +64,8 @@ export async function GET(
     type SemanaRow = {
       id: string; numero_semana: number; titulo: string
       descripcion: string | null; contenido: string | null
-      video_url: string | null; tiempo_estimado_minutos: number
+      video_url: string | null; video_url_2: string | null; video_url_3: string | null
+      tiempo_estimado_minutos: number
     }
     type MesRow = {
       id: string; numero_mes: number; titulo: string; descripcion: string | null
@@ -87,17 +88,17 @@ export async function GET(
         contenido:   s.contenido ?? s.descripcion ?? '',
         contenido_en: s.contenido ?? s.descripcion ?? '',
         url_en:      '',
-        videos:      s.video_url
-          ? [{
-              titulo:    s.titulo,
-              titulo_en: s.titulo,
-              url:       s.video_url,
-              url_en:    s.video_url,
-              duracion:  s.tiempo_estimado_minutos
-                ? `${s.tiempo_estimado_minutos} min`
-                : '',
-            }]
-          : [],
+        videos:      [s.video_url, s.video_url_2, s.video_url_3]
+          .filter(Boolean)
+          .map(url => ({
+            titulo:    s.titulo,
+            titulo_en: s.titulo,
+            url:       url as string,
+            url_en:    url as string,
+            duracion:  s.tiempo_estimado_minutos
+              ? `${s.tiempo_estimado_minutos} min`
+              : '',
+          })),
       }))
     )
 

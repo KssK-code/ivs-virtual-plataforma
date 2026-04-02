@@ -323,7 +323,7 @@ export default function MateriaPage() {
                         })()}
                       </div>
 
-                      {/* Contenido — markdown */}
+                      {/* Contenido — markdown (sin sección "Videos recomendados") */}
                       {semana.contenido && (
                         <div className="prose prose-sm max-w-none" style={{
                           color: '#94A3B8',
@@ -354,7 +354,7 @@ export default function MateriaPage() {
                               ),
                             }}
                           >
-                            {semana.contenido}
+                            {semana.contenido.replace(/(\n|^)(#{1,3} )?(\*\*)?Videos recomendados(\*\*)?:?[\s\S]*$/i, '')}
                           </ReactMarkdown>
                         </div>
                       )}
