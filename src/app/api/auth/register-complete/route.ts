@@ -52,19 +52,22 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Crear fila en public.alumnos ────────────────────────────────
     // La matrícula la genera el trigger trg_asignar_matricula automáticamente
+    const alumnoPayload = {
+      id:                user.id,
+      nivel,
+      modalidad,
+      es_sindicalizado,
+      sindicato:         es_sindicalizado ? sindicato : null,
+      inscripcion_pagada: false,
+      meses_desbloqueados: 0,
+      activo:            true,
+      fecha_inscripcion: new Date().toISOString(),
+    }
+    console.log('[register-complete] alumnos insert payload:', JSON.stringify(alumnoPayload))
+
     const { error: alumnoError } = await admin
       .from('alumnos')
-      .insert({
-        id:                user.id,
-        nivel,
-        modalidad,
-        es_sindicalizado,
-        sindicato:         es_sindicalizado ? sindicato : null,
-        inscripcion_pagada: false,
-        meses_desbloqueados: 0,
-        activo:            true,
-        fecha_inscripcion: new Date().toISOString(),
-      })
+      .insert(alumnoPayload)
 
     if (alumnoError) {
       // Conflicto → alumno ya existe, no es un error fatal

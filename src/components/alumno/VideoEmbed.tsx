@@ -1,6 +1,6 @@
 'use client'
 
-import { ExternalLink, Search } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 
 interface VideoEmbedProps {
   url: string
@@ -24,46 +24,36 @@ function extractYouTubeId(url: string): string | null {
 }
 
 export default function VideoEmbed({ url, titulo, duracion }: VideoEmbedProps) {
-  // ── Caso 1: URL de búsqueda de YouTube ──────────────────────────────────────
+  // ── Caso 1: URL de búsqueda de YouTube → iframe embed de resultados ─────────
   // Ej: https://www.youtube.com/results?search_query=numeros+naturales
   if (url.includes('results?search_query')) {
-    // Extraer el término legible de la query para mostrarlo
-    const query = new URLSearchParams(url.split('?')[1] ?? '').get('search_query') ?? ''
-    const termino = query.replace(/\+/g, ' ')
+    const searchQuery = new URLSearchParams(url.split('?')[1] ?? '').get('search_query') ?? ''
+    const embedSearch = `https://www.youtube.com/embed/videosearch?q=${encodeURIComponent(searchQuery.replace(/\+/g, ' '))}`
 
     return (
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ background: '#1A2235', border: '1px solid rgba(58,175,169,0.25)' }}
-      >
-        {/* Descripción del tema */}
-        <div className="px-4 pt-4 pb-3">
-          <p className="text-sm font-medium" style={{ color: '#E2E8F0' }}>{titulo}</p>
-          {termino && (
-            <p className="text-xs mt-1" style={{ color: '#64748B' }}>
-              🔍 Tema: <span style={{ color: '#94A3B8' }}>{termino}</span>
-            </p>
-          )}
-          {duracion && (
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{duracion}</p>
-          )}
+      <div className="rounded-xl overflow-hidden" style={{ background: '#1E2330' }}>
+        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+          <iframe
+            src={embedSearch}
+            title={titulo}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              border: 'none',
+            }}
+          />
         </div>
-
-        {/* Botón de búsqueda */}
-        <div className="px-4 pb-4">
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-            style={{ background: '#3AAFA9', color: '#fff' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}
-          >
-            <Search className="w-4 h-4" />
-            Buscar videos sobre este tema en YouTube
-          </a>
-        </div>
+        {(titulo || duracion) && (
+          <div className="px-4 py-3">
+            {titulo && <p className="text-sm font-medium" style={{ color: '#E2E8F0' }}>{titulo}</p>}
+            {duracion && <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{duracion}</p>}
+          </div>
+        )}
       </div>
     )
   }
