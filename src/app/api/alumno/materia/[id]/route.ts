@@ -147,6 +147,7 @@ export async function GET(
     // ── 6. Respuesta con forma compatible con la página ───────────────────────
     return Response.json({
       id:              materia.id,
+      nivel:           materia.nivel,
       codigo:          '',
       nombre:          materia.nombre,
       nombre_en:       materia.nombre,

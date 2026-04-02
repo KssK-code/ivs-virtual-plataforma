@@ -30,7 +30,7 @@ interface Evaluacion {
 }
 interface BibItem { titulo: string; url?: string; tipo?: string }
 interface Materia {
-  id: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
+  id: string; nivel: string; codigo: string; nombre: string; nombre_en: string; color_hex: string
   descripcion: string; descripcion_en: string; objetivo: string; objetivo_en: string; temario: string[]
   temario_en?: string[]
   bibliografia: BibItem[]
@@ -278,6 +278,7 @@ export default function MateriaPage() {
                     semanaActivaId={semanaSeleccionada ?? undefined}
                     onSemanaClick={setSemanaSeleccionada}
                     lang="es"
+                    esDemo={materia.nivel === 'demo'}
                   />
                 </div>
               </div>
@@ -298,7 +299,7 @@ export default function MateriaPage() {
                       {/* Header de la semana */}
                       <div className="pb-3" style={{ borderBottom: '1px solid #2A2F3E' }}>
                         <span className="text-xs font-mono" style={{ color: '#6366F1' }}>
-                          Semana {semana.numero}
+                          {materia.nivel === 'demo' ? `Paso ${semana.numero}` : `Semana ${semana.numero}`}
                         </span>
                         <h3 className="text-base font-bold mt-0.5" style={{ color: '#F1F5F9' }}>
                           {semana.titulo}
