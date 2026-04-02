@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
+import {
+  buildDocEstadoUpdates,
+  documentoStoragePath,
+  mapDocumentoAlumnoRow,
+  type DocEstadoAdmin,
+} from '@/lib/admin/documentos-admin'
 
 export async function GET(
   _req: NextRequest,
@@ -21,18 +27,48 @@ export async function GET(
       .from('documentos_alumno')
       .select('*')
       .eq('alumno_id', params.id)
+      .order('fecha_subida', { ascending: false })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    let list: Record<string, unknown>[] = []
+    if (error) {
+      const { data: retry, error: e2 } = await admin
+        .from('documentos_alumno')
+        .select('*')
+        .eq('alumno_id', params.id)
+        .order('subido_en', { ascending: false })
+      if (e2) return NextResponse.json({ error: e2.message }, { status: 500 })
+      list = (retry ?? []) as Record<string, unknown>[]
+    } else {
+      list = (documentos ?? []) as Record<string, unknown>[]
+    }
 
-    // Generar URLs firmadas para cada documento (válidas 1 hora)
+    const mapped = list.map(mapDocumentoAlumnoRow)
+
     const docs = await Promise.all(
-      (documentos ?? []).map(async (doc) => {
-        const ext = doc.nombre_archivo.split('.').pop()?.toLowerCase() ?? 'pdf'
-        const storagePath = `${params.id}/${doc.tipo}.${ext}`
-        const { data: signed } = await admin.storage
-          .from('documentos')
-          .createSignedUrl(storagePath, 3600)
-        return { ...doc, signed_url: signed?.signedUrl ?? null }
+      mapped.map(async doc => {
+        const path = documentoStoragePath(params.id, doc.tipo, doc.nombre_archivo)
+        let signed: string | null = null
+        const tryPath = async (p: string) => {
+          const { data } = await admin.storage.from('documentos').createSignedUrl(p, 3600)
+          return data?.signedUrl ?? null
+        }
+        signed = await tryPath(path)
+        if (!signed) {
+          for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'pdf']) {
+            signed = await tryPath(`${params.id}/${doc.tipo}.${ext}`)
+            if (signed) break
+          }
+        }
+        return {
+          id:               doc.id,
+          alumno_id:        doc.alumno_id,
+          tipo:             doc.tipo,
+          nombre_archivo:   doc.nombre_archivo,
+          estado:           doc.estado,
+          comentario_admin: doc.comentario_admin,
+          subido_en:        doc.subido_en,
+          signed_url:       signed ?? doc.url,
+        }
       })
     )
 
@@ -59,22 +95,28 @@ export async function PATCH(
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const estadosValidos = ['pendiente', 'aprobado', 'rechazado']
+    const estadosValidos: DocEstadoAdmin[] = ['pendiente', 'aprobado', 'rechazado']
     if (!estadosValidos.includes(estado)) {
       return NextResponse.json({ error: 'Estado inválido' }, { status: 400 })
     }
 
     const admin = createAdminClient()
+    const { nuevo, legacy } = buildDocEstadoUpdates(estado, comentario ?? null)
 
-    const { error } = await admin
+    let { error } = await admin
       .from('documentos_alumno')
-      .update({
-        estado,
-        comentario_admin: comentario ?? null,
-        revisado_en: new Date().toISOString(),
-      })
+      .update(nuevo)
       .eq('id', documentoId)
       .eq('alumno_id', params.id)
+
+    if (error) {
+      const second = await admin
+        .from('documentos_alumno')
+        .update(legacy)
+        .eq('id', documentoId)
+        .eq('alumno_id', params.id)
+      error = second.error
+    }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

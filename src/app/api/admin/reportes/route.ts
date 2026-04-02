@@ -33,12 +33,13 @@ export async function GET() {
       ? alumnosList.reduce((s, a) => s + (a.meses_desbloqueados ?? 0), 0) / alumnosList.length
       : 0
 
-    const { data: pagosData } = await admin
+    let pagosList: { monto: number; alumno_id: string; metodo_pago: string; created_at: string }[] = []
+    const pagosRes = await admin
       .from('pagos')
       .select('monto, alumno_id, metodo_pago, created_at')
-
-    type PagoRow = { monto: number; alumno_id: string; metodo_pago: string; created_at: string }
-    const pagosList = (pagosData ?? []) as PagoRow[]
+    if (!pagosRes.error && pagosRes.data) {
+      pagosList = pagosRes.data as typeof pagosList
+    }
 
     const pagosAlumnoIds = [...new Set(pagosList.map(p => p.alumno_id))]
     const { data: usuariosPagos } = pagosAlumnoIds.length > 0

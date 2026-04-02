@@ -13,6 +13,25 @@ async function checkAdmin(userId: string): Promise<boolean> {
   return (data?.rol as string | undefined)?.toUpperCase() === 'ADMIN'
 }
 
+/** Columna opcional hasta aplicar migración; si falla el SELECT, todos false. */
+async function contactadoWhatsappMap(
+  admin: ReturnType<typeof createAdminClient>,
+  ids: string[]
+): Promise<Map<string, boolean>> {
+  const m = new Map<string, boolean>()
+  if (ids.length === 0) return m
+  const { data, error } = await admin
+    .from('alumnos')
+    .select('id, contactado_whatsapp')
+    .in('id', ids)
+  if (error) return m
+  for (const row of data ?? []) {
+    const r = row as { id: string; contactado_whatsapp?: boolean }
+    m.set(r.id, r.contactado_whatsapp === true)
+  }
+  return m
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -64,7 +83,7 @@ export async function GET() {
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
           sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
-          activo:               a.activo ?? false,
+          activo:               a.activo !== false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
@@ -74,7 +93,10 @@ export async function GET() {
           foto_url:             u?.foto_url ?? null,
         }
       })
-      return NextResponse.json(result)
+      const cMap = await contactadoWhatsappMap(admin, result.map(r => r.id))
+      return NextResponse.json(
+        result.map(r => ({ ...r, contactado_whatsapp: cMap.get(r.id) ?? false }))
+      )
     }
 
     // ── Intento 2: schema antiguo — alumnos.usuario_id → usuarios.id ─────────
@@ -118,7 +140,7 @@ export async function GET() {
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
           sindicalizado:        Boolean(a.sindicalizado),
-          activo:               a.activo ?? false,
+          activo:               a.activo !== false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
@@ -128,7 +150,10 @@ export async function GET() {
           foto_url:             u?.foto_url ?? null,
         }
       })
-      return NextResponse.json(result2)
+      const cMap2 = await contactadoWhatsappMap(admin, result2.map(r => r.id))
+      return NextResponse.json(
+        result2.map(r => ({ ...r, contactado_whatsapp: cMap2.get(r.id) ?? false }))
+      )
     }
 
     // ── Fallback: alumnos sin join + usuarios por separado ────────────────────
@@ -146,7 +171,7 @@ export async function GET() {
     for (const a of (alumnos ?? []) as {
       id: string; matricula?: string; nivel?: string; modalidad?: string
       es_sindicalizado?: boolean; sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
-      inscripcion_pagada?: boolean; created_at: string
+      inscripcion_pagada?: boolean; contactado_whatsapp?: boolean; created_at: string
     }[]) {
       const { data: u } = await admin
         .from('usuarios')
@@ -159,7 +184,7 @@ export async function GET() {
         nivel:                a.nivel ?? null,
         modalidad:            a.modalidad ?? '6_meses',
         sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
-        activo:               a.activo ?? false,
+        activo:               a.activo !== false,
         meses_desbloqueados:  a.meses_desbloqueados ?? 0,
         duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
         inscripcion_pagada:   a.inscripcion_pagada ?? false,
@@ -169,7 +194,13 @@ export async function GET() {
         foto_url:             (u as {foto_url?:string|null}|null)?.foto_url ?? null,
       })
     }
-    return NextResponse.json(resultFallback)
+    const cMapF = await contactadoWhatsappMap(admin, resultFallback.map(r => r.id))
+    return NextResponse.json(
+      resultFallback.map(r => ({
+        ...r,
+        contactado_whatsapp: cMapF.get(r.id) ?? false,
+      }))
+    )
 
   } catch (err) {
     console.error('[GET /api/admin/alumnos] excepción:', err)

@@ -83,11 +83,11 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', inicioMes.toISOString())
 
-  // Documentos pendientes
+  // Documentos pendientes (tabla IVS: documentos_alumno + verificado)
   const { count: docsPendientes } = await supabase
-    .from('documentos')
+    .from('documentos_alumno')
     .select('*', { count: 'exact', head: true })
-    .eq('estado', 'pendiente')
+    .eq('verificado', false)
 
   // Últimos 5 alumnos
   const { data: recientes } = await supabase

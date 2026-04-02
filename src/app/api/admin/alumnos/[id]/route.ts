@@ -63,7 +63,6 @@ export async function GET(
       .from('documentos_alumno')
       .select('*')
       .eq('alumno_id', params.id)
-      .order('subido_en', { ascending: false })
 
     const duracion = (a.modalidad as string) === '3_meses' ? 3 : 6
 

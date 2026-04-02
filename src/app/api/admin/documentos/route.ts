@@ -2,17 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
-
-type DocRow = {
-  id: string
-  alumno_id: string
-  tipo: string
-  nombre_archivo: string
-  estado: string
-  comentario_admin: string | null
-  subido_en: string
-  url?: string
-}
+import { documentoStoragePath, mapDocumentoAlumnoRow } from '@/lib/admin/documentos-admin'
 
 export async function GET() {
   try {
@@ -25,26 +15,19 @@ export async function GET() {
 
     const admin = createAdminClient()
 
-    const { data, error } = await admin
-      .from('documentos_alumno')
-      .select(`
-        id,
-        alumno_id,
-        tipo,
-        nombre_archivo,
-        url,
-        estado,
-        comentario_admin,
-        subido_en
-      `)
-      .order('subido_en', { ascending: false })
+    const { data: raw, error } = await admin.from('documentos_alumno').select('*')
 
     if (error) {
-      console.error('[GET /api/admin/documentos] Error:', error.message, '| code:', error.code)
+      console.error('[GET /api/admin/documentos]', error.message, error.code)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const alumnoIds = [...new Set((data ?? []).map((d: DocRow) => d.alumno_id))]
+    const mapped = (raw ?? []).map(r => mapDocumentoAlumnoRow(r as Record<string, unknown>))
+    mapped.sort(
+      (a, b) => new Date(b.subido_en).getTime() - new Date(a.subido_en).getTime()
+    )
+
+    const alumnoIds = [...new Set(mapped.map(d => d.alumno_id))]
 
     const { data: usuarios } = alumnoIds.length > 0
       ? await admin.from('usuarios').select('id, nombre, apellidos').in('id', alumnoIds)
@@ -57,19 +40,33 @@ export async function GET() {
       ])
     )
 
+    async function signedFor(doc: (typeof mapped)[0]) {
+      const path = documentoStoragePath(doc.alumno_id, doc.tipo, doc.nombre_archivo)
+      const tryPath = async (p: string) => {
+        const { data: signed } = await admin.storage.from('documentos').createSignedUrl(p, 3600)
+        return signed?.signedUrl ?? null
+      }
+      let u = await tryPath(path)
+      if (u) return u
+      for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'pdf']) {
+        u = await tryPath(`${doc.alumno_id}/${doc.tipo}.${ext}`)
+        if (u) return u
+      }
+      return doc.url
+    }
+
     const docs = await Promise.all(
-      ((data ?? []) as DocRow[]).map(async doc => {
-        const ext = doc.nombre_archivo.split('.').pop()?.toLowerCase() ?? 'pdf'
-        const storagePath = `${doc.alumno_id}/${doc.tipo}.${ext}`
-        const { data: signed } = await admin.storage
-          .from('documentos')
-          .createSignedUrl(storagePath, 3600)
-        return {
-          ...doc,
-          alumno_nombre: usuarioMap.get(doc.alumno_id) ?? '—',
-          signed_url:    signed?.signedUrl ?? doc.url ?? null,
-        }
-      })
+      mapped.map(async doc => ({
+        id:               doc.id,
+        alumno_id:        doc.alumno_id,
+        tipo:             doc.tipo,
+        nombre_archivo:   doc.nombre_archivo,
+        estado:           doc.estado,
+        comentario_admin: doc.comentario_admin,
+        subido_en:        doc.subido_en,
+        alumno_nombre:    usuarioMap.get(doc.alumno_id) ?? '—',
+        signed_url:       await signedFor(doc),
+      }))
     )
 
     return NextResponse.json(docs)

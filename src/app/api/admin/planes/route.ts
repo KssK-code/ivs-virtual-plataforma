@@ -21,9 +21,12 @@ export async function GET() {
       .eq('activo', true)
       .order('nombre')
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.warn('[GET /api/admin/planes]', error.message)
+      return NextResponse.json([])
+    }
 
-    return NextResponse.json(data)
+    return NextResponse.json(data ?? [])
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
