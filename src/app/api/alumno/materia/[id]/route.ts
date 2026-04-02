@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
 
     // ── 1. Alumno: nivel + meses desbloqueados ────────────────────────────────
     const { data: alumnoData } = await supabase
@@ -17,7 +17,7 @@ export async function GET(
       .eq('id', user.id)
       .single()
 
-    if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
+    if (!alumnoData) return Response.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
     const alumno = alumnoData as { nivel: string; meses_desbloqueados: number }
     const mesesDesbloqueados = alumno.meses_desbloqueados ?? 0
@@ -29,7 +29,7 @@ export async function GET(
       .eq('id', params.id)
       .single()
 
-    if (!materiaData) return NextResponse.json({ error: 'Materia no encontrada' }, { status: 404 })
+    if (!materiaData) return Response.json({ error: 'Materia no encontrada' }, { status: 404 })
 
     const materia = materiaData as {
       id: string; nombre: string; descripcion: string | null
@@ -39,16 +39,12 @@ export async function GET(
     // ── 3. Control de acceso ──────────────────────────────────────────────────
     // Materias demo: siempre accesibles
     // Materias del nivel del alumno: accesibles si meses_desbloqueados > 0
-    // El acceso es por nivel completo — NO materia por materia
-    const esDemo       = materia.nivel === 'demo'
-    const esMismoNivel = materia.nivel === alumno.nivel
-    const tieneAcceso  = esDemo || (esMismoNivel && mesesDesbloqueados > 0)
-
-    if (!tieneAcceso) {
-      const motivo = !esMismoNivel
-        ? 'Esta materia no corresponde a tu nivel'
-        : 'Aún no tienes meses desbloqueados. Contacta a tu administrador.'
-      return NextResponse.json({ error: motivo }, { status: 403 })
+    if (materia.nivel === 'demo') {
+      // siempre permitir acceso — no retornar
+    } else if (alumno.meses_desbloqueados === 0) {
+      return Response.json({ error: 'Aún no tienes meses desbloqueados. Contacta a tu administrador.' }, { status: 403 })
+    } else if (materia.nivel !== alumno.nivel) {
+      return Response.json({ error: 'Esta materia no corresponde a tu nivel' }, { status: 403 })
     }
 
     // ── 4. Meses del contenido → Semanas ──────────────────────────────────────
@@ -145,7 +141,7 @@ export async function GET(
     )
 
     // ── 6. Respuesta con forma compatible con la página ───────────────────────
-    return NextResponse.json({
+    return Response.json({
       id:              materia.id,
       codigo:          '',
       nombre:          materia.nombre,
@@ -164,6 +160,6 @@ export async function GET(
     })
   } catch (err) {
     console.error('[api/alumno/materia/[id]]', err)
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
