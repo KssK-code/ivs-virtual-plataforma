@@ -41,12 +41,14 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // Normalizar rol a mayúsculas para soportar 'admin' y 'ADMIN'
+    const rol = (usuario?.rol as string | undefined)?.toUpperCase()
     const roleRedirects: Record<string, string> = {
       ADMIN: '/admin',
       ALUMNO: '/alumno',
     }
 
-    const destination = usuario?.rol ? (roleRedirects[usuario.rol] ?? '/alumno') : '/alumno'
+    const destination = rol ? (roleRedirects[rol] ?? '/alumno') : '/alumno'
     const url = request.nextUrl.clone()
     url.pathname = destination
     return NextResponse.redirect(url)
@@ -72,7 +74,8 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const rol = usuarioRol?.rol as string | undefined
+    // Normalizar rol a mayúsculas
+    const rol = (usuarioRol?.rol as string | undefined)?.toUpperCase()
 
     if (isAdminRoute && rol !== 'ADMIN') {
       const url = request.nextUrl.clone()

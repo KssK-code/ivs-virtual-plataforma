@@ -159,7 +159,8 @@ export default function LoginPage() {
 
       if (rolError) console.warn('[login] rol query error (non-fatal):', rolError.message)
 
-      const rol  = usuario?.rol ?? 'ALUMNO'
+      // Normalizar a mayúsculas: soporta 'admin', 'ADMIN', 'alumno', 'ALUMNO'
+      const rol  = (usuario?.rol as string | undefined)?.toUpperCase() ?? 'ALUMNO'
       const dest = ROLE_REDIRECTS[rol] ?? '/alumno'
       console.log('[login] success → rol:', rol, '→ redirect:', dest)
 
