@@ -9,7 +9,6 @@ import ReadingProgress from '@/components/alumno/ReadingProgress'
 import WeekRoadmap from '@/components/alumno/WeekRoadmap'
 import CelebrationBanner from '@/components/alumno/CelebrationBanner'
 import FadeIn from '@/components/ui/FadeIn'
-import SplitTitle from '@/components/ui/SplitTitle'
 import SemanaQuiz from '@/components/alumno/SemanaQuiz'
 import NotasPersonales from '@/components/alumno/NotasPersonales'
 import gsap from 'gsap'
@@ -52,22 +51,6 @@ function renderBold(text: string) {
   )
 }
 
-function renderTexto(texto: string) {
-  const paragraphs = texto.split(/\n{2,}/)
-  return paragraphs.map((para, pi) => {
-    const lines = para.split('\n')
-    return (
-      <p key={pi} className="text-sm leading-relaxed" style={{ color: '#94A3B8', marginBottom: '0.75em' }}>
-        {lines.map((line, li) => (
-          <span key={li}>
-            {li > 0 && <br />}
-            {renderBold(line)}
-          </span>
-        ))}
-      </p>
-    )
-  })
-}
 
 export default function MateriaPage() {
   const router = useRouter()
