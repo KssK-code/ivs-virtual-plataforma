@@ -18,6 +18,7 @@ interface WeekRoadmapProps {
   semanaActivaId?: string
   onSemanaClick: (semanaId: string) => void
   lang: string
+  esDemo?: boolean
 }
 
 type EstadoSemana = 'completado' | 'activo' | 'bloqueado'
@@ -45,6 +46,7 @@ export default function WeekRoadmap({
   semanasCompletadas,
   onSemanaClick,
   lang,
+  esDemo = false,
 }: WeekRoadmapProps) {
   const loc = (es: string, en?: string) => lang === 'en' && en ? en : es
   const containerRef = useRef<HTMLDivElement>(null)
@@ -76,9 +78,14 @@ export default function WeekRoadmap({
   return (
     <div ref={containerRef} className="flex flex-col">
       {semanas.map((semana, index) => {
-        const estado = getEstado(semana.id, index, semanas, semanasCompletadas)
+        // En demo: todas las semanas están desbloqueadas
+        const estado = esDemo
+          ? (semanasCompletadas.has(semana.id) ? 'completado' : 'activo')
+          : getEstado(semana.id, index, semanas, semanasCompletadas)
         const esUltima = index === semanas.length - 1
         const clickable = estado !== 'bloqueado'
+        // En demo: "Paso N" en vez de "Semana N"
+        const labelPrefijo = esDemo ? 'Paso' : (lang === 'en' ? 'Week' : 'Semana')
 
         return (
           <div key={semana.id} className="roadmap-node flex gap-4">
@@ -88,7 +95,7 @@ export default function WeekRoadmap({
               <button
                 onClick={() => clickable && onSemanaClick(semana.id)}
                 disabled={!clickable}
-                aria-label={`${lang === 'en' ? 'Week' : 'Semana'} ${semana.numero}: ${loc(semana.titulo, semana.titulo_en)}`}
+                aria-label={`${labelPrefijo} ${semana.numero}: ${loc(semana.titulo, semana.titulo_en)}`}
                 className={[
                   'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 relative z-10',
                   estado === 'completado'
@@ -141,7 +148,7 @@ export default function WeekRoadmap({
                   className="text-xs font-mono transition-all duration-500"
                   style={{ color: estado === 'bloqueado' ? '#475569' : '#6366F1' }}
                 >
-                  {lang === 'en' ? 'Week' : 'Semana'} {semana.numero}
+                  {labelPrefijo} {semana.numero}
                 </span>
 
                 {estado === 'activo' && (
