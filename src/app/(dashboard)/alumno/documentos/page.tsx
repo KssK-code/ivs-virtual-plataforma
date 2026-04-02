@@ -25,7 +25,6 @@ interface Documento {
 }
 
 const TIPOS_PREPA: DocTipo[] = [
-  'acta_nacimiento',
   'curp',
   'certificado_secundaria',
   'identificacion_oficial',
@@ -33,7 +32,6 @@ const TIPOS_PREPA: DocTipo[] = [
 ]
 
 const TIPOS_SECUNDARIA: DocTipo[] = [
-  'acta_nacimiento',
   'curp',
   'certificado_primaria',
   'identificacion_oficial',
@@ -175,7 +173,7 @@ export default function DocumentosPage() {
                   <DocIcon tipo={tipo} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate text-gray-900">
+                  <p className="text-white font-semibold text-sm truncate">
                     {TIPO_LABEL[tipo]}
                   </p>
                   {doc ? (
