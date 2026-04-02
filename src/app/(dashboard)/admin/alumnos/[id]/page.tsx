@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, X, Loader2, CreditCard, Key, Eye, EyeOff, Download, FileText } from 'lucide-react'
+import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText, StickyNote, Save, LockOpen, CheckCircle2 } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
 interface AlumnoDetalle {
@@ -10,6 +10,7 @@ interface AlumnoDetalle {
   matricula: string
   meses_desbloqueados: number
   created_at: string
+  notas_admin: string | null
   usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
   plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
   pagos: { id: string; monto: number; mes_desbloqueado: number; metodo_pago: string; referencia: string | null; created_at: string }[]
@@ -77,6 +78,10 @@ export default function AlumnoDetallePage() {
   const [docEdits, setDocEdits] = useState<Record<string, { estado: DocEstado; comentario: string }>>({})
   const [savingDoc, setSavingDoc] = useState<string | null>(null)
 
+  // Notas del admin
+  const [notas, setNotas] = useState('')
+  const [savingNotas, setSavingNotas] = useState(false)
+
   const cargar = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -88,6 +93,9 @@ export default function AlumnoDetallePage() {
       if (!alumnoRes.ok) throw new Error('Alumno no encontrado')
       const alumnoData = await alumnoRes.json()
       setAlumno(alumnoData)
+      if (alumnoData.notas_admin !== undefined) {
+        setNotas(alumnoData.notas_admin ?? '')
+      }
       const docsData: DocumentoAdmin[] = docsRes.ok ? await docsRes.json() : []
       setDocumentos(docsData)
       // Inicializar edits con valores actuales
@@ -205,6 +213,24 @@ export default function AlumnoDetallePage() {
     }
   }
 
+  async function handleGuardarNotas() {
+    setSavingNotas(true)
+    try {
+      const res = await fetch(`/api/admin/alumnos/${id}/notas`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notas }),
+      })
+      const data = await res.json()
+      if (!res.ok) { showToast(data.error ?? 'Error al guardar notas', 'error'); return }
+      showToast('✓ Notas guardadas', 'success')
+    } catch {
+      showToast('Error inesperado al guardar notas', 'error')
+    } finally {
+      setSavingNotas(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#5B6CFF' }} />
@@ -301,17 +327,26 @@ export default function AlumnoDetallePage() {
               {alumno.meses_desbloqueados} de {alumno.plan.duracion_meses} meses desbloqueados
             </p>
           </div>
-          <button
-            onClick={() => setModalPago(true)}
-            disabled={todosBloqueados}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: todosBloqueados ? 'rgba(91,108,255,0.1)' : '#5B6CFF', color: todosBloqueados ? '#7B8AFF' : '#fff' }}
-            onMouseEnter={e => { if (!todosBloqueados) e.currentTarget.style.background = '#7B8AFF' }}
-            onMouseLeave={e => { if (!todosBloqueados) e.currentTarget.style.background = '#5B6CFF' }}
-          >
-            <CreditCard className="w-4 h-4" />
-            {todosBloqueados ? 'Todos los meses desbloqueados' : 'Registrar Pago y Abrir Siguiente Mes'}
-          </button>
+          {todosBloqueados ? (
+            <div
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#22C55E' }}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Todos los meses desbloqueados
+            </div>
+          ) : (
+            <button
+              onClick={() => setModalPago(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-base font-bold transition-all shadow-lg"
+              style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 20px rgba(58,175,169,0.4)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#2D8C87'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#3AAFA9'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              <LockOpen className="w-5 h-5" />
+              Abrir Mes {alumno.meses_desbloqueados + 1}
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -407,6 +442,37 @@ export default function AlumnoDetallePage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Notas del Admin */}
+      <div className="rounded-xl p-5 space-y-3" style={CARD_STYLE}>
+        <div className="flex items-center gap-2">
+          <StickyNote className="w-4 h-4" style={{ color: '#F59E0B' }} />
+          <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>Notas internas</h3>
+          <span className="text-xs" style={{ color: '#475569' }}>(Solo visibles para admins)</span>
+        </div>
+        <textarea
+          rows={4}
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          placeholder="Escribe notas sobre este alumno (motivos de contacto, observaciones, seguimiento, etc.)..."
+          className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
+          style={{ ...INPUT_STYLE, minHeight: 100 }}
+          onFocus={e => { e.currentTarget.style.border = '1px solid #3AAFA9' }}
+          onBlur={e => { e.currentTarget.style.border = '1px solid #2A2F3E' }}
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleGuardarNotas}
+            disabled={savingNotas}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-60"
+            style={{ background: '#3AAFA9', color: '#fff' }}
+            onMouseEnter={e => { if (!savingNotas) e.currentTarget.style.background = '#2D8C87' }}
+            onMouseLeave={e => { if (!savingNotas) e.currentTarget.style.background = '#3AAFA9' }}
+          >
+            {savingNotas ? <><Loader2 className="w-4 h-4 animate-spin" />Guardando...</> : <><Save className="w-4 h-4" />Guardar notas</>}
+          </button>
+        </div>
       </div>
 
       {/* Documentos */}

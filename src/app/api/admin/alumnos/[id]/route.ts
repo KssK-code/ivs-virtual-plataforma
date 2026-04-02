@@ -11,6 +11,7 @@ type AlumnoRow = {
   created_at: string
   usuario_id: string
   plan_estudio_id: string
+  notas_admin: string | null
   usuarios: UsuariosData | UsuariosData[] | null
   planes_estudio: { id: string; nombre: string; duracion_meses: number; precio_mensual: number } | null
 }
@@ -74,6 +75,7 @@ export async function GET(
         duracion_meses: a.planes_estudio?.duracion_meses ?? 0,
         precio_mensual: a.planes_estudio?.precio_mensual ?? 0,
       },
+      notas_admin: a.notas_admin ?? null,
       pagos: pagos ?? [],
       calificaciones: calificaciones ?? [],
     })

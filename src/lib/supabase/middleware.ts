@@ -59,5 +59,33 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Protección de rutas por rol:
+  // - /admin/** → requiere rol ADMIN; si es ALUMNO → redirigir a /alumno
+  // - /alumno/** → requiere rol ALUMNO; si es ADMIN → redirigir a /admin
+  const isAdminRoute  = request.nextUrl.pathname.startsWith('/admin')
+  const isAlumnoRoute = request.nextUrl.pathname.startsWith('/alumno')
+
+  if (user && (isAdminRoute || isAlumnoRoute)) {
+    const { data: usuarioRol } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = usuarioRol?.rol as string | undefined
+
+    if (isAdminRoute && rol !== 'ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = rol === 'ALUMNO' ? '/alumno' : '/login'
+      return NextResponse.redirect(url)
+    }
+
+    if (isAlumnoRoute && rol === 'ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
