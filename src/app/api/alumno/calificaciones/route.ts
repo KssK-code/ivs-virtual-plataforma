@@ -75,14 +75,18 @@ export async function GET() {
       califMap.set(row.materia_id, row.aprobada)
     }
 
-    // ── Materias del plan ─────────────────────────────────────────────────────
+    // ── Materias del plan via meses_contenido ─────────────────────────────────
+    // meses_contenido.materia_id → materias.id (many-to-one → materias es objeto único)
     const { data: meses } = await supabase
       .from('meses_contenido')
-      .select('numero, materias(id, codigo, nombre)')
-      .order('numero')
-      .lte('numero', duracionMeses)
+      .select('numero_mes, materias(id, nombre)')
+      .order('numero_mes')
+      .lte('numero_mes', duracionMeses)
 
-    type MesRow = { numero: number; materias: { id: string; codigo: string; nombre: string }[] }
+    type MesRow = {
+      numero_mes: number
+      materias: { id: string; nombre: string } | null
+    }
 
     const resultado: {
       materia_id:     string
@@ -93,24 +97,25 @@ export async function GET() {
     }[] = []
 
     for (const mes of ((meses ?? []) as unknown as MesRow[])) {
-      for (const mat of (mes.materias ?? [])) {
-        if (califMap.has(mat.id)) {
-          resultado.push({
-            materia_id:     mat.id,
-            codigo:         mat.codigo,
-            nombre_materia: mat.nombre,
-            mes_numero:     mes.numero,
-            estado:         califMap.get(mat.id) ? 'Acreditada' : 'No acreditada',
-          })
-        } else if (mes.numero <= mesesDesbloqueados) {
-          resultado.push({
-            materia_id:     mat.id,
-            codigo:         mat.codigo,
-            nombre_materia: mat.nombre,
-            mes_numero:     mes.numero,
-            estado:         'Pendiente',
-          })
-        }
+      const mat = mes.materias
+      if (!mat) continue
+
+      if (califMap.has(mat.id)) {
+        resultado.push({
+          materia_id:     mat.id,
+          codigo:         '',
+          nombre_materia: mat.nombre,
+          mes_numero:     mes.numero_mes,
+          estado:         califMap.get(mat.id) ? 'Acreditada' : 'No acreditada',
+        })
+      } else if (mes.numero_mes <= mesesDesbloqueados) {
+        resultado.push({
+          materia_id:     mat.id,
+          codigo:         '',
+          nombre_materia: mat.nombre,
+          mes_numero:     mes.numero_mes,
+          estado:         'Pendiente',
+        })
       }
     }
 

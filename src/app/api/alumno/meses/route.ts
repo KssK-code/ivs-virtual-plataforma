@@ -66,19 +66,21 @@ export async function GET() {
     }
 
     // ── Obtener meses del contenido ───────────────────────────────────────────
+    // Columnas correctas IVS: numero_mes (no 'numero'), color (no 'color_hex')
+    // meses_contenido.materia_id → materias.id (many-to-one → materias es objeto único)
     const { data: meses, error: mesesError } = await supabase
       .from('meses_contenido')
-      .select('*, materias(id, codigo, nombre, nombre_en, color_hex)')
-      .order('numero')
-      .lte('numero', duracionMeses)
+      .select('*, materias(id, nombre, color)')
+      .order('numero_mes')
+      .lte('numero_mes', duracionMeses)
 
     // Si la tabla no existe o no tiene datos → generar meses ficticios
     if (mesesError || !meses || meses.length === 0) {
       const mesesFicticios = Array.from({ length: duracionMeses || 6 }, (_, i) => ({
         id:          `mes-ficticio-${i + 1}`,
-        numero:      i + 1,
+        numero_mes:  i + 1,
         titulo:      `Mes ${i + 1}`,
-        materias:    [],
+        materias:    null,
         desbloqueado: (i + 1) <= mesesDesbloqueados,
       }))
       return NextResponse.json(mesesFicticios)
@@ -87,13 +89,13 @@ export async function GET() {
     const result = meses.map((mes: unknown) => {
       const m = mes as {
         id: string
-        numero: number
+        numero_mes: number
         titulo: string
-        materias: { id: string; codigo: string; nombre: string; color_hex: string }[]
+        materias: { id: string; nombre: string; color: string | null } | null
       }
       return {
         ...m,
-        desbloqueado: m.numero <= mesesDesbloqueados,
+        desbloqueado: m.numero_mes <= mesesDesbloqueados,
       }
     })
 

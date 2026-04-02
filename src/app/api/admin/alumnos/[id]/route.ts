@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyAdmin } from '@/lib/supabase/verify-admin'
 
 export async function GET(
   _request: NextRequest,
@@ -112,19 +113,13 @@ export async function PUT(
     if (denied) return denied
 
     const body = await request.json()
+    const admin = createAdminClient()
 
-    const { data: alumno, error: fetchError } = await supabase
+    // Schema nuevo: alumnos.id = user.id — actualizar alumnos.activo directamente
+    const { error } = await admin
       .from('alumnos')
-      .select('usuario_id')
-      .eq('id', params.id)
-      .single()
-
-    if (fetchError || !alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
-
-    const { error } = await supabase
-      .from('usuarios')
       .update({ activo: body.activo })
-      .eq('id', (alumno as { usuario_id: string }).usuario_id)
+      .eq('id', params.id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -184,18 +179,12 @@ export async function DELETE(
     const denied = await verifyAdmin(supabase, user.id)
     if (denied) return denied
 
-    const { data: alumno, error: fetchError } = await supabase
+    // Schema nuevo: alumnos.id = user.id — desactivar en alumnos directamente
+    const admin = createAdminClient()
+    const { error } = await admin
       .from('alumnos')
-      .select('usuario_id')
-      .eq('id', params.id)
-      .single()
-
-    if (fetchError || !alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
-
-    const { error } = await supabase
-      .from('usuarios')
       .update({ activo: false })
-      .eq('id', (alumno as { usuario_id: string }).usuario_id)
+      .eq('id', params.id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

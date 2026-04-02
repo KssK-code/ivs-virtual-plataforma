@@ -20,23 +20,10 @@ export async function GET() {
 
     const admin = createAdminClient()
 
-    // Obtener documentos con datos de alumno
+    // Obtener documentos (sin join a usuarios — schema nuevo comparte ID)
     const { data: documentos, error } = await admin
       .from('documentos_alumno')
-      .select(
-        `
-        id,
-        alumno_id,
-        tipo,
-        nombre_archivo,
-        estado,
-        comentario_admin,
-        subido_en,
-        alumnos (
-          usuarios ( nombre_completo )
-        )
-      `
-      )
+      .select('id, alumno_id, tipo, nombre_archivo, estado, comentario_admin, subido_en')
       .order('subido_en', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -49,26 +36,31 @@ export async function GET() {
       estado: string
       comentario_admin: string | null
       subido_en: string
-      alumnos:
-        | { usuarios: { nombre_completo: string } | { nombre_completo: string }[] | null }
-        | null
     }
+
+    const docs = (documentos ?? []) as unknown as DocRow[]
+
+    // Obtener nombres de usuarios en una sola query (alumnos.id = usuarios.id en schema nuevo)
+    const alumnoIds = [...new Set(docs.map(d => d.alumno_id))]
+    const { data: usuarios } = alumnoIds.length > 0
+      ? await admin.from('usuarios').select('id, nombre, apellidos').in('id', alumnoIds)
+      : { data: [] }
+
+    const usuarioMap = new Map<string, string>(
+      (usuarios ?? []).map((u: { id: string; nombre?: string; apellidos?: string }) => [
+        u.id,
+        [u.nombre, u.apellidos].filter(Boolean).join(' ') || '—',
+      ])
+    )
 
     // Generar URLs firmadas
     const result = await Promise.all(
-      ((documentos ?? []) as unknown as DocRow[]).map(async (doc) => {
+      docs.map(async (doc) => {
         const ext = doc.nombre_archivo.split('.').pop()?.toLowerCase() ?? 'pdf'
         const storagePath = `${doc.alumno_id}/${doc.tipo}.${ext}`
         const { data: signed } = await admin.storage
           .from('documentos')
           .createSignedUrl(storagePath, 3600)
-
-        const alumnosData = doc.alumnos
-        const usuariosData = alumnosData
-          ? Array.isArray((alumnosData as { usuarios: unknown }).usuarios)
-            ? ((alumnosData as { usuarios: { nombre_completo: string }[] }).usuarios)[0]
-            : (alumnosData as { usuarios: { nombre_completo: string } | null }).usuarios
-          : null
 
         return {
           id: doc.id,
@@ -79,7 +71,7 @@ export async function GET() {
           comentario_admin: doc.comentario_admin,
           subido_en: doc.subido_en,
           signed_url: signed?.signedUrl ?? null,
-          alumno_nombre: usuariosData?.nombre_completo ?? null,
+          alumno_nombre: usuarioMap.get(doc.alumno_id) ?? null,
         }
       })
     )
