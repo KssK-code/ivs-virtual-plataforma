@@ -68,7 +68,29 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
     }
   }, { dependencies: [currentIdx], scope: cardRef })
 
-  if (loading || preguntas.length === 0) return null
+  if (loading) {
+    return (
+      <div className="rounded-xl p-4 mt-2 flex items-center gap-2 text-xs" style={CARD}>
+        <span style={{ color: '#94A3B8' }}>{loc('Cargando refuerzo…', 'Loading practice…')}</span>
+      </div>
+    )
+  }
+
+  if (preguntas.length === 0) {
+    return (
+      <div className="rounded-xl p-4 mt-2 text-xs leading-relaxed" style={CARD}>
+        <p className="font-semibold mb-1" style={{ color: '#94A3B8' }}>
+          {loc('Quiz de refuerzo', 'Practice quiz')}
+        </p>
+        <p style={{ color: '#64748B' }}>
+          {loc(
+            'Aún no hay preguntas para esta semana. Tu avance no se ve afectado.',
+            'No practice questions for this week yet. Your progress is not affected.',
+          )}
+        </p>
+      </div>
+    )
+  }
 
   const pregunta = preguntas[currentIdx]
   const total = preguntas.length
