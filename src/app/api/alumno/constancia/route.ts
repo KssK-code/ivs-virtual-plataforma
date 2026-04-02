@@ -83,6 +83,8 @@ export async function GET() {
 
     return NextResponse.json({
       nombre_completo:     nombreCompleto,
+      nombre:              u?.nombre ?? '',
+      apellidos:           u?.apellidos ?? '',
       matricula:           alumno.matricula ?? 'IVS-0000',
       plan_nombre:         duracionMeses === 3 ? '3 Meses' : '6 Meses',
       meses_desbloqueados: alumno.meses_desbloqueados,

@@ -15,6 +15,8 @@ interface MateriaCursada {
 
 interface DatosConstancia {
   nombre_completo: string
+  nombre: string
+  apellidos: string
   matricula: string
   plan_nombre: string
   meses_desbloqueados: number
@@ -213,7 +215,7 @@ export default function ConstanciaPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={datos.avatar_url}
-                    alt={datos.nombre_completo}
+                    alt={[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
                     style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3AAFA9' }}
                   />
                 ) : (
@@ -223,11 +225,11 @@ export default function ConstanciaPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 28, fontWeight: 700,
                   }}>
-                    {datos.nombre_completo.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                    {((datos.nombre?.[0] ?? '') + (datos.apellidos?.[0] ?? '')).toUpperCase() || datos.nombre_completo[0]?.toUpperCase() || 'A'}
                   </div>
                 )}
                 <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', maxWidth: 110 }}>
-                  {datos.nombre_completo}
+                  {[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
                 </span>
               </div>
             </div>
@@ -235,7 +237,7 @@ export default function ConstanciaPage() {
             {/* Párrafo 1 */}
             <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.9, marginBottom: 6 }}>
               Se certifica que el alumno{' '}
-              <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.nombre_completo}</strong>,{' '}
+              <strong style={{ color: '#0f172a', fontWeight: 600 }}>{[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}</strong>,{' '}
               con matrícula{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.matricula}</strong>,{' '}
               está inscrito en el programa{' '}
