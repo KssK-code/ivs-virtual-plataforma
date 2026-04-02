@@ -5,7 +5,7 @@ import { verifyAdmin } from '@/lib/supabase/verify-admin'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { alumnoId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient()
@@ -20,7 +20,7 @@ export async function GET(
     const { data: documentos, error } = await admin
       .from('documentos_alumno')
       .select('*')
-      .eq('alumno_id', params.alumnoId)
+      .eq('alumno_id', params.id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -28,7 +28,7 @@ export async function GET(
     const docs = await Promise.all(
       (documentos ?? []).map(async (doc) => {
         const ext = doc.nombre_archivo.split('.').pop()?.toLowerCase() ?? 'pdf'
-        const storagePath = `${params.alumnoId}/${doc.tipo}.${ext}`
+        const storagePath = `${params.id}/${doc.tipo}.${ext}`
         const { data: signed } = await admin.storage
           .from('documentos')
           .createSignedUrl(storagePath, 3600)
@@ -44,7 +44,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { alumnoId: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient()
@@ -74,7 +74,7 @@ export async function PATCH(
         revisado_en: new Date().toISOString(),
       })
       .eq('id', documentoId)
-      .eq('alumno_id', params.alumnoId)
+      .eq('alumno_id', params.id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
