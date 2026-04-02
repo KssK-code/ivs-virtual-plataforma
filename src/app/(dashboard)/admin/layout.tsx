@@ -14,17 +14,21 @@ export default async function AdminLayout({
 
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('nombre_completo, rol')
+    .select('nombre, apellidos, rol')
     .eq('id', user.id)
     .single()
 
-  if (!usuario || usuario.rol !== 'ADMIN') redirect('/login')
+  // Normalizar rol a mayúsculas: soporta 'admin' y 'ADMIN' en la BD
+  const rol = (usuario?.rol as string | undefined)?.toUpperCase()
+  if (!usuario || rol !== 'ADMIN') redirect('/login')
+
+  const userName = [usuario.nombre, usuario.apellidos].filter(Boolean).join(' ') || user.email || 'Admin'
 
   return (
     <DashboardLayout
       role="ADMIN"
-      userName={usuario.nombre_completo}
-      pageTitle="header.adminPortal"
+      userName={userName}
+      pageTitle="Panel de Administración"
     >
       {children}
     </DashboardLayout>

@@ -41,12 +41,14 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // Normalizar a mayúsculas: soporta 'admin' y 'ADMIN', 'alumno' y 'ALUMNO'
+    const rol = (usuario?.rol as string | undefined)?.toUpperCase()
     const roleRedirects: Record<string, string> = {
       ADMIN: '/admin',
       ALUMNO: '/alumno',
     }
 
-    const destination = usuario?.rol ? (roleRedirects[usuario.rol] ?? '/alumno') : '/alumno'
+    const destination = rol ? (roleRedirects[rol] ?? '/alumno') : '/alumno'
     const url = request.nextUrl.clone()
     url.pathname = destination
     return NextResponse.redirect(url)
@@ -57,6 +59,34 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Protección de rutas por rol:
+  // - /admin/** → requiere rol ADMIN; si es ALUMNO → redirigir a /alumno
+  // - /alumno/** → requiere rol ADMIN → redirigir a /admin
+  const isAdminRoute  = request.nextUrl.pathname.startsWith('/admin')
+  const isAlumnoRoute = request.nextUrl.pathname.startsWith('/alumno')
+
+  if (user && (isAdminRoute || isAlumnoRoute)) {
+    const { data: usuarioRol } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', user.id)
+      .single()
+
+    const rol = (usuarioRol?.rol as string | undefined)?.toUpperCase()
+
+    if (isAdminRoute && rol !== 'ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = rol === 'ALUMNO' ? '/alumno' : '/login'
+      return NextResponse.redirect(url)
+    }
+
+    if (isAlumnoRoute && rol === 'ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

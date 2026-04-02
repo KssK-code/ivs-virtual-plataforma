@@ -15,28 +15,39 @@ export default async function AlumnoLayout({
 
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('nombre_completo, rol, avatar_url')
+    .select('nombre, apellidos, rol, foto_url')
     .eq('id', user.id)
     .single()
 
-  // Si no hay fila en usuarios pero sí hay sesión activa, permitir paso
-  // (el usuario puede existir en auth.users sin fila en usuarios aún)
-  if (usuario && usuario.rol !== 'ALUMNO') redirect('/login')
+  // Normalizar rol a mayúsculas: soporta 'admin'/'ADMIN', 'alumno'/'ALUMNO'
+  const rol = (usuario?.rol as string | undefined)?.toUpperCase()
 
-  // Fetch alumno data (nivel, matrícula)
+  // Admin intentando entrar a /alumno → redirigir a su panel
+  if (rol === 'ADMIN') redirect('/admin')
+
+  // Otro rol desconocido con fila en usuarios → rechazar
+  if (usuario && rol && rol !== 'ALUMNO') redirect('/login')
+
+  // Fetch nivel del alumno
   const { data: alumno } = await supabase
     .from('alumnos')
     .select('nivel')
     .eq('id', user.id)
     .single()
 
+  const userName = [usuario?.nombre, usuario?.apellidos].filter(Boolean).join(' ')
+    || user.email
+    || 'Alumno'
+
+  const avatarUrl = (usuario as unknown as { foto_url?: string | null } | null)?.foto_url ?? null
+
   return (
     <DashboardLayout
       role="ALUMNO"
-      userName={usuario?.nombre_completo ?? user.email ?? 'Alumno'}
-      avatarUrl={(usuario as unknown as { avatar_url?: string | null } | null)?.avatar_url ?? null}
+      userName={userName}
+      avatarUrl={avatarUrl}
       nivel={alumno?.nivel ?? null}
-      pageTitle="header.studentPortal"
+      pageTitle="Mi Portal de Estudios"
       showFooter={true}
       theme="light"
     >
