@@ -40,7 +40,7 @@ export async function GET() {
       ])
     )
 
-    async function signedFor(doc: (typeof mapped)[0]) {
+    const signedFor = async (doc: (typeof mapped)[0]) => {
       const path = documentoStoragePath(doc.alumno_id, doc.tipo, doc.nombre_archivo)
       const tryPath = async (p: string) => {
         const { data: signed } = await admin.storage.from('documentos').createSignedUrl(p, 3600)

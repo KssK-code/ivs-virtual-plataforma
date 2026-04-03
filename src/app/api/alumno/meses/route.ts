@@ -8,7 +8,7 @@ function nivelCanon(raw: string | null | undefined): 'secundaria' | 'preparatori
   const s = (raw ?? '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .trim()
   if (s === 'secundaria' || s.includes('secund')) return 'secundaria'
   if (s === 'preparatoria' || s.includes('prepa')) return 'preparatoria'
