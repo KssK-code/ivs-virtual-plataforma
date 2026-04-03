@@ -11,8 +11,6 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    console.log('[perfil] user.id:', user.id, '| user.email:', user.email)
-
     // ── IVS: preferir alumnos.id = auth.users.id ─────────────────────────────
     const { data: data2, error: error2 } = await supabase
       .from('alumnos')
@@ -25,9 +23,6 @@ export async function GET() {
       .select('id, nombre, apellidos, email, foto_url, rol')
       .eq('id', user.id)
       .single()
-
-    console.log('[perfil] schema nuevo — alumnos error:', error2?.message ?? null)
-    console.log('[perfil] usuario query — error:', errorUsuario?.message ?? null, '| data:', JSON.stringify(usuarioNuevo))
 
     if (!error2 && data2) {
       const a = data2 as unknown as {
@@ -46,8 +41,6 @@ export async function GET() {
       } | null
 
       const nombreCompleto = buildNombre(u?.nombre, u?.apellidos, user.email)
-
-      console.log('[perfil] nombre construido:', nombreCompleto)
 
       return NextResponse.json({
         id:                  a.id,
@@ -69,8 +62,6 @@ export async function GET() {
       .select('*, planes_estudio(nombre, duracion_meses), usuarios(id, nombre, apellidos, email, avatar_url)')
       .eq('usuario_id', user.id)
       .maybeSingle()
-
-    console.log('[perfil] schema antiguo — error:', error?.message ?? null, '| data:', JSON.stringify(data))
 
     if (!error && data) {
       const a = data as unknown as {
@@ -106,15 +97,11 @@ export async function GET() {
       .eq('id', user.id)
       .single()
 
-    console.log('[perfil] fallback usuario — error:', errorFallback?.message ?? null, '| data:', JSON.stringify(uFallback))
-
     const uf = uFallback as unknown as {
       nombre?: string; apellidos?: string; email?: string
     } | null
 
     const nombreFallback = buildNombre(uf?.nombre, uf?.apellidos, user.email)
-
-    console.log('[perfil] fallback nombre:', nombreFallback)
 
     return NextResponse.json({
       id:                  user.id,

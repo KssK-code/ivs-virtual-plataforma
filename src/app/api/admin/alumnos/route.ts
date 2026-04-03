@@ -66,9 +66,6 @@ export async function GET() {
       `)
       .order('created_at', { ascending: false })
 
-    console.log('[GET /api/admin/alumnos] error schema nuevo:', error?.message ?? null)
-    console.log('[GET /api/admin/alumnos] data count:', data?.length ?? 0)
-
     if (!error && data && data.length > 0) {
       type Row = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
@@ -87,6 +84,8 @@ export async function GET() {
           activo:               a.activo !== false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
+          plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
+            + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
           created_at:           a.created_at,
           nombre_completo:      [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
@@ -125,9 +124,6 @@ export async function GET() {
       `)
       .order('created_at', { ascending: false })
 
-    console.log('[GET /api/admin/alumnos] error schema antiguo:', error2?.message ?? null)
-    console.log('[GET /api/admin/alumnos] data2 count:', data2?.length ?? 0)
-
     if (!error2 && data2 && data2.length > 0) {
       type Row2 = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
@@ -146,6 +142,8 @@ export async function GET() {
           activo:               a.activo !== false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
+          plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
+            + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
           created_at:           a.created_at,
           nombre_completo:      [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
@@ -161,15 +159,10 @@ export async function GET() {
     }
 
     // ── Fallback: alumnos sin join + usuarios por separado ────────────────────
-    console.log('[GET /api/admin/alumnos] usando fallback sin join')
     const { data: alumnos, error: errorFallback } = await admin
       .from('alumnos')
       .select('*')
       .order('created_at', { ascending: false })
-
-    console.log('[GET /api/admin/alumnos] fallback error:', errorFallback?.message ?? null)
-    console.log('[GET /api/admin/alumnos] fallback alumnos count:', alumnos?.length ?? 0)
-    if (alumnos?.[0]) console.log('[GET /api/admin/alumnos] sample row keys:', Object.keys(alumnos[0]))
 
     const resultFallback = []
     for (const a of (alumnos ?? []) as {
@@ -191,6 +184,8 @@ export async function GET() {
         activo:               a.activo !== false,
         meses_desbloqueados:  a.meses_desbloqueados ?? 0,
         duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
+        plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
+          + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
         inscripcion_pagada:   a.inscripcion_pagada ?? false,
         created_at:           a.created_at,
         nombre_completo:      [(u as {nombre?:string}|null)?.nombre, (u as {apellidos?:string}|null)?.apellidos].filter(Boolean).join(' ') || '—',

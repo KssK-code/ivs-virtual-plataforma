@@ -11,8 +11,7 @@ async function otorgarLogro(
   alumnoId: string,
   tipoLogro: string
 ): Promise<void> {
-  console.log('Intentando otorgar logro:', tipoLogro, alumnoId)
-  const { data, error } = await db
+  const { error } = await db
     .from('logros_alumno')
     .insert({ alumno_id: alumnoId, tipo_logro: tipoLogro })
     .select('id, tipo_logro, fecha_obtenido')
@@ -23,14 +22,11 @@ async function otorgarLogro(
     const msg = String((error as { message?: string }).message ?? '')
     const dup = code === '23505' || /duplicate key|unique constraint/i.test(msg)
     if (dup) {
-      console.log('Resultado logro:', null, error)
       return
     }
-    console.log('Resultado logro:', null, error)
     console.error('[progreso/semana] Error logro', tipoLogro, error)
     return
   }
-  console.log('Resultado logro:', data, null)
 }
 
 export async function POST(request: NextRequest) {
@@ -42,8 +38,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { semana_id } = body as { semana_id: string }
     if (!semana_id) return NextResponse.json({ error: 'semana_id requerido' }, { status: 400 })
-
-    console.log('=== PROGRESO SEMANA ===', { semanaId: semana_id, userId: user.id })
 
     const { data: alumnoData } = await supabase
       .from('alumnos')
@@ -77,14 +71,8 @@ export async function POST(request: NextRequest) {
     const yaCompletadaAntes = existente?.completada === true
 
     const fechaCompletada = new Date().toISOString()
-    console.log('[progreso/semana] upsert progreso_semanas', {
-      alumno_id: alumno.id,
-      semana_id,
-      completada: true,
-      usa_service_role: !!adminDb,
-    })
 
-    const { data: progresoGuardado, error: upsertError } = await dbProg
+    const { error: upsertError } = await dbProg
       .from('progreso_semanas')
       .upsert(
         {
@@ -102,7 +90,6 @@ export async function POST(request: NextRequest) {
       console.error('[progreso/semana] upsert progreso_semanas:', upsertError)
       return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
     }
-    console.log('[progreso/semana] fila guardada:', progresoGuardado)
 
     // Contar semanas marcadas como completadas (misma fuente que la UI)
     const { count: totalCompletadas, error: countErr } = await dbPriv
@@ -115,21 +102,7 @@ export async function POST(request: NextRequest) {
 
     const semanasCompletadas = totalCompletadas ?? 0
 
-    console.log(
-      '[progreso/semana] semana_id:',
-      semana_id,
-      'alumno:',
-      alumno.id,
-      'ya_completada_antes:',
-      yaCompletadaAntes,
-      'total_completadas:',
-      semanasCompletadas,
-      'usa_service_role:',
-      !!adminDb
-    )
-
     // Primera semana completada en la plataforma (idempotente si ya hay fila)
-    console.log('Evaluando logro primera_semana, semanas completadas:', semanasCompletadas)
     if (semanasCompletadas >= 1) {
       await otorgarLogro(dbPriv, alumno.id, 'primera_semana')
     }
@@ -210,9 +183,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaMax = Math.max(diasRacha, prev?.racha_maxima ?? 0)
 
-    console.log('[progreso/semana] racha upsert', { alumno: alumno.id, diasRacha, nuevaMax, hoyStr })
-
-    const { data: rachaOut, error: erRacha } = await dbPriv
+    const { error: erRacha } = await dbPriv
       .from('racha_actividad')
       .upsert(
         {
@@ -227,7 +198,6 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (erRacha) console.error('[progreso/semana] racha_actividad:', erRacha)
-    else console.log('[progreso/semana] Resultado racha:', rachaOut, erRacha)
 
     if (diasRacha >= 3) await otorgarLogro(dbPriv, alumno.id, 'racha_3_dias')
     if (diasRacha >= 7) await otorgarLogro(dbPriv, alumno.id, 'racha_7_dias')

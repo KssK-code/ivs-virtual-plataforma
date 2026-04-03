@@ -162,7 +162,6 @@ export default function LoginPage() {
       // Normalizar a mayúsculas: soporta 'admin', 'ADMIN', 'alumno', 'ALUMNO'
       const rol  = (usuario?.rol as string | undefined)?.toUpperCase() ?? 'ALUMNO'
       const dest = ROLE_REDIRECTS[rol] ?? '/alumno'
-      console.log('[login] success → rol:', rol, '→ redirect:', dest)
 
       // router.refresh() asegura que los Server Components relean la cookie de sesión
       router.refresh()

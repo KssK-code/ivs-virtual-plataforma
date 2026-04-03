@@ -59,8 +59,6 @@ export async function POST(request: Request) {
       fecha_inscripcion:   new Date().toISOString(),
     }
 
-    console.log('[register-complete] alumnos insert payload:', JSON.stringify(alumnoPayload))
-
     const { error: alumnoError } = await admin
       .from('alumnos')
       .insert(alumnoPayload)
@@ -68,7 +66,6 @@ export async function POST(request: Request) {
     if (alumnoError) {
       // Conflicto de clave primaria → alumno ya existe, no es error fatal
       if (alumnoError.code === '23505') {
-        console.log('[register-complete] alumno ya existía, skipping insert')
         return Response.json({ ok: true, nota: 'alumno ya existía' })
       }
       console.error('[register-complete] alumnos insert error:', alumnoError)

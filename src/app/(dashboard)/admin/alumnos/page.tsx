@@ -32,12 +32,16 @@ const CARD_STYLE = {
   border: '1px solid #2A2F3E',
 }
 
-const WA_NUMERO = '5256543225636'
+const WA_NUMERO = '523328381405'
 
 function waContactarUrl(nombreAlumno: string, telefonoAlumno?: string | null) {
-  const numero = telefonoAlumno
-    ? '52' + telefonoAlumno.replace(/\D/g, '')
-    : WA_NUMERO
+  let numero: string
+  if (telefonoAlumno) {
+    const digits = telefonoAlumno.replace(/\D/g, '')
+    numero = digits.startsWith('52') ? digits : '52' + digits
+  } else {
+    numero = WA_NUMERO
+  }
   const texto = `Hola ${nombreAlumno} 👋, soy de Control Escolar de IVS Virtual. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }
@@ -443,7 +447,7 @@ export default function AlumnosPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
-                      {['Matrícula', 'Nombre', 'Email', 'Plan', 'Meses', 'Inscripción', 'Estado', 'Acciones'].map(h => (
+                      {['Matrícula', 'Nombre', 'Correo', 'Plan', 'Meses', 'Inscripción', 'Estado', 'Acciones'].map(h => (
                         <th key={h} className="text-left px-4 py-3 font-medium" style={{ color: '#94A3B8' }}>{h}</th>
                       ))}
                     </tr>
