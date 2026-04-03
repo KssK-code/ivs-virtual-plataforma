@@ -21,7 +21,7 @@ export async function GET() {
     // ── Alumno: nivel + meses desbloqueados ──────────────────────────────────
     const { data: alumno } = await supabase
       .from('alumnos')
-      .select('nivel, meses_desbloqueados')
+      .select('nivel, meses_desbloqueados, modalidad')
       .eq('id', user.id)
       .single()
 
@@ -30,6 +30,8 @@ export async function GET() {
     const nivelRaw           = (alumno as { nivel: string | null; meses_desbloqueados: number }).nivel
     const nivel              = nivelCanon(nivelRaw)
     const mesesDesbloqueados = (alumno as { meses_desbloqueados: number }).meses_desbloqueados ?? 0
+    const modalidad = (alumno as { nivel: string | null; meses_desbloqueados: number; modalidad: string | null }).modalidad ?? '6_meses'
+    const mesesEfectivos = modalidad === '3_meses' ? mesesDesbloqueados * 2 : mesesDesbloqueados
 
     // ── Materias del nivel del alumno con meses y semanas ───────────────────
     const { data: materias, error } = await supabase
@@ -73,7 +75,7 @@ export async function GET() {
       const mesMinimoRequerido = meses.length > 0
         ? Math.min(...meses.map(m => m.numero_mes))
         : 999
-      const disponible = mesesDesbloqueados >= mesMinimoRequerido
+      const disponible = mesesEfectivos >= mesMinimoRequerido
 
       return {
         id:             mat.id,
