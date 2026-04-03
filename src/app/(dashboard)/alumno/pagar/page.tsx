@@ -1,5 +1,7 @@
 'use client'
 
+import { CONFIG } from '@/lib/config'
+
 export default function PagarPage() {
   return (
     <div className="max-w-2xl space-y-6">
@@ -15,10 +17,10 @@ export default function PagarPage() {
       <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 text-center">
         <p className="text-gray-700">Para desbloquear el siguiente módulo contacta a tu asesor</p>
         <a
-          href="https://wa.me/523328381405"
+          href={`https://wa.me/${CONFIG.whatsapp}`}
           className="mt-2 inline-block bg-green-500 text-white px-4 py-2 rounded-lg"
         >
-          💬 WhatsApp 33 2838 1405
+          {`💬 WhatsApp ${CONFIG.whatsappDisplay}`}
         </a>
       </div>
     </div>

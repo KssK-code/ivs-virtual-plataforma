@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/types'
+import { CONFIG } from '@/lib/config'
 
 interface NavItem {
   label: string
@@ -111,7 +112,6 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
         <div className="flex items-center justify-between px-5 py-4"
           style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
           <div className="flex items-center gap-3">
-            {/* Logo real IVS */}
             <div style={{
               background: 'rgba(255,255,255,0.95)',
               borderRadius: 10,
@@ -121,8 +121,8 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
               justifyContent: 'center',
             }}>
               <Image
-                src="/logo-ivs.jpg"
-                alt="IVS Virtual"
+                src={CONFIG.logo}
+                alt={CONFIG.nombre}
                 width={56}
                 height={40}
                 style={{ height: 40, width: 'auto', display: 'block', objectFit: 'contain' }}
@@ -131,7 +131,7 @@ export function Sidebar({ role, userName, avatarUrl, nivel, isOpen, onClose }: S
             <div>
               <p className="text-sm font-bold leading-tight"
                 style={{ color: '#fff', fontFamily: 'Syne, sans-serif' }}>
-                IVS Virtual
+                {CONFIG.nombre}
               </p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em' }}>
                 INSTITUTO

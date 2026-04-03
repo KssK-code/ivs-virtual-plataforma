@@ -1,3 +1,5 @@
+import { CONFIG } from './config'
+
 export const ROLES = {
   ADMIN: 'ADMIN',
   ALUMNO: 'ALUMNO',
@@ -8,7 +10,7 @@ export const ROLE_REDIRECTS: Record<string, string> = {
   ALUMNO: '/alumno',
 }
 
-export const APP_NAME = 'IVS Virtual'
+export const APP_NAME = CONFIG.nombre
 
 export const COLORS = {
   bg: '#0B0D11',

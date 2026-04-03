@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users, Search, Plus, X, Loader2, Eye, MessageSquare, CheckCheck, Clock, AlertCircle } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
+import { CONFIG } from '@/lib/config'
 
 interface Alumno {
   id: string
@@ -32,17 +33,15 @@ const CARD_STYLE = {
   border: '1px solid #2A2F3E',
 }
 
-const WA_NUMERO = '523328381405'
-
 function waContactarUrl(nombreAlumno: string, telefonoAlumno?: string | null) {
   let numero: string
   if (telefonoAlumno) {
     const digits = telefonoAlumno.replace(/\D/g, '')
     numero = digits.startsWith('52') ? digits : '52' + digits
   } else {
-    numero = WA_NUMERO
+    numero = CONFIG.whatsapp
   }
-  const texto = `Hola ${nombreAlumno} 👋, soy de Control Escolar de IVS Virtual. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
+  const texto = `Hola ${nombreAlumno} 👋, soy de Control Escolar de ${CONFIG.nombre}. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
 }
 
@@ -246,7 +245,7 @@ export default function AlumnosPage() {
           <p className="text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
             Estos alumnos se registraron pero aún no han pagado su inscripción.
             Contáctalos por WhatsApp para darles la bienvenida y ayudarlos a continuar.
-            El número de Control Escolar es <strong style={{ color: '#F59E0B' }}>+{WA_NUMERO}</strong>.
+            El número de Control Escolar es <strong style={{ color: '#F59E0B' }}>{CONFIG.whatsappDisplay}</strong>.
           </p>
         </div>
       )}

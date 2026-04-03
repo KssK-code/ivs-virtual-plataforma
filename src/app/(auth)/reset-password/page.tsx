@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Lock, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { ESCUELA_CONFIG } from '@/lib/config'
+import { CONFIG } from '@/lib/config'
 import { EdvexLogo } from '@/components/ui/edvex-logo'
 
 export default function ResetPasswordPage() {
@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
             Nueva contraseña
           </h1>
           <p className="text-sm font-medium mt-1 text-center" style={{ color: '#1ad9ff' }}>
-            {ESCUELA_CONFIG.nombre}
+            {CONFIG.nombre}
           </p>
           <p className="text-xs mt-3 text-center" style={{ color: '#64748B' }}>
             Escribe tu nueva contraseña. Mínimo 6 caracteres.
@@ -228,7 +228,7 @@ export default function ResetPasswordPage() {
       </div>
 
       <p className="text-xs" style={{ color: '#374151' }}>
-        © {new Date().getFullYear()} {ESCUELA_CONFIG.nombre}. Todos los derechos reservados.
+        © {new Date().getFullYear()} {CONFIG.nombreCompleto}. Todos los derechos reservados.
       </p>
     </div>
   )

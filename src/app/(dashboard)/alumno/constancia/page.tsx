@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, Printer, Download } from 'lucide-react'
+import { CONFIG } from '@/lib/config'
 
 type Estado = 'Acreditada' | 'No acreditada' | 'Pendiente'
 
@@ -89,7 +90,7 @@ export default function ConstanciaPage() {
     ? Math.round((datos.meses_desbloqueados / datos.duracion_meses) * 100)
     : 0
 
-  const disclaimerParts = `Este documento es un comprobante académico interno con folio {folio} generado digitalmente por IVS Virtual. Para verificar su autenticidad, contacte a administración.`.split('{folio}')
+  const disclaimerParts = `Este documento es un comprobante académico interno con folio {folio} generado digitalmente por ${CONFIG.nombre}. Para verificar su autenticidad, contacte a administración.`.split('{folio}')
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
@@ -159,7 +160,7 @@ export default function ConstanciaPage() {
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo-ivs.jpg" alt="IVS" style={{ height: 60, width: 'auto' }} />
+              <img src={CONFIG.logo} alt={CONFIG.nombre} style={{ height: 60, width: 'auto' }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span
                   className="constancia-print-title-gradient"
@@ -169,7 +170,7 @@ export default function ConstanciaPage() {
                     WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text', lineHeight: 1.1,
                   }}
-                >IVS Instituto Virtual Superior</span>
+                >{CONFIG.nombreCompleto}</span>
                 <span style={{ fontSize: 9, letterSpacing: '0.2em', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', marginTop: 4 }}>
                   Incorporado a la SEP &nbsp;·&nbsp; CCT: 09GBD0002D
                 </span>
@@ -250,7 +251,7 @@ export default function ConstanciaPage() {
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.matricula}</strong>,{' '}
               está inscrito en el programa{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.plan_nombre}</strong>{' '}
-              de IVS Virtual.
+              {` de ${CONFIG.nombre}.`}
             </p>
 
             {/* Párrafo 2 */}
@@ -268,7 +269,7 @@ export default function ConstanciaPage() {
               display: 'flex', flexWrap: 'wrap', gap: '6px 24px',
             }}>
               {[
-                { label: 'Institución', value: 'IVS Instituto Virtual Superior' },
+                { label: 'Institución', value: CONFIG.nombreCompleto },
                 { label: 'CCT', value: '09GBD0002D' },
                 { label: 'Autoridad educativa', value: 'Incorporado a la SEP' },
                 { label: 'Sistema', value: datos.duracion_meses <= 6 && datos.plan_nombre?.toLowerCase().includes('prepa')
@@ -380,7 +381,7 @@ export default function ConstanciaPage() {
                 Dirección Académica
               </div>
               <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>
-                IVS Virtual
+                {CONFIG.nombre}
               </div>
             </div>
           </div>

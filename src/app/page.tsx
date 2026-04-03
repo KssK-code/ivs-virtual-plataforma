@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import './landing.css'
+import { CONFIG } from '@/lib/config'
 
-const WA_URL = 'https://wa.me/523328381405'
+const WA_URL = `https://wa.me/${CONFIG.whatsapp}`
 
 const WaButton = ({ className = '' }: { className?: string }) => (
   <a
@@ -45,8 +46,8 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <nav>
         <div className="nav-logo">
-          <Image src="/logo-ivs.jpg" alt="IVS Instituto Virtual Superior" width={45} height={45} style={{ objectFit: 'contain', borderRadius: 6 }} />
-          <div className="nav-logo-text">IVS Virtual</div>
+          <Image src={CONFIG.logo} alt={CONFIG.nombreCompleto} width={45} height={45} style={{ objectFit: 'contain', borderRadius: 6 }} />
+          <div className="nav-logo-text">{CONFIG.nombre}</div>
         </div>
         <div className="nav-right">
           <a
@@ -118,7 +119,7 @@ export default function LandingPage() {
           <div className="hero-right">
             <Image
               src="/alumna-certificado.jpg"
-              alt="Alumna con certificado IVS"
+              alt={`Alumna con certificado ${CONFIG.nombre}`}
               width={520}
               height={450}
               className="hero-img"
@@ -203,7 +204,7 @@ export default function LandingPage() {
       {/* ── BENEFICIOS ── */}
       <section className="section-gray" id="beneficios">
         <div className="section-header">
-          <div className="tag-line">Por qué IVS Virtual</div>
+          <div className="tag-line">Por qué {CONFIG.nombre}</div>
           <h2 className="sec-title">Todo lo que necesitas,<br />nada de lo que no</h2>
           <p className="sec-sub">Diseñado para que termines. Sin excusas, sin complicaciones.</p>
         </div>
@@ -234,7 +235,7 @@ export default function LandingPage() {
           <div className="tag-line">Convenios Sindicales</div>
           <h2 className="sec-title">Precio especial para trabajadores sindicalizados</h2>
           <p className="sec-sub">
-            IVS Virtual tiene convenio con el Sindicato del IMSS y el Sindicato de Ferrocarrileros de México,
+            {CONFIG.nombre} tiene convenio con el Sindicato del IMSS y el Sindicato de Ferrocarrileros de México,
             ofreciendo precios preferenciales para trabajadores sindicalizados y sus familias.
           </p>
         </div>
@@ -287,7 +288,7 @@ export default function LandingPage() {
             </div>
 
             <p className="respaldo-desc">
-              IVS Instituto Virtual Superior está oficialmente registrado ante la Secretaría de Educación Pública como Centro de Asesoría y Gestoría para certificación de Secundaria y Preparatoria.
+              {CONFIG.nombreCompleto} está oficialmente registrado ante la Secretaría de Educación Pública como Centro de Asesoría y Gestoría para certificación de Secundaria y Preparatoria.
             </p>
             <p className="respaldo-desc respaldo-desc--footer">
               Con este respaldo oficial, nuestros alumnos obtienen certificados con validez en toda la República Mexicana, reconocidos por universidades e instituciones educativas.
@@ -298,7 +299,7 @@ export default function LandingPage() {
           <div className="respaldo-img-wrap">
             <Image
               src="/oficio-dgb.png"
-              alt="Oficio oficial DGB — IVS Instituto Virtual Superior"
+              alt={`Oficio oficial DGB — ${CONFIG.nombreCompleto}`}
               width={520}
               height={640}
               style={{ width: '100%', height: 'auto', display: 'block' }}
@@ -312,7 +313,7 @@ export default function LandingPage() {
         <div className="section-header">
           <div className="tag-line">Planes y Precios</div>
           <h2 className="sec-title">Invierte en tu futuro</h2>
-          <p className="sec-sub">Inscripción única: <strong>$399 MXN</strong> · Después pagas mensual según tu modalidad.</p>
+          <p className="sec-sub">Inscripción única: <strong>{`$${CONFIG.precios.inscripcion} MXN`}</strong> · Después pagas mensual según tu modalidad.</p>
         </div>
 
         {/* Tabla de precios */}
@@ -398,18 +399,18 @@ export default function LandingPage() {
             <div
               className="cert-img-wrap"
               style={{ cursor: 'pointer' }}
-              onClick={() => setLightbox({ src: '/certificado-ivs.jpg', alt: 'Certificado oficial SEP — IVS Instituto Virtual Superior' })}
+              onClick={() => setLightbox({ src: '/certificado-ivs.jpg', alt: `Certificado oficial SEP — ${CONFIG.nombreCompleto}` })}
             >
               <Image
                 src="/certificado-ivs.jpg"
-                alt="Certificado oficial SEP — IVS Instituto Virtual Superior"
+                alt={`Certificado oficial SEP — ${CONFIG.nombreCompleto}`}
                 fill
                 style={{ objectFit: 'contain' }}
                 sizes="(max-width: 768px) 100vw, 600px"
               />
             </div>
             <div className="cert-card-body">
-              <div className="cert-badge cert-badge-mx">✅ CERTIFICADO SEP — IVS INSTITUTO VIRTUAL SUPERIOR</div>
+              <div className="cert-badge cert-badge-mx">✅ CERTIFICADO SEP — {CONFIG.nombreCompleto.toUpperCase()}</div>
               <div className="cert-card-title">Certificado de Terminación de Estudios</div>
               <p className="cert-card-desc">
                 Emitido por el Sistema Educativo Nacional (Secundaria) o Sistema Nacional de Educación Media Superior (Preparatoria).
@@ -518,7 +519,7 @@ export default function LandingPage() {
             },
             {
               q: '¿Puedo ver la plataforma antes de pagar?',
-              a: 'Sí. Crea tu cuenta gratis, entra a la plataforma y explora el contenido. Solo necesitas pagar la inscripción ($399 MXN) para desbloquear acceso completo.',
+              a: `Sí. Crea tu cuenta gratis, entra a la plataforma y explora el contenido. Solo necesitas pagar la inscripción ($${CONFIG.precios.inscripcion} MXN) para desbloquear acceso completo.`,
             },
           ]).map((item, i) => (
             <div key={i} className={`faq-item${openFaq === i ? ' open' : ''}`}>
@@ -560,7 +561,7 @@ export default function LandingPage() {
           Tu certificado te espera.<br />Solo falta el primer paso.
         </h2>
         <p className="cta-final-sub">
-          Cientos de alumnos en México ya terminaron su Secundaria o Preparatoria con IVS Virtual.
+          Cientos de alumnos en México ya terminaron su Secundaria o Preparatoria con {CONFIG.nombre}.
           En 6 meses — o 3 — puedes ser el siguiente.
         </p>
 
@@ -572,7 +573,7 @@ export default function LandingPage() {
         </div>
 
         <p className="cta-final-footnote">
-          Sin tarjeta de crédito · Registro en 2 minutos · Inscripción desde $399 MXN
+          {`Sin tarjeta de crédito · Registro en 2 minutos · Inscripción desde $${CONFIG.precios.inscripcion} MXN`}
         </p>
       </section>
 
@@ -583,11 +584,11 @@ export default function LandingPage() {
           <span>Empresa legalmente constituida en México · Emitimos facturas (CFDI)</span>
         </div>
         <div className="footer-logo">
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={32} height={32} style={{ objectFit: 'contain', borderRadius: 4 }} />
-          <span className="footer-logo-text">IVS Virtual</span>
+          <Image src={CONFIG.logo} alt={CONFIG.nombre} width={32} height={32} style={{ objectFit: 'contain', borderRadius: 4 }} />
+          <span className="footer-logo-text">{CONFIG.nombre}</span>
         </div>
         <p className="footer-text">
-          ivsvirtual.com · Preparatoria · Secundaria · Instituto Virtual Superior
+          {CONFIG.dominio} · Preparatoria · Secundaria · {CONFIG.nombreCompleto}
         </p>
       </footer>
     </div>
