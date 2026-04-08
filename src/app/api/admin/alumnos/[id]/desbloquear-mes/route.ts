@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(
   _request: NextRequest,
@@ -22,7 +22,11 @@ export async function POST(
     const esAdmin = (usuarioAdmin?.rol as string | undefined)?.toLowerCase() === 'admin'
     if (!esAdmin) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
-    const admin = createAdminClient()
+    // ── Usar service role para saltarse RLS ───────────────────────────────────
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // ── Obtener alumno ────────────────────────────────────────────────────────
     const { data: alumno, error: fetchError } = await admin

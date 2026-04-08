@@ -1,17 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-function nivelCanon(raw: string | null | undefined): 'secundaria' | 'preparatoria' {
-  const s = (raw ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-  if (s === 'secundaria' || s.includes('secund')) return 'secundaria'
-  if (s === 'preparatoria' || s.includes('prepa')) return 'preparatoria'
-  return 'preparatoria'
-}
-
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -21,17 +10,14 @@ export async function GET() {
     // ── Alumno: nivel + meses desbloqueados ──────────────────────────────────
     const { data: alumno } = await supabase
       .from('alumnos')
-      .select('nivel, meses_desbloqueados, modalidad')
+      .select('nivel, meses_desbloqueados')
       .eq('id', user.id)
       .single()
 
     if (!alumno) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
-    const nivelRaw           = (alumno as { nivel: string | null; meses_desbloqueados: number }).nivel
-    const nivel              = nivelCanon(nivelRaw)
-    const mesesDesbloqueados = (alumno as { meses_desbloqueados: number }).meses_desbloqueados ?? 0
-    const modalidad = (alumno as { nivel: string | null; meses_desbloqueados: number; modalidad: string | null }).modalidad ?? '6_meses'
-    const mesesEfectivos = modalidad === '3_meses' ? mesesDesbloqueados * 2 : mesesDesbloqueados
+    const nivel              = (alumno as { nivel: string; meses_desbloqueados: number }).nivel
+    const mesesDesbloqueados = (alumno as { nivel: string; meses_desbloqueados: number }).meses_desbloqueados ?? 0
 
     // ── Materias del nivel del alumno con meses y semanas ───────────────────
     const { data: materias, error } = await supabase
@@ -71,11 +57,8 @@ export async function GET() {
     const result = ((materias ?? []) as unknown as MateriaRow[]).map(mat => {
       const meses        = mat.meses_contenido ?? []
       const totalSemanas = meses.reduce((acc, mes) => acc + (mes.semanas?.length ?? 0), 0)
-      // Mes mínimo requerido para acceder a esta materia
-      const mesMinimoRequerido = meses.length > 0
-        ? Math.min(...meses.map(m => m.numero_mes))
-        : 999
-      const disponible = mesesEfectivos >= mesMinimoRequerido
+      // Materia disponible si el alumno tiene al menos 1 mes desbloqueado
+      const disponible   = mesesDesbloqueados > 0
 
       return {
         id:             mat.id,

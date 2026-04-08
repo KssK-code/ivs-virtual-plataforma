@@ -4,13 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users, Search, Plus, X, Loader2, Eye, MessageSquare, CheckCheck, Clock, AlertCircle } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { CONFIG } from '@/lib/config'
 
 interface Alumno {
   id: string
   nombre_completo: string
   email: string
-  telefono?: string | null
   activo: boolean
   matricula: string
   plan_nombre: string
@@ -33,16 +31,11 @@ const CARD_STYLE = {
   border: '1px solid #2A2F3E',
 }
 
-function waContactarUrl(nombreAlumno: string, telefonoAlumno?: string | null) {
-  let numero: string
-  if (telefonoAlumno) {
-    const digits = telefonoAlumno.replace(/\D/g, '')
-    numero = digits.startsWith('52') ? digits : '52' + digits
-  } else {
-    numero = CONFIG.whatsapp
-  }
-  const texto = `Hola ${nombreAlumno} 👋, soy de Control Escolar de ${CONFIG.nombre}. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
-  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
+const WA_NUMERO = '5256543225636'
+
+function waContactarUrl(nombre: string) {
+  const texto = `Hola ${nombre} 👋, soy de Control Escolar de IVS Virtual. Vi que te registraste y quería darte la bienvenida y resolver cualquier duda que tengas 🎓`
+  return `https://wa.me/${WA_NUMERO}?text=${encodeURIComponent(texto)}`
 }
 
 function tiempoRelativo(dateStr: string) {
@@ -74,7 +67,6 @@ export default function AlumnosPage() {
     password: '',
     nivel: '',
     modalidad: '',
-    telefono: '',
   })
 
   const cargarAlumnos = useCallback(async () => {
@@ -132,7 +124,7 @@ export default function AlumnosPage() {
       const nombre = form.nombre_completo
       const matricula = data.matricula ?? ''
       setModalOpen(false)
-      setForm({ nombre_completo: '', email: '', password: '', nivel: '', modalidad: '', telefono: '' })
+      setForm({ nombre_completo: '', email: '', password: '', nivel: '', modalidad: '' })
       await cargarAlumnos()
       showToast(`✓ Alumno ${nombre} creado${matricula ? ` con matrícula ${matricula}` : ''}`, 'success')
     } catch {
@@ -245,7 +237,7 @@ export default function AlumnosPage() {
           <p className="text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
             Estos alumnos se registraron pero aún no han pagado su inscripción.
             Contáctalos por WhatsApp para darles la bienvenida y ayudarlos a continuar.
-            El número de Control Escolar es <strong style={{ color: '#F59E0B' }}>{CONFIG.whatsappDisplay}</strong>.
+            El número de Control Escolar es <strong style={{ color: '#F59E0B' }}>+{WA_NUMERO}</strong>.
           </p>
         </div>
       )}
@@ -288,7 +280,7 @@ export default function AlumnosPage() {
                     {/* Info alumno */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-sm text-gray-100">
+                        <p className="font-semibold text-sm text-gray-900">
                           {a.nombre_completo}
                         </p>
                         {a.contactado_whatsapp && (
@@ -320,7 +312,7 @@ export default function AlumnosPage() {
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                       {/* Botón WhatsApp */}
                       <a
-                        href={waContactarUrl(a.nombre_completo.split(' ')[0], a.telefono)}
+                        href={waContactarUrl(a.nombre_completo.split(' ')[0])}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
@@ -446,7 +438,7 @@ export default function AlumnosPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr style={{ borderBottom: '1px solid #2A2F3E' }}>
-                      {['Matrícula', 'Nombre', 'Correo', 'Plan', 'Meses', 'Inscripción', 'Estado', 'Acciones'].map(h => (
+                      {['Matrícula', 'Nombre', 'Email', 'Plan', 'Meses', 'Inscripción', 'Estado', 'Acciones'].map(h => (
                         <th key={h} className="text-left px-4 py-3 font-medium" style={{ color: '#94A3B8' }}>{h}</th>
                       ))}
                     </tr>
@@ -516,7 +508,7 @@ export default function AlumnosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
           <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={CARD_STYLE}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-100">Nuevo Alumno</h3>
+              <h3 className="text-lg font-bold text-gray-900">Nuevo Alumno</h3>
               <button
                 onClick={() => { setModalOpen(false); setFormError(null) }}
                 className="p-1.5 rounded-lg"
@@ -532,14 +524,13 @@ export default function AlumnosPage() {
               {[
                 { label: 'Nombre completo', key: 'nombre_completo', type: 'text', placeholder: 'Juan Pérez García' },
                 { label: 'Correo electrónico', key: 'email', type: 'email', placeholder: 'alumno@ejemplo.com' },
-                { label: 'Teléfono (WhatsApp)', key: 'telefono', type: 'tel', placeholder: '3312345678' },
                 { label: 'Contraseña temporal', key: 'password', type: 'password', placeholder: '••••••••' },
               ].map(({ label, key, type, placeholder }) => (
                 <div key={key} className="space-y-1.5">
                   <label className="block text-sm font-medium" style={{ color: '#94A3B8' }}>{label}</label>
                   <input
                     type={type}
-                    required={key !== 'telefono'}
+                    required
                     placeholder={placeholder}
                     value={form[key as keyof typeof form]}
                     onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}

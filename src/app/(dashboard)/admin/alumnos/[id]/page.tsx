@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, X, Loader2, Key, Eye, EyeOff, Download, FileText, StickyNote, Save, LockOpen, CheckCircle2, CreditCard } from 'lucide-react'
 import { useToast, ToastContainer } from '@/components/ui/toast'
-import { CONFIG } from '@/lib/config'
+import { config } from '@/lib/config'
 
 interface AlumnoDetalle {
   id: string
@@ -293,7 +293,7 @@ export default function AlumnoDetallePage() {
           </button>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl font-bold text-gray-900">{alumno.usuario.nombre_completo}</h1>
+              <h1 className="text-xl font-bold text-gray-100">{alumno.usuario.nombre_completo}</h1>
               <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(91,108,255,0.15)', color: '#7B8AFF' }}>
                 {alumno.matricula}
               </span>
@@ -419,6 +419,8 @@ export default function AlumnoDetallePage() {
           })}
         </div>
       </div>
+
+
 
       {/* Calificaciones */}
       <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
@@ -752,7 +754,7 @@ export default function AlumnoDetallePage() {
               <p className="text-4xl mb-2">💳</p>
               <p className="text-sm font-medium text-gray-100">
                 ¿Confirmas que el alumno pagó su inscripción de{' '}
-                <span style={{ color: '#7B8AFF' }}>{`$${CONFIG.precios.inscripcion}`}</span>?
+                <span style={{ color: '#7B8AFF' }}>${config.precios.inscripcion}</span>?
               </p>
               <p className="text-sm font-bold mt-0.5 text-gray-100">
                 {alumno.usuario.nombre_completo}

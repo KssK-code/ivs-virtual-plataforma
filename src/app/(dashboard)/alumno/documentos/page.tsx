@@ -104,7 +104,6 @@ export default function DocumentosPage() {
 
   const [documentos, setDocumentos] = useState<Documento[]>([])
   const [planNombre, setPlanNombre] = useState('')
-  const [nivelAlumno, setNivelAlumno] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState<DocTipo | null>(null)
   const fileInputRefs = useRef<Partial<Record<DocTipo, HTMLInputElement | null>>>({})
@@ -115,7 +114,6 @@ export default function DocumentosPage() {
       .then(data => {
         setDocumentos(Array.isArray(data.documentos) ? data.documentos : [])
         setPlanNombre(data.plan_nombre ?? '')
-        setNivelAlumno(data.nivel ?? null)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -147,26 +145,20 @@ export default function DocumentosPage() {
     </div>
   )
 
-  const esSecundaria =
-    nivelAlumno === 'secundaria'
-    || planNombre.toLowerCase().includes('ecundaria')
+  const esSecundaria = planNombre.toLowerCase().includes('ecundaria')
   const tiposActivos = esSecundaria ? TIPOS_SECUNDARIA : TIPOS_PREPA
   const docMap = new Map(documentos.map(d => [d.tipo, d]))
 
   return (
-    <div className="space-y-6 max-w-3xl w-full min-w-0 px-0">
+    <div className="space-y-6 max-w-3xl">
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
       <div>
-        <h2 className="text-xl font-bold tracking-tight" style={{ color: '#1B3A57' }}>
-          Mis Documentos
-        </h2>
-        <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>
-          Sube y administra tus documentos escolares
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">Mis Documentos</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>Sube y administra tus documentos escolares</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {tiposActivos.map(tipo => {
           const doc = docMap.get(tipo)
           const isUploading = uploading === tipo

@@ -60,7 +60,7 @@ export default function DocumentosAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [filtroTipo, setFiltroTipo] = useState<string>('')
-  const [filtroEstado, setFiltroEstado] = useState<DocEstado | ''>('')
+  const [filtroEstado, setFiltroEstado] = useState<DocEstado | ''>('pendiente')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [comentarios, setComentarios] = useState<Record<string, string>>({})
 
@@ -106,15 +106,11 @@ export default function DocumentosAdminPage() {
   }
 
   const filtrados = documentos.filter((d) => {
-    const normalize = (s: string) =>
-      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     const nombre = d.alumno_nombre ?? ''
-    const q = normalize(busqueda)
     const matchBusqueda =
       !busqueda ||
-      normalize(nombre).includes(q) ||
-      normalize(d.tipo).includes(q) ||
-      normalize(DOC_LABELS[d.tipo] ?? '').includes(q)
+      nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      d.tipo.toLowerCase().includes(busqueda.toLowerCase())
     const matchTipo = !filtroTipo || d.tipo === filtroTipo
     const matchEstado = !filtroEstado || d.estado === filtroEstado
     return matchBusqueda && matchTipo && matchEstado

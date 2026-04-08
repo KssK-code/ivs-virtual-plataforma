@@ -13,25 +13,6 @@ async function checkAdmin(userId: string): Promise<boolean> {
   return (data?.rol as string | undefined)?.toUpperCase() === 'ADMIN'
 }
 
-/** Columna opcional hasta aplicar migración; si falla el SELECT, todos false. */
-async function contactadoWhatsappMap(
-  admin: ReturnType<typeof createAdminClient>,
-  ids: string[]
-): Promise<Map<string, boolean>> {
-  const m = new Map<string, boolean>()
-  if (ids.length === 0) return m
-  const { data, error } = await admin
-    .from('alumnos')
-    .select('id, contactado_whatsapp')
-    .in('id', ids)
-  if (error) return m
-  for (const row of data ?? []) {
-    const r = row as { id: string; contactado_whatsapp?: boolean }
-    m.set(r.id, r.contactado_whatsapp === true)
-  }
-  return m
-}
-
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -51,7 +32,7 @@ export async function GET() {
         matricula,
         nivel,
         modalidad,
-        es_sindicalizado,
+        sindicalizado,
         activo,
         meses_desbloqueados,
         inscripcion_pagada,
@@ -60,18 +41,20 @@ export async function GET() {
           nombre,
           apellidos,
           email,
-          foto_url,
-          telefono
+          foto_url
         )
       `)
       .order('created_at', { ascending: false })
 
+    console.log('[GET /api/admin/alumnos] error schema nuevo:', error?.message ?? null)
+    console.log('[GET /api/admin/alumnos] data count:', data?.length ?? 0)
+
     if (!error && data && data.length > 0) {
       type Row = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
-        es_sindicalizado?: boolean; sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
+        sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
         inscripcion_pagada?: boolean; created_at: string
-        usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null; telefono?: string | null } | null
+        usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null } | null
       }
       const result = (data as unknown as Row[]).map(a => {
         const u = Array.isArray(a.usuarios) ? a.usuarios[0] : a.usuarios
@@ -80,24 +63,18 @@ export async function GET() {
           matricula:            a.matricula ?? 'IVS-0000',
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
-          sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
-          activo:               a.activo !== false,
+          sindicalizado:        a.sindicalizado ?? false,
+          activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
-          plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
-            + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
           created_at:           a.created_at,
           nombre_completo:      [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
           email:                u?.email ?? '—',
-          telefono:             u?.telefono ?? null,
           foto_url:             u?.foto_url ?? null,
         }
       })
-      const cMap = await contactadoWhatsappMap(admin, result.map(r => r.id))
-      return NextResponse.json(
-        result.map(r => ({ ...r, contactado_whatsapp: cMap.get(r.id) ?? false }))
-      )
+      return NextResponse.json(result)
     }
 
     // ── Intento 2: schema antiguo — alumnos.usuario_id → usuarios.id ─────────
@@ -118,18 +95,20 @@ export async function GET() {
           nombre,
           apellidos,
           email,
-          foto_url,
-          telefono
+          foto_url
         )
       `)
       .order('created_at', { ascending: false })
+
+    console.log('[GET /api/admin/alumnos] error schema antiguo:', error2?.message ?? null)
+    console.log('[GET /api/admin/alumnos] data2 count:', data2?.length ?? 0)
 
     if (!error2 && data2 && data2.length > 0) {
       type Row2 = {
         id: string; matricula?: string; nivel?: string; modalidad?: string
         sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
         inscripcion_pagada?: boolean; created_at: string; usuario_id?: string
-        usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null; telefono?: string | null } | null
+        usuarios: { nombre?: string; apellidos?: string; email?: string; foto_url?: string | null } | null
       }
       const result2 = (data2 as unknown as Row2[]).map(a => {
         const u = Array.isArray(a.usuarios) ? a.usuarios[0] : a.usuarios
@@ -138,41 +117,40 @@ export async function GET() {
           matricula:            a.matricula ?? 'IVS-0000',
           nivel:                a.nivel ?? null,
           modalidad:            a.modalidad ?? '6_meses',
-          sindicalizado:        Boolean(a.sindicalizado),
-          activo:               a.activo !== false,
+          sindicalizado:        a.sindicalizado ?? false,
+          activo:               a.activo ?? false,
           meses_desbloqueados:  a.meses_desbloqueados ?? 0,
           duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
-          plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
-            + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
           inscripcion_pagada:   a.inscripcion_pagada ?? false,
           created_at:           a.created_at,
           nombre_completo:      [u?.nombre, u?.apellidos].filter(Boolean).join(' ') || '—',
           email:                u?.email ?? '—',
-          telefono:             u?.telefono ?? null,
           foto_url:             u?.foto_url ?? null,
         }
       })
-      const cMap2 = await contactadoWhatsappMap(admin, result2.map(r => r.id))
-      return NextResponse.json(
-        result2.map(r => ({ ...r, contactado_whatsapp: cMap2.get(r.id) ?? false }))
-      )
+      return NextResponse.json(result2)
     }
 
     // ── Fallback: alumnos sin join + usuarios por separado ────────────────────
+    console.log('[GET /api/admin/alumnos] usando fallback sin join')
     const { data: alumnos, error: errorFallback } = await admin
       .from('alumnos')
       .select('*')
       .order('created_at', { ascending: false })
 
+    console.log('[GET /api/admin/alumnos] fallback error:', errorFallback?.message ?? null)
+    console.log('[GET /api/admin/alumnos] fallback alumnos count:', alumnos?.length ?? 0)
+    if (alumnos?.[0]) console.log('[GET /api/admin/alumnos] sample row keys:', Object.keys(alumnos[0]))
+
     const resultFallback = []
     for (const a of (alumnos ?? []) as {
       id: string; matricula?: string; nivel?: string; modalidad?: string
-      es_sindicalizado?: boolean; sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
-      inscripcion_pagada?: boolean; contactado_whatsapp?: boolean; created_at: string
+      sindicalizado?: boolean; activo?: boolean; meses_desbloqueados?: number
+      inscripcion_pagada?: boolean; created_at: string
     }[]) {
       const { data: u } = await admin
         .from('usuarios')
-        .select('nombre, apellidos, email, foto_url, telefono')
+        .select('nombre, apellidos, email, foto_url')
         .eq('id', a.id)
         .single()
       resultFallback.push({
@@ -180,27 +158,18 @@ export async function GET() {
         matricula:            a.matricula ?? 'IVS-0000',
         nivel:                a.nivel ?? null,
         modalidad:            a.modalidad ?? '6_meses',
-        sindicalizado:        Boolean(a.es_sindicalizado ?? a.sindicalizado),
-        activo:               a.activo !== false,
+        sindicalizado:        a.sindicalizado ?? false,
+        activo:               a.activo ?? false,
         meses_desbloqueados:  a.meses_desbloqueados ?? 0,
         duracion_meses:       a.modalidad === '3_meses' ? 3 : 6,
-        plan_nombre:          (a.nivel === 'preparatoria' ? 'Preparatoria' : 'Secundaria')
-          + (a.modalidad === '3_meses' ? ' · 3 meses' : ' · 6 meses'),
         inscripcion_pagada:   a.inscripcion_pagada ?? false,
         created_at:           a.created_at,
         nombre_completo:      [(u as {nombre?:string}|null)?.nombre, (u as {apellidos?:string}|null)?.apellidos].filter(Boolean).join(' ') || '—',
         email:                (u as {email?:string}|null)?.email ?? '—',
-        telefono:             (u as {telefono?:string|null}|null)?.telefono ?? null,
         foto_url:             (u as {foto_url?:string|null}|null)?.foto_url ?? null,
       })
     }
-    const cMapF = await contactadoWhatsappMap(admin, resultFallback.map(r => r.id))
-    return NextResponse.json(
-      resultFallback.map(r => ({
-        ...r,
-        contactado_whatsapp: cMapF.get(r.id) ?? false,
-      }))
-    )
+    return NextResponse.json(resultFallback)
 
   } catch (err) {
     console.error('[GET /api/admin/alumnos] excepción:', err)
@@ -218,7 +187,7 @@ export async function POST(request: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
     const body = await request.json()
-    const { nombre_completo, email, password, nivel, modalidad, telefono } = body
+    const { nombre_completo, email, password, nivel, modalidad } = body
 
     // Aceptar "nombre_completo" del form y dividirlo en nombre / apellidos
     const partes     = (nombre_completo as string | undefined)?.trim().split(/\s+/) ?? []
@@ -254,14 +223,7 @@ export async function POST(request: NextRequest) {
     const matricula = `IVS-${year}-${rand}`
 
     // Insertar en usuarios
-    await admin.from('usuarios').insert({
-      id: newUserId,
-      nombre,
-      apellidos,
-      email,
-      rol: 'ALUMNO',
-      telefono: telefono ?? null,
-    })
+    await admin.from('usuarios').insert({ id: newUserId, nombre, apellidos, email, rol: 'ALUMNO' })
 
     // Insertar en alumnos (nivel + modalidad obligatorios)
     const { data: alumnoData, error: alumnoError } = await admin

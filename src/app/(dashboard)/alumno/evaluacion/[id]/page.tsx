@@ -164,17 +164,17 @@ export default function EvaluacionPage() {
 
           <div className="flex items-center justify-center gap-4 sm:gap-8 mt-5 pt-5" style={{ borderTop: '1px solid #2A2F3E' }}>
             <div>
-              <p className="text-xl sm:text-2xl font-bold text-gray-100">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {resultado.correctas}/{resultado.total_preguntas}
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Correctas</p>
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-bold text-gray-100">{pct}%</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{pct}%</p>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Porcentaje</p>
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-bold text-gray-100">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {resultado.intento_numero}/{evaluacion?.intentos_max}
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Intento</p>
@@ -287,7 +287,7 @@ export default function EvaluacionPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate text-gray-100">{evaluacion ? evaluacion.titulo : ''}</p>
+            <p className="text-sm font-semibold truncate text-gray-900">{evaluacion ? evaluacion.titulo : ''}</p>
             <p className="text-xs" style={{ color: '#94A3B8' }}>
               {preguntaActual + 1} / {preguntas.length}
             </p>
@@ -308,7 +308,7 @@ export default function EvaluacionPage() {
 
       {/* Card pregunta */}
       <div className="rounded-2xl p-4 sm:p-6 space-y-4" style={CARD}>
-        <p className="text-sm sm:text-base font-semibold leading-relaxed text-gray-100">
+        <p className="text-sm sm:text-base font-semibold leading-relaxed text-gray-900">
           {pregunta.texto}
         </p>
 
@@ -411,7 +411,7 @@ export default function EvaluacionPage() {
           <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={CARD}>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-6 h-6 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <h3 className="text-base font-bold text-gray-100">¿Enviar examen?</h3>
+              <h3 className="text-base font-bold text-gray-900">¿Enviar examen?</h3>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>
               ¿Estás seguro de que deseas enviar?{' '}

@@ -126,7 +126,7 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}>
             <Camera className="w-4 h-4" style={{ color: '#818CF8' }} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-100">Foto de perfil</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Foto de perfil</h3>
         </div>
         <div className="p-5 flex items-center gap-5">
           <div className="relative flex-shrink-0">
@@ -184,7 +184,7 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(91,108,255,0.15)' }}>
             <User className="w-4 h-4" style={{ color: '#7B8AFF' }} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-100">Información Personal</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Información Personal</h3>
         </div>
         <div className="p-5 space-y-4">
           {perfil ? (
@@ -219,7 +219,7 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.15)' }}>
             <Lock className="w-4 h-4" style={{ color: '#F59E0B' }} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-100">Cambiar Contraseña</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Cambiar Contraseña</h3>
         </div>
         <div className="p-5">
           <form onSubmit={handleCambiarPassword} className="space-y-4">
@@ -290,7 +290,7 @@ export default function PerfilPage() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}>
             <GraduationCap className="w-4 h-4" style={{ color: '#10B981' }} />
           </div>
-          <h3 className="text-sm font-semibold text-gray-100">Información de la Escuela</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Información de la Escuela</h3>
         </div>
         <div className="p-5 space-y-3">
           <div className="flex items-center gap-3">

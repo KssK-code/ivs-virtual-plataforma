@@ -80,30 +80,18 @@ export default function MateriaPage() {
     if (guardandoProgreso || semanasCompletadas.has(semanaId)) return
     setGuardandoProgreso(true)
     try {
-      const res = await fetch('/api/alumno/progreso/semana', {
+      await fetch('/api/alumno/progreso/semana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana_id: semanaId }),
       })
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}))
-        console.error('[materia] marcarSemana POST progreso', {
-          status: res.status,
-          semanaId,
-          body: errBody,
-        })
-        return
-      }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('ivs-logros-update'))
-      }
       const nuevas = new Set([...semanasCompletadas, semanaId])
       setSemanasCompletadas(nuevas)
       if (materia && materia.semanas.every(s => nuevas.has(s.id))) {
         setMateriaAcreditada(true)
       }
-    } catch (e) {
-      console.error('[materia] marcarSemana', e)
+    } catch {
+      // silencioso — no bloquear al alumno
     } finally {
       setGuardandoProgreso(false)
     }
@@ -297,7 +285,7 @@ export default function MateriaPage() {
                         <span className="text-xs font-mono" style={{ color: '#6366F1' }}>
                           {materia.nivel === 'demo' ? `Paso ${semana.numero}` : `Semana ${semana.numero}`}
                         </span>
-                        <h3 className="text-base font-bold mt-0.5 text-gray-100">
+                        <h3 className="text-base font-bold mt-0.5 text-gray-900">
                           {semana.titulo}
                         </h3>
                         {(() => {
@@ -330,9 +318,9 @@ export default function MateriaPage() {
                               p:      ({ children }) => <p className="mb-3 text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{children}</p>,
                               strong: ({ children }) => <strong style={{ color: '#F1F5F9', fontWeight: 600 }}>{children}</strong>,
                               em:     ({ children }) => <em style={{ color: '#CBD5E1' }}>{children}</em>,
-                              h1:     ({ children }) => <h1 className="text-base font-bold mt-4 mb-2 text-gray-100">{children}</h1>,
-                              h2:     ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1.5 text-gray-100">{children}</h2>,
-                              h3:     ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1 text-gray-100">{children}</h3>,
+                              h1:     ({ children }) => <h1 className="text-base font-bold mt-4 mb-2 text-gray-900">{children}</h1>,
+                              h2:     ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1.5 text-gray-900">{children}</h2>,
+                              h3:     ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1 text-gray-900">{children}</h3>,
                               ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3 text-sm" style={{ color: '#94A3B8' }}>{children}</ul>,
                               ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-3 text-sm" style={{ color: '#94A3B8' }}>{children}</ol>,
                               li:     ({ children }) => <li className="leading-relaxed">{children}</li>,
@@ -373,13 +361,15 @@ export default function MateriaPage() {
                         </div>
                       )}
 
-                      {/* Mini quiz de refuerzo (auth vía cookie en /api/alumno/quiz) */}
-                      <SemanaQuiz
-                        key={semana.id}
-                        semanaId={semana.id}
-                        alumnoId={alumnoId}
-                        lang="es"
-                      />
+                      {/* Mini quiz de refuerzo */}
+                      {alumnoId && (
+                        <SemanaQuiz
+                          key={semana.id}
+                          semanaId={semana.id}
+                          alumnoId={alumnoId}
+                          lang="es"
+                        />
+                      )}
 
                       {/* Botón completar semana — siempre visible al final del contenido */}
                       <div className="pt-2">
@@ -453,7 +443,7 @@ export default function MateriaPage() {
                   >
                     <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>🎯</span>
                     <div className="space-y-1">
-                      <h3 className="text-base font-bold text-gray-100">
+                      <h3 className="text-base font-bold text-gray-900">
                         ¡Materia completada!
                       </h3>
                       <p className="text-sm" style={{ color: '#94A3B8' }}>
@@ -496,7 +486,7 @@ export default function MateriaPage() {
                 style={{ background: '#1A1F2E', border: '1px solid #2A2F3E' }}
               >
                 <div className="space-y-0.5">
-                  <h3 className="text-base font-bold text-gray-100">
+                  <h3 className="text-base font-bold text-gray-900">
                     Prepárate para el examen
                   </h3>
                   <p className="text-sm" style={{ color: '#64748B' }}>
@@ -579,7 +569,7 @@ export default function MateriaPage() {
               return (
                 <div key={ev.id} className="rounded-xl p-5 space-y-4" style={CARD}>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-100">{ev.titulo}</h3>
+                    <h3 className="text-base font-semibold text-gray-900">{ev.titulo}</h3>
                     <div className="flex items-center gap-4 mt-2 text-sm" style={{ color: '#94A3B8' }}>
                       <span>Intentos: {ev.intentos_usados}/{ev.intentos_max}</span>
                     </div>
@@ -623,7 +613,7 @@ export default function MateriaPage() {
         <div className="space-y-4">
           {(materia.descripcion || materia.objetivo) && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold text-gray-100">Descripción</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Descripción</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>
                 {materia.descripcion || materia.objetivo}
               </p>
@@ -631,7 +621,7 @@ export default function MateriaPage() {
           )}
           {materia.objetivo && materia.objetivo !== materia.descripcion && (
             <div className="rounded-xl p-5 space-y-2" style={CARD}>
-              <h3 className="text-sm font-semibold text-gray-100">Objetivo</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Objetivo</h3>
               <p className="text-sm leading-relaxed" style={{ color: '#94A3B8' }}>{materia.objetivo}</p>
             </div>
           )}
@@ -643,7 +633,7 @@ export default function MateriaPage() {
             if (!haySemanas && !hayTemas) return null
             return (
               <div className="rounded-xl p-5 space-y-3" style={CARD}>
-                <h3 className="text-sm font-semibold text-gray-100">Plan de estudios</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Plan de estudios</h3>
                 {haySemanas && (
                   <ol className="space-y-2">
                     {materia.semanas!.map(semana => (
@@ -674,7 +664,7 @@ export default function MateriaPage() {
 
           {materia.bibliografia?.length > 0 && (
             <div className="rounded-xl p-5 space-y-3" style={CARD}>
-              <h3 className="text-sm font-semibold text-gray-100">Bibliografía</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Bibliografía</h3>
               <ul className="space-y-2">
                 {materia.bibliografia.map((bib, i) => {
                   const etiqueta = bib.tipo ? `${bib.titulo} (${bib.tipo})` : bib.titulo
@@ -705,7 +695,7 @@ export default function MateriaPage() {
 
           {glosario.length > 0 && (
             <div className="rounded-xl p-5 space-y-4" style={CARD}>
-              <h3 className="text-sm font-semibold text-gray-100">
+              <h3 className="text-sm font-semibold text-gray-900">
                 Glosario
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

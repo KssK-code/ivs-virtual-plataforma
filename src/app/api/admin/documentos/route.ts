@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyAdmin } from '@/lib/supabase/verify-admin'
-import { documentoStoragePath, mapDocumentoAlumnoRow } from '@/lib/admin/documentos-admin'
 
 export async function GET() {
   try {
+    // ── Auth ─────────────────────────────────────────────────────────────────
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -13,63 +13,48 @@ export async function GET() {
     const denied = await verifyAdmin(supabase, user.id)
     if (denied) return denied
 
+    // ── Query con service role (bypass RLS) ──────────────────────────────────
     const admin = createAdminClient()
 
-    const { data: raw, error } = await admin.from('documentos_alumno').select('*')
+    const { data, error } = await admin
+      .from('documentos_alumno')
+      .select(`
+        id,
+        alumno_id,
+        tipo_documento,
+        nombre_archivo,
+        url_archivo,
+        verificado,
+        fecha_subida,
+        notas
+      `)
+      .order('fecha_subida', { ascending: false })
 
     if (error) {
-      console.error('[GET /api/admin/documentos]', error.message, error.code)
+      console.error('[GET /api/admin/documentos] Error:', error.message, '| code:', error.code)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const mapped = (raw ?? []).map(r => mapDocumentoAlumnoRow(r as Record<string, unknown>))
-    mapped.sort(
-      (a, b) => new Date(b.subido_en).getTime() - new Date(a.subido_en).getTime()
-    )
-
-    const alumnoIds = [...new Set(mapped.map(d => d.alumno_id))]
+    // ── Enriquecer con nombre del alumno ─────────────────────────────────────
+    const alumnoIds = [...new Set((data ?? []).map((d: { alumno_id: string }) => d.alumno_id))]
 
     const { data: usuarios } = alumnoIds.length > 0
       ? await admin.from('usuarios').select('id, nombre, apellidos').in('id', alumnoIds)
-      : { data: [] as { id: string; nombre?: string; apellidos?: string }[] }
+      : { data: [] }
 
     const usuarioMap = new Map<string, string>(
-      (usuarios ?? []).map(u => [
+      (usuarios ?? []).map((u: { id: string; nombre?: string; apellidos?: string }) => [
         u.id,
         [u.nombre, u.apellidos].filter(Boolean).join(' ') || '—',
       ])
     )
 
-    const signedFor = async (doc: (typeof mapped)[0]) => {
-      const path = documentoStoragePath(doc.alumno_id, doc.tipo, doc.nombre_archivo)
-      const tryPath = async (p: string) => {
-        const { data: signed } = await admin.storage.from('documentos').createSignedUrl(p, 3600)
-        return signed?.signedUrl ?? null
-      }
-      let u = await tryPath(path)
-      if (u) return u
-      for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'pdf']) {
-        u = await tryPath(`${doc.alumno_id}/${doc.tipo}.${ext}`)
-        if (u) return u
-      }
-      return doc.url
-    }
+    const result = (data ?? []).map((doc: { alumno_id: string; [key: string]: unknown }) => ({
+      ...doc,
+      alumno_nombre: usuarioMap.get(doc.alumno_id) ?? '—',
+    }))
 
-    const docs = await Promise.all(
-      mapped.map(async doc => ({
-        id:               doc.id,
-        alumno_id:        doc.alumno_id,
-        tipo:             doc.tipo,
-        nombre_archivo:   doc.nombre_archivo,
-        estado:           doc.estado,
-        comentario_admin: doc.comentario_admin,
-        subido_en:        doc.subido_en,
-        alumno_nombre:    usuarioMap.get(doc.alumno_id) ?? '—',
-        signed_url:       await signedFor(doc),
-      }))
-    )
-
-    return NextResponse.json(docs)
+    return NextResponse.json(result)
   } catch (err) {
     console.error('[GET /api/admin/documentos] excepción:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

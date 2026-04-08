@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Loader2, Printer, Download } from 'lucide-react'
-import { CONFIG } from '@/lib/config'
 
 type Estado = 'Acreditada' | 'No acreditada' | 'Pendiente'
 
@@ -23,7 +22,6 @@ interface DatosConstancia {
   meses_desbloqueados: number
   duracion_meses: number
   porcentaje_avance: number
-  foto_url?: string | null
   avatar_url?: string | null
   materias_cursadas: MateriaCursada[]
 }
@@ -32,18 +30,6 @@ function generarFolio() {
   const year = new Date().getFullYear()
   const rand = Math.floor(100000 + Math.random() * 900000)
   return `CONST-${year}-${rand}`
-}
-
-/** Iniciales estilo MG: primera letra del primer nombre + primera del primer apellido. */
-function inicialesAlumno(nombre: string, apellidos: string, nombreCompleto: string) {
-  const nw = nombre?.trim().split(/\s+/).filter(Boolean)[0]?.[0] ?? ''
-  const aw = apellidos?.trim().split(/\s+/).filter(Boolean)[0]?.[0] ?? ''
-  const pair = (nw + aw).toUpperCase()
-  if (pair.length >= 2) return pair.slice(0, 2)
-  if (pair.length === 1) return pair
-  const parts = nombreCompleto.trim().split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return (parts[0]?.[0] ?? 'A').toUpperCase()
 }
 
 const BADGE: Record<Estado, React.CSSProperties> = {
@@ -62,7 +48,6 @@ export default function ConstanciaPage() {
   const [datos, setDatos] = useState<DatosConstancia | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [fotoFalloCarga, setFotoFalloCarga] = useState(false)
   const folioRef = useRef<string>('')
 
   useEffect(() => {
@@ -77,11 +62,6 @@ export default function ConstanciaPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const fotoSrc = datos ? (datos.foto_url || datos.avatar_url || null) : null
-  useEffect(() => {
-    setFotoFalloCarga(false)
-  }, [fotoSrc])
-
   const folio = folioRef.current
 
   const fecha = new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -90,7 +70,7 @@ export default function ConstanciaPage() {
     ? Math.round((datos.meses_desbloqueados / datos.duracion_meses) * 100)
     : 0
 
-  const disclaimerParts = `Este documento es un comprobante académico interno con folio {folio} generado digitalmente por ${CONFIG.nombre}. Para verificar su autenticidad, contacte a administración.`.split('{folio}')
+  const disclaimerParts = `Este documento es un comprobante académico interno con folio {folio} generado digitalmente por IVS Virtual. Para verificar su autenticidad, contacte a administración.`.split('{folio}')
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
@@ -111,8 +91,8 @@ export default function ConstanciaPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center', width: '100%', maxWidth: 780, margin: '0 auto' }}>
 
-        {/* ── Botones de acción (ocultos al imprimir) ── */}
-        <div className="no-print" style={{ display: 'flex', gap: 12, alignSelf: 'flex-start' }}>
+        {/* ── Botones de acción ── */}
+        <div style={{ display: 'flex', gap: 12, alignSelf: 'flex-start' }}>
           <button
             onClick={() => window.print()}
             style={{
@@ -160,17 +140,14 @@ export default function ConstanciaPage() {
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={CONFIG.logo} alt={CONFIG.nombre} style={{ height: 60, width: 'auto' }} />
+              <img src="/logo-ivs.jpg" alt="IVS" style={{ height: 60, width: 'auto' }} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span
-                  className="constancia-print-title-gradient"
-                  style={{
-                    fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
-                    background: 'linear-gradient(135deg, #1B3A57, #3AAFA9, #4ECDC4)',
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text', lineHeight: 1.1,
-                  }}
-                >{CONFIG.nombreCompleto}</span>
+                <span style={{
+                  fontWeight: 800, fontSize: 18, letterSpacing: '0.08em',
+                  background: 'linear-gradient(135deg, #1B3A57, #3AAFA9, #4ECDC4)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text', lineHeight: 1.1,
+                }}>IVS Instituto Virtual Superior</span>
                 <span style={{ fontSize: 9, letterSpacing: '0.2em', color: '#64748b', fontWeight: 500, textTransform: 'uppercase', marginTop: 4 }}>
                   Incorporado a la SEP &nbsp;·&nbsp; CCT: 09GBD0002D
                 </span>
@@ -221,20 +198,21 @@ export default function ConstanciaPage() {
 
               {/* Foto del alumno */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                {fotoSrc && !fotoFalloCarga ? (
+                {datos.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={fotoSrc}
+                    src={datos.avatar_url}
                     alt={[datos.nombre, datos.apellidos].filter(Boolean).join(' ') || datos.nombre_completo}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-teal-500"
-                    onError={() => setFotoFalloCarga(true)}
+                    style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '2px solid #3AAFA9' }}
                   />
                 ) : (
-                  <div
-                    className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold border-4 border-teal-500"
-                    style={{ background: '#3AAFA9', color: '#fff' }}
-                  >
-                    {inicialesAlumno(datos.nombre, datos.apellidos, datos.nombre_completo)}
+                  <div style={{
+                    width: 90, height: 90, borderRadius: '50%',
+                    background: '#3AAFA9', color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 28, fontWeight: 700,
+                  }}>
+                    {((datos.nombre?.[0] ?? '') + (datos.apellidos?.[0] ?? '')).toUpperCase() || datos.nombre_completo[0]?.toUpperCase() || 'A'}
                   </div>
                 )}
                 <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', maxWidth: 110 }}>
@@ -251,7 +229,7 @@ export default function ConstanciaPage() {
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.matricula}</strong>,{' '}
               está inscrito en el programa{' '}
               <strong style={{ color: '#0f172a', fontWeight: 600 }}>{datos.plan_nombre}</strong>{' '}
-              {` de ${CONFIG.nombre}.`}
+              de IVS Virtual.
             </p>
 
             {/* Párrafo 2 */}
@@ -269,7 +247,7 @@ export default function ConstanciaPage() {
               display: 'flex', flexWrap: 'wrap', gap: '6px 24px',
             }}>
               {[
-                { label: 'Institución', value: CONFIG.nombreCompleto },
+                { label: 'Institución', value: 'IVS Instituto Virtual Superior' },
                 { label: 'CCT', value: '09GBD0002D' },
                 { label: 'Autoridad educativa', value: 'Incorporado a la SEP' },
                 { label: 'Sistema', value: datos.duracion_meses <= 6 && datos.plan_nombre?.toLowerCase().includes('prepa')
@@ -381,7 +359,7 @@ export default function ConstanciaPage() {
                 Dirección Académica
               </div>
               <div style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 3 }}>
-                {CONFIG.nombre}
+                IVS Virtual
               </div>
             </div>
           </div>
@@ -391,42 +369,15 @@ export default function ConstanciaPage() {
         </div>
       </div>
 
-      {/* Impresión/PDF del navegador: Next anida bajo body; visibility evita página en blanco */}
+      {/* Estilos de impresión */}
       <style>{`
         @media print {
-          @page { margin: 12mm; size: A4; }
-          .no-print {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          html, body {
-            background: #fff !important;
-            height: auto !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #constancia-print,
-          #constancia-print * {
-            visibility: visible;
-          }
+          body > *:not(#constancia-print) { display: none !important; }
           #constancia-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            max-width: 100% !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            background: #fff !important;
-            color: #0f172a !important;
-          }
-          .constancia-print-title-gradient {
-            background: none !important;
-            -webkit-text-fill-color: #1B3A57 !important;
-            color: #1B3A57 !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
         }
       `}</style>

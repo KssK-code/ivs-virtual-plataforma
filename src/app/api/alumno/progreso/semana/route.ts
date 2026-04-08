@@ -1,33 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-export const runtime = 'nodejs'
-
-/** Insert idempotente: ignora violación UNIQUE (23505) */
-async function otorgarLogro(
-  db: SupabaseClient,
-  alumnoId: string,
-  tipoLogro: string
-): Promise<void> {
-  const { error } = await db
-    .from('logros_alumno')
-    .insert({ alumno_id: alumnoId, tipo_logro: tipoLogro })
-    .select('id, tipo_logro, fecha_obtenido')
-    .maybeSingle()
-
-  if (error) {
-    const code = (error as { code?: string }).code
-    const msg = String((error as { message?: string }).message ?? '')
-    const dup = code === '23505' || /duplicate key|unique constraint/i.test(msg)
-    if (dup) {
-      return
-    }
-    console.error('[progreso/semana] Error logro', tipoLogro, error)
-    return
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,176 +11,149 @@ export async function POST(request: NextRequest) {
     const { semana_id } = body as { semana_id: string }
     if (!semana_id) return NextResponse.json({ error: 'semana_id requerido' }, { status: 400 })
 
+    // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('id')
       .eq('id', user.id)
-      .maybeSingle()
+      .single()
 
     if (!alumnoData) return NextResponse.json({ error: 'Alumno no encontrado' }, { status: 404 })
 
     const alumno = alumnoData as { id: string }
 
-    let adminDb: SupabaseClient | null = null
-    try {
-      adminDb = createAdminClient()
-    } catch (e) {
-      console.warn(
-        '[progreso/semana] createAdminClient falló — progreso/logros/racha usan cliente de sesión (puede fallar por RLS).',
-        e
-      )
-    }
-    const dbProg = adminDb ?? supabase
-    const dbPriv = dbProg
-
-    const { data: existente } = await dbProg
+    // Verificar si ya existía el progreso
+    const { data: existente } = await supabase
       .from('progreso_semanas')
-      .select('id, completada')
+      .select('id')
       .eq('alumno_id', alumno.id)
       .eq('semana_id', semana_id)
-      .maybeSingle()
+      .single()
 
-    const yaCompletadaAntes = existente?.completada === true
+    const ya_existia = !!existente
 
-    const fechaCompletada = new Date().toISOString()
-
-    const { error: upsertError } = await dbProg
+    // Upsert progreso (ignora si ya existe)
+    const { error: upsertError } = await supabase
       .from('progreso_semanas')
       .upsert(
-        {
-          alumno_id: alumno.id,
-          semana_id,
-          completada: true,
-          fecha_completada: fechaCompletada,
-        },
-        { onConflict: 'alumno_id,semana_id' }
+        { alumno_id: alumno.id, semana_id },
+        { onConflict: 'alumno_id,semana_id', ignoreDuplicates: true }
       )
-      .select('id, completada, fecha_completada')
-      .maybeSingle()
 
-    if (upsertError) {
-      console.error('[progreso/semana] upsert progreso_semanas:', upsertError)
-      return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
-    }
+    if (upsertError) return NextResponse.json({ error: 'Error al guardar progreso' }, { status: 500 })
 
-    // Contar semanas marcadas como completadas (misma fuente que la UI)
-    const { count: totalCompletadas, error: countErr } = await dbPriv
+    // Si ya existía, no re-evaluar logros
+    if (ya_existia) return NextResponse.json({ ok: true, ya_existia: true })
+
+    // ── Verificar logros ──────────────────────────────────────────────────────
+
+    // Contar total de semanas completadas por el alumno
+    const { count: totalCompletadas } = await supabase
       .from('progreso_semanas')
       .select('id', { count: 'exact', head: true })
       .eq('alumno_id', alumno.id)
-      .eq('completada', true)
 
-    if (countErr) console.error('[progreso/semana] count progreso_semanas:', countErr)
-
-    const semanasCompletadas = totalCompletadas ?? 0
-
-    // Primera semana completada en la plataforma (idempotente si ya hay fila)
-    if (semanasCompletadas >= 1) {
-      await otorgarLogro(dbPriv, alumno.id, 'primera_semana')
+    // Logro: primera semana completada
+    if ((totalCompletadas ?? 0) === 1) {
+      await supabase
+        .from('logros_alumno')
+        .upsert(
+          { alumno_id: alumno.id, tipo: 'primera_semana' },
+          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+        )
     }
 
+    // Logro: materia completada — obtener materia_id desde la semana
     const { data: semanaData } = await supabase
       .from('semanas')
-      .select('mes_id, meses_contenido!inner(materia_id)')
+      .select('materia_id')
       .eq('id', semana_id)
-      .maybeSingle()
+      .single()
 
     if (semanaData) {
-      const raw = semanaData as unknown as {
-        mes_id: string
-        meses_contenido: { materia_id: string } | { materia_id: string }[]
-      }
-      const mc = Array.isArray(raw.meses_contenido)
-        ? raw.meses_contenido[0]
-        : raw.meses_contenido
-      const materia_id = mc?.materia_id
+      const { materia_id } = semanaData as { materia_id: string }
 
-      if (materia_id) {
-        const { data: mesesIds } = await supabase
-          .from('meses_contenido')
-          .select('id')
-          .eq('materia_id', materia_id)
+      const { count: totalSemanas } = await supabase
+        .from('semanas')
+        .select('id', { count: 'exact', head: true })
+        .eq('materia_id', materia_id)
 
-        const mesIds = (mesesIds ?? []).map((m: { id: string }) => m.id)
+      const { count: completadasEnMateria } = await supabase
+        .from('progreso_semanas')
+        .select('id', { count: 'exact', head: true })
+        .eq('alumno_id', alumno.id)
+        .in(
+          'semana_id',
+          (
+            await supabase.from('semanas').select('id').eq('materia_id', materia_id)
+          ).data?.map((s: { id: string }) => s.id) ?? []
+        )
 
-        const { count: totalSemanas } = await dbPriv
-          .from('semanas')
-          .select('id', { count: 'exact', head: true })
-          .in('mes_id', mesIds)
-
-        const { data: semanasIds } = await supabase
-          .from('semanas')
-          .select('id')
-          .in('mes_id', mesIds)
-
-        const semIds = (semanasIds ?? []).map((s: { id: string }) => s.id)
-
-        const { count: completadasEnMateria } = await dbPriv
-          .from('progreso_semanas')
-          .select('id', { count: 'exact', head: true })
-          .eq('alumno_id', alumno.id)
-          .eq('completada', true)
-          .in('semana_id', semIds)
-
-        if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
-          await otorgarLogro(dbPriv, alumno.id, 'materia_completada')
-        }
+      if ((totalSemanas ?? 0) > 0 && completadasEnMateria === totalSemanas) {
+        await supabase
+          .from('logros_alumno')
+          .upsert(
+            { alumno_id: alumno.id, tipo: 'materia_completada', metadata: { materia_id } },
+            { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+          )
       }
     }
 
-    const hoyStr = new Date().toISOString().slice(0, 10)
+    // ── Racha de días ─────────────────────────────────────────────────────────
+    const ahora = new Date()
+    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
 
-    const { data: rachaData } = await dbPriv
-      .from('racha_actividad')
-      .select('racha_actual, racha_maxima, ultima_actividad')
+    const { data: rachaActual } = await supabase
+      .from('logros_alumno')
+      .select('metadata')
       .eq('alumno_id', alumno.id)
-      .maybeSingle()
+      .eq('tipo', 'racha_actual')
+      .single()
 
-    const prev = rachaData as {
-      racha_actual: number; racha_maxima: number; ultima_actividad: string | null
-    } | null
+    const rachaPrevia = (rachaActual?.metadata as { dias?: number; ultima_actividad?: string } | null)
 
     let diasRacha = 1
-    if (prev) {
-      const ultima = prev.ultima_actividad
-      if (ultima === hoyStr) {
-        diasRacha = prev.racha_actual
-      } else if (ultima) {
-        const diffMs = new Date(hoyStr).getTime() - new Date(ultima).getTime()
-        const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24))
-        if (diffDias === 1) diasRacha = (prev.racha_actual ?? 1) + 1
-        else                diasRacha = 1
-      }
+
+    if (rachaPrevia?.ultima_actividad) {
+      const ultimaFecha = new Date(rachaPrevia.ultima_actividad)
+      const ultimaDia = new Date(ultimaFecha.getFullYear(), ultimaFecha.getMonth(), ultimaFecha.getDate())
+      const diffDias = Math.round((hoy.getTime() - ultimaDia.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (diffDias === 0)      diasRacha = rachaPrevia.dias ?? 1
+      else if (diffDias === 1) diasRacha = (rachaPrevia.dias ?? 1) + 1
+      else                     diasRacha = 1
     }
 
-    const nuevaMax = Math.max(diasRacha, prev?.racha_maxima ?? 0)
-
-    const { error: erRacha } = await dbPriv
-      .from('racha_actividad')
+    await supabase
+      .from('logros_alumno')
       .upsert(
         {
-          alumno_id:        alumno.id,
-          racha_actual:     diasRacha,
-          racha_maxima:     nuevaMax,
-          ultima_actividad: hoyStr,
+          alumno_id: alumno.id,
+          tipo: 'racha_actual',
+          metadata: { dias: diasRacha, ultima_actividad: ahora.toISOString() },
         },
-        { onConflict: 'alumno_id', ignoreDuplicates: false }
+        { onConflict: 'alumno_id,tipo', ignoreDuplicates: false }
       )
-      .select('alumno_id, racha_actual')
-      .maybeSingle()
 
-    if (erRacha) console.error('[progreso/semana] racha_actividad:', erRacha)
+    if (diasRacha >= 3) {
+      await supabase
+        .from('logros_alumno')
+        .upsert(
+          { alumno_id: alumno.id, tipo: 'racha_3_dias' },
+          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+        )
+    }
+    if (diasRacha >= 7) {
+      await supabase
+        .from('logros_alumno')
+        .upsert(
+          { alumno_id: alumno.id, tipo: 'racha_7_dias' },
+          { onConflict: 'alumno_id,tipo', ignoreDuplicates: true }
+        )
+    }
 
-    if (diasRacha >= 3) await otorgarLogro(dbPriv, alumno.id, 'racha_3_dias')
-    if (diasRacha >= 7) await otorgarLogro(dbPriv, alumno.id, 'racha_7_dias')
-
-    return NextResponse.json({
-      ok: true,
-      ya_completada_antes: yaCompletadaAntes,
-      diasRacha,
-    })
-  } catch (e) {
-    console.error('[progreso/semana] excepción:', e)
+    return NextResponse.json({ ok: true, ya_existia: false, diasRacha })
+  } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
