@@ -11,7 +11,7 @@ interface Pregunta {
   pregunta: string
   opciones: string[]
   respuesta_correcta: number
-  explicacion: string
+  explicacion?: string   // opcional — se muestra cuando la BD lo provee
   orden: number
 }
 
@@ -68,7 +68,29 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
     }
   }, { dependencies: [currentIdx], scope: cardRef })
 
-  if (loading || preguntas.length === 0) return null
+  if (loading) {
+    return (
+      <div className="rounded-xl p-4 mt-2 flex items-center gap-2 text-xs" style={CARD}>
+        <span style={{ color: '#94A3B8' }}>{loc('Cargando refuerzo…', 'Loading practice…')}</span>
+      </div>
+    )
+  }
+
+  if (preguntas.length === 0) {
+    return (
+      <div className="rounded-xl p-4 mt-2 text-xs leading-relaxed" style={CARD}>
+        <p className="font-semibold mb-1" style={{ color: '#94A3B8' }}>
+          {loc('Quiz de refuerzo', 'Practice quiz')}
+        </p>
+        <p style={{ color: '#64748B' }}>
+          {loc(
+            'Aún no hay preguntas para esta semana. Tu avance no se ve afectado.',
+            'No practice questions for this week yet. Your progress is not affected.',
+          )}
+        </p>
+      </div>
+    )
+  }
 
   const pregunta = preguntas[currentIdx]
   const total = preguntas.length
@@ -196,15 +218,18 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
             let borderColor = '#2A2F3E'
             let textColor = '#94A3B8'
 
+            // Solo estilizar la opción que eligió el alumno (no “revelar” la correcta sola).
             if (yaRespondida) {
-              if (esCorrecta) {
-                bg = 'rgba(16,185,129,0.1)'
-                borderColor = '#10B981'
-                textColor = '#86EFAC'
-              } else if (esSeleccionada) {
-                bg = 'rgba(239,68,68,0.1)'
-                borderColor = '#EF4444'
-                textColor = '#FCA5A5'
+              if (esSeleccionada) {
+                if (esCorrecta) {
+                  bg = 'rgba(16,185,129,0.1)'
+                  borderColor = '#10B981'
+                  textColor = '#86EFAC'
+                } else {
+                  bg = 'rgba(239,68,68,0.1)'
+                  borderColor = '#EF4444'
+                  textColor = '#FCA5A5'
+                }
               }
             } else if (esSeleccionada) {
               bg = 'rgba(99,102,241,0.15)'
@@ -227,7 +252,14 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
               >
                 <span
                   className="font-semibold mr-2"
-                  style={{ color: esCorrecta && yaRespondida ? '#10B981' : '#6366F1' }}
+                  style={{
+                    color:
+                      yaRespondida && esSeleccionada && esCorrecta
+                        ? '#10B981'
+                        : yaRespondida && esSeleccionada
+                          ? '#EF4444'
+                          : '#6366F1',
+                  }}
                 >
                   {String.fromCharCode(65 + i)}.
                 </span>
@@ -237,7 +269,7 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
           })}
         </div>
 
-        {/* Explicación */}
+        {/* Retroalimentación inmediata */}
         {yaRespondida && (
           <div
             className="px-4 py-3 rounded-lg text-sm leading-relaxed"
@@ -254,7 +286,11 @@ export default function SemanaQuiz({ semanaId, lang }: SemanaQuizProps) {
             <span className="font-semibold mr-1">
               {seleccionada === pregunta.respuesta_correcta ? '✓' : '✗'}
             </span>
-            {pregunta.explicacion}
+            {pregunta.explicacion
+              ? pregunta.explicacion
+              : seleccionada === pregunta.respuesta_correcta
+                ? '¡Correcto!'
+                : 'Incorrecto'}
           </div>
         )}
       </div>

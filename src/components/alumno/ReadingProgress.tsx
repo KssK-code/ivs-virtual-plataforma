@@ -105,11 +105,23 @@ export default function ReadingProgress({
     if (cargando || completada) return
     setCargando(true)
     try {
-      await fetch('/api/alumno/progreso/semana', {
+      const res = await fetch('/api/alumno/progreso/semana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semana_id: semanaId }),
       })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        console.error('[ReadingProgress] POST /api/alumno/progreso/semana', {
+          status: res.status,
+          semanaId,
+          body: errBody,
+        })
+        return
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ivs-logros-update'))
+      }
 
       // Calcular tiempo transcurrido desde que se montó el componente
       const segundos = Math.round((Date.now() - mountedAt.current) / 1000)
@@ -130,10 +142,8 @@ export default function ReadingProgress({
       // Mostrar card de resumen (el badge verde aparece después, via useGSAP)
       setMostrarResumen(true)
 
-    } catch {
-      // silencioso — no bloquear al alumno
-      setCompletada(true)
-      onCompletada?.()
+    } catch (e) {
+      console.error('[ReadingProgress] marcarLeido', e)
     } finally {
       setCargando(false)
     }

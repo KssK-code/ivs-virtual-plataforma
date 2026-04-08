@@ -1,6 +1,6 @@
 'use client'
 
-import { ESCUELA_CONFIG } from '@/lib/config'
+import { CONFIG, ESCUELA_CONFIG } from '@/lib/config'
 
 export function Footer() {
   return (
@@ -19,7 +19,7 @@ export function Footer() {
       </p>
       <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1">
         <a
-          href="https://ivsvirtual.com"
+          href={`https://${CONFIG.dominio}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs transition-colors"
@@ -27,7 +27,7 @@ export function Footer() {
           onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
           onMouseLeave={e => { e.currentTarget.style.color = '#374151' }}
         >
-          ivsvirtual.com
+          {CONFIG.dominio}
         </a>
         <span style={{ color: '#2A2F3E' }}>·</span>
         <a
@@ -49,7 +49,7 @@ export function Footer() {
               onMouseEnter={e => { e.currentTarget.style.color = '#3AAFA9' }}
               onMouseLeave={e => { e.currentTarget.style.color = '#374151' }}
             >
-              {ESCUELA_CONFIG.contactoTelefono}
+              {ESCUELA_CONFIG.whatsappDisplay ?? ESCUELA_CONFIG.contactoTelefono}
             </a>
           </>
         )}

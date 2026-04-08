@@ -41,7 +41,7 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Normalizar a mayúsculas: soporta 'admin' y 'ADMIN', 'alumno' y 'ALUMNO'
+    // Normalizar rol a mayúsculas para soportar 'admin' y 'ADMIN'
     const rol = (usuario?.rol as string | undefined)?.toUpperCase()
     const roleRedirects: Record<string, string> = {
       ADMIN: '/admin',
@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
 
   // Protección de rutas por rol:
   // - /admin/** → requiere rol ADMIN; si es ALUMNO → redirigir a /alumno
-  // - /alumno/** → requiere rol ADMIN → redirigir a /admin
+  // - /alumno/** → requiere rol ALUMNO; si es ADMIN → redirigir a /admin
   const isAdminRoute  = request.nextUrl.pathname.startsWith('/admin')
   const isAlumnoRoute = request.nextUrl.pathname.startsWith('/alumno')
 
@@ -74,6 +74,7 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // Normalizar rol a mayúsculas
     const rol = (usuarioRol?.rol as string | undefined)?.toUpperCase()
 
     if (isAdminRoute && rol !== 'ADMIN') {

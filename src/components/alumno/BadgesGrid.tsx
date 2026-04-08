@@ -1,14 +1,65 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import gsap from 'gsap'
-import { useGSAP } from '@gsap/react'
-
-gsap.registerPlugin(useGSAP)
+import { useState } from 'react'
 
 interface BadgesGridProps {
-  logros: Array<{ tipo: string; obtenido_en: string }>
+  logros: Array<{ tipo_logro: string; fecha_obtenido: string }>
   lang: string
+}
+
+/** Acento por tipo: borde claro, fondo del ícono y check (badges obtenidos). */
+const ACCENT_BY_TIPO: Record<
+  string,
+  { border: string; iconBg: string; iconTint: string; check: string }
+> = {
+  primera_semana: {
+    border: 'border-teal-200',
+    iconBg: 'bg-teal-50',
+    iconTint: 'text-teal-600',
+    check: 'text-teal-600',
+  },
+  materia_completada: {
+    border: 'border-indigo-200',
+    iconBg: 'bg-indigo-50',
+    iconTint: 'text-indigo-600',
+    check: 'text-indigo-600',
+  },
+  racha_3_dias: {
+    border: 'border-orange-200',
+    iconBg: 'bg-orange-50',
+    iconTint: 'text-orange-600',
+    check: 'text-orange-600',
+  },
+  racha_7_dias: {
+    border: 'border-amber-200',
+    iconBg: 'bg-amber-50',
+    iconTint: 'text-amber-600',
+    check: 'text-amber-600',
+  },
+  mes_completado: {
+    border: 'border-amber-200',
+    iconBg: 'bg-amber-50',
+    iconTint: 'text-amber-600',
+    check: 'text-amber-600',
+  },
+  primer_examen: {
+    border: 'border-slate-200',
+    iconBg: 'bg-slate-100',
+    iconTint: 'text-slate-600',
+    check: 'text-slate-600',
+  },
+  examen_perfecto: {
+    border: 'border-yellow-200',
+    iconBg: 'bg-yellow-50',
+    iconTint: 'text-yellow-600',
+    check: 'text-yellow-600',
+  },
+  mitad_carrera: {
+    border: 'border-cyan-200',
+    iconBg: 'bg-cyan-50',
+    iconTint: 'text-cyan-600',
+    check: 'text-cyan-600',
+  },
 }
 
 const BADGES = [
@@ -90,33 +141,18 @@ function formatFecha(iso: string, lang: string) {
 
 export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
   const [hoveredTipo, setHoveredTipo] = useState<string | null>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
 
-  const logroMap = new Map(logros.map(l => [l.tipo, l.obtenido_en]))
+  const logroMap = new Map(logros.map(l => [l.tipo_logro, l.fecha_obtenido]))
   const obtenidos = logros.length
-
-  useGSAP(() => {
-    if (!gridRef.current) return
-    const badges = gridRef.current.querySelectorAll('.badge-obtenido')
-    if (badges.length === 0) return
-    gsap.from(badges, {
-      scale: 3,
-      opacity: 0,
-      rotation: -15,
-      duration: 0.6,
-      stagger: 0.1,
-      ease: 'back.out(1.7)',
-    })
-  }, { scope: gridRef, dependencies: [logros] })
 
   return (
     <div className="space-y-4">
       {/* Encabezado */}
       <div className="flex items-baseline gap-2">
-        <h3 className="text-sm font-semibold" style={{ color: '#F1F5F9' }}>
+        <h3 className="text-sm font-semibold text-gray-900">
           {lang === 'en' ? 'My achievements' : 'Mis logros'}
         </h3>
-        <span className="text-xs" style={{ color: '#475569' }}>
+        <span className="text-xs text-gray-600">
           {lang === 'en'
             ? `${obtenidos} of 8 earned`
             : `${obtenidos} de 8 obtenidos`}
@@ -124,50 +160,53 @@ export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
       </div>
 
       {/* Grid */}
-      <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {BADGES.map(badge => {
           const obtenido = logroMap.has(badge.tipo)
           const fecha = logroMap.get(badge.tipo)
           const nombre = lang === 'en' ? badge.nombre_en : badge.nombre_es
           const desc = lang === 'en' ? badge.desc_en : badge.desc_es
           const isHovered = hoveredTipo === badge.tipo
+          const accent = ACCENT_BY_TIPO[badge.tipo] ?? ACCENT_BY_TIPO.primera_semana
 
           return (
             <div
               key={badge.tipo}
-              className={`relative flex flex-col items-center text-center gap-2 rounded-xl p-4 transition-all duration-200 cursor-default select-none${obtenido ? ' badge-obtenido' : ''}`}
-              style={{
-                background: obtenido ? 'rgba(99,102,241,0.1)' : '#181C26',
-                border: obtenido ? '1px solid rgba(99,102,241,0.3)' : '1px solid #2A2F3E',
-              }}
+              className={[
+                'relative flex flex-col items-center text-center gap-2 rounded-xl p-4 transition-all duration-200 cursor-default select-none overflow-hidden',
+                obtenido
+                  ? `border bg-white shadow-md ${accent.border}`
+                  : 'bg-gray-800 border border-gray-700',
+              ].join(' ')}
               onMouseEnter={() => setHoveredTipo(badge.tipo)}
               onMouseLeave={() => setHoveredTipo(null)}
             >
               {/* Checkmark si obtenido */}
               {obtenido && (
                 <span
-                  className="absolute top-2 right-2 text-xs leading-none"
-                  style={{ color: '#34D399' }}
+                  className={`absolute top-2 right-2 text-xs font-bold leading-none ${accent.check}`}
                 >
                   ✓
                 </span>
               )}
 
-              {/* Emoji */}
+              {/* Emoji en cápsula con color de acento (obtenido) o apagado */}
               <span
-                className="text-4xl leading-none"
-                style={{ filter: obtenido ? 'none' : 'grayscale(1)', opacity: obtenido ? 1 : 0.35 }}
+                className={[
+                  'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-4xl leading-none',
+                  obtenido ? `${accent.iconBg} ${accent.iconTint}` : 'text-gray-600 opacity-50',
+                ].join(' ')}
+                style={obtenido ? undefined : { filter: 'grayscale(1)' }}
               >
                 {badge.emoji}
               </span>
 
               {/* Nombre */}
               <p
-                className="text-xs font-medium leading-tight"
-                style={{
-                  color: obtenido ? '#E2E8F0' : '#94A3B8',
-                  opacity: obtenido ? 1 : 0.45,
-                }}
+                className={[
+                  'text-xs leading-tight',
+                  obtenido ? 'font-bold text-gray-900' : 'font-medium text-gray-400',
+                ].join(' ')}
               >
                 {nombre}
               </p>
@@ -175,22 +214,20 @@ export default function BadgesGrid({ logros, lang }: BadgesGridProps) {
               {/* Tooltip */}
               {isHovered && (
                 <div
-                  className="absolute bottom-full left-1/2 mb-2 z-10 w-44 rounded-lg px-3 py-2 text-center pointer-events-none"
-                  style={{
-                    transform: 'translateX(-50%)',
-                    background: '#0B0D11',
-                    border: '1px solid #2A2F3E',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                  }}
+                  className="absolute bottom-full left-1/2 z-10 mb-2 w-44 -translate-x-1/2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-center shadow-lg pointer-events-none"
                 >
-                  <p className="text-xs leading-snug" style={{ color: '#94A3B8' }}>{desc}</p>
+                  <p
+                    className={obtenido ? 'text-xs leading-snug text-gray-700' : 'text-xs leading-snug text-gray-600'}
+                  >
+                    {desc}
+                  </p>
                   {obtenido && fecha && (
-                    <p className="text-xs mt-1 font-medium" style={{ color: '#34D399' }}>
+                    <p className={`text-xs mt-1 font-medium ${accent.check}`}>
                       {formatFecha(fecha, lang)}
                     </p>
                   )}
                   {!obtenido && (
-                    <p className="text-xs mt-1" style={{ color: '#475569' }}>
+                    <p className="mt-1 text-xs text-gray-500">
                       {lang === 'en' ? 'Not yet earned' : 'Aún no obtenido'}
                     </p>
                   )}

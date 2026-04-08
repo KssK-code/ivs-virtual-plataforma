@@ -8,7 +8,9 @@ import { Mail, Lock, Loader2, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ROLE_REDIRECTS } from '@/lib/constants'
 
-const WA_URL = 'https://wa.me/523328381405'
+import { CONFIG } from '@/lib/config'
+
+const WA_URL = `https://wa.me/${CONFIG.whatsapp}`
 
 const BENEFITS = [
   'Certificado oficial con validez SEP',
@@ -73,15 +75,15 @@ function LeftPanel() {
           border: '1px solid rgba(255,255,255,0.25)',
         }}>
           <Image
-            src="/logo-ivs.jpg"
-            alt="IVS Virtual"
+            src={CONFIG.logo}
+            alt={CONFIG.nombre}
             width={72}
             height={72}
             style={{ borderRadius: 12, objectFit: 'contain', display: 'block' }}
           />
         </div>
         <p className="mt-4 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.05em' }}>
-          IVS INSTITUTO VIRTUAL SUPERIOR
+          {CONFIG.nombreCompleto.toUpperCase()}
         </p>
       </div>
 
@@ -159,9 +161,9 @@ export default function LoginPage() {
 
       if (rolError) console.warn('[login] rol query error (non-fatal):', rolError.message)
 
-      const rol  = usuario?.rol ?? 'ALUMNO'
+      // Normalizar a mayúsculas: soporta 'admin', 'ADMIN', 'alumno', 'ALUMNO'
+      const rol  = (usuario?.rol as string | undefined)?.toUpperCase() ?? 'ALUMNO'
       const dest = ROLE_REDIRECTS[rol] ?? '/alumno'
-      console.log('[login] success → rol:', rol, '→ redirect:', dest)
 
       // router.refresh() asegura que los Server Components relean la cookie de sesión
       router.refresh()
@@ -185,10 +187,10 @@ export default function LoginPage() {
       >
         {/* Mobile-only logo */}
         <div className="flex flex-col items-center mb-8 md:hidden">
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={64} height={64}
+          <Image src={CONFIG.logo} alt={CONFIG.nombre} width={64} height={64}
             style={{ borderRadius: 12, objectFit: 'contain', border: '1px solid #E2E8F0' }} />
           <p className="mt-2 text-xs font-semibold" style={{ color: '#6B8FA8', letterSpacing: '0.05em' }}>
-            IVS INSTITUTO VIRTUAL SUPERIOR
+            {CONFIG.nombreCompleto.toUpperCase()}
           </p>
         </div>
 
@@ -210,7 +212,7 @@ export default function LoginPage() {
               Bienvenido de vuelta
             </h1>
             <p className="mt-1 text-sm" style={{ color: '#7A92A9' }}>
-              Ingresa a tu plataforma IVS
+              Ingresa a tu plataforma {CONFIG.nombre}
             </p>
           </div>
 
@@ -349,7 +351,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="mt-8 text-xs" style={{ color: '#B0C4D4' }}>
-          © {new Date().getFullYear()} IVS Instituto Virtual Superior
+          © {new Date().getFullYear()} {CONFIG.nombreCompleto}
         </p>
       </div>
     </div>

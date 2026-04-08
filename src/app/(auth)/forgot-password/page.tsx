@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { CONFIG } from '@/lib/config'
 
 export default function ForgotPasswordPage() {
   const router = useRouter()
@@ -39,7 +40,7 @@ export default function ForgotPasswordPage() {
 
         {/* Header */}
         <div className="flex flex-col items-center mb-7">
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={60} height={60}
+          <Image src={CONFIG.logo} alt={CONFIG.nombre} width={60} height={60}
             style={{ borderRadius: 10, objectFit: 'contain', marginBottom: 14 }} />
           <h1 className="text-xl font-bold text-center" style={{ color: '#1B3A57', fontFamily: 'Syne, sans-serif' }}>
             Recuperar contraseña
@@ -123,7 +124,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       <p className="text-xs" style={{ color: '#9DB0C0' }}>
-        © {new Date().getFullYear()} IVS Instituto Virtual Superior
+        © {new Date().getFullYear()} {CONFIG.nombreCompleto}
       </p>
     </div>
   )

@@ -18,7 +18,7 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single()
 
-  // Normalizar rol a mayúsculas: soporta 'admin' y 'ADMIN' en la BD
+  // Normalizar rol a mayúsculas para comparación robusta (soporta 'admin' y 'ADMIN')
   const rol = (usuario?.rol as string | undefined)?.toUpperCase()
   if (!usuario || rol !== 'ADMIN') redirect('/login')
 

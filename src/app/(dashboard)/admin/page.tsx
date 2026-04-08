@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { CONFIG } from '@/lib/config'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function getServiceClient() {
@@ -83,11 +84,11 @@ export default async function AdminDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', inicioMes.toISOString())
 
-  // Documentos pendientes
+  // Documentos pendientes (tabla IVS: documentos_alumno + verificado)
   const { count: docsPendientes } = await supabase
-    .from('documentos')
+    .from('documentos_alumno')
     .select('*', { count: 'exact', head: true })
-    .eq('estado', 'pendiente')
+    .eq('verificado', false)
 
   // Últimos 5 alumnos
   const { data: recientes } = await supabase
@@ -125,7 +126,7 @@ export default async function AdminDashboardPage() {
           Bienvenido, Administrador 👋
         </h2>
         <p className="text-sm mt-1" style={{ color: '#6B8FA8' }}>
-          Resumen general de IVS Virtual
+          Resumen general de {CONFIG.nombre}
         </p>
       </div>
 

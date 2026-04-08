@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { CONFIG } from '@/lib/config'
 
 interface IVSLogoProps {
   size?: number
@@ -10,8 +11,8 @@ interface IVSLogoProps {
 export function EdvexLogo({ size = 36 }: IVSLogoProps) {
   return (
     <Image
-      src="/logo-ivs.jpg"
-      alt="IVS Instituto Virtual Superior"
+      src={CONFIG.logo}
+      alt={CONFIG.nombreCompleto}
       width={size}
       height={size}
       style={{ objectFit: 'contain', borderRadius: 6 }}

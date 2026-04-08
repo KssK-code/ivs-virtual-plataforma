@@ -8,6 +8,7 @@ export interface ConfigEscuela {
   colorSecundario: string
   contactoEmail: string
   contactoTelefono: string | null
+  whatsappDisplay?: string
 }
 
 export interface Usuario {

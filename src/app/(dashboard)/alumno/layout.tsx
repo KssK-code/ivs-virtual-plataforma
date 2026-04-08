@@ -19,16 +19,16 @@ export default async function AlumnoLayout({
     .eq('id', user.id)
     .single()
 
-  // Normalizar rol a mayúsculas: soporta 'admin'/'ADMIN', 'alumno'/'ALUMNO'
+  // Normalizar rol a mayúsculas para comparación robusta (soporta 'admin' y 'ADMIN')
   const rol = (usuario?.rol as string | undefined)?.toUpperCase()
 
-  // Admin intentando entrar a /alumno → redirigir a su panel
+  // Si el usuario es ADMIN, redirigir a su panel (no al dashboard de alumno)
   if (rol === 'ADMIN') redirect('/admin')
 
-  // Otro rol desconocido con fila en usuarios → rechazar
+  // Si hay fila en usuarios y el rol NO es ALUMNO (ni null), rechazar
   if (usuario && rol && rol !== 'ALUMNO') redirect('/login')
 
-  // Fetch nivel del alumno
+  // Fetch alumno data (nivel)
   const { data: alumno } = await supabase
     .from('alumnos')
     .select('nivel')

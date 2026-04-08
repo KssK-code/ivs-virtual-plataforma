@@ -6,8 +6,9 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Loader2, Eye, EyeOff, Phone, User, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { CONFIG } from '@/lib/config'
 
-const WA_URL = 'https://wa.me/523328381405'
+const WA_URL = `https://wa.me/${CONFIG.whatsapp}`
 
 const BENEFITS = [
   'Certificado oficial con validez SEP',
@@ -141,11 +142,11 @@ function LeftPanel() {
           borderRadius: 16, padding: 4, display: 'inline-block',
           border: '1px solid rgba(255,255,255,0.25)',
         }}>
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={68} height={68}
+          <Image src={CONFIG.logo} alt={CONFIG.nombre} width={68} height={68}
             style={{ borderRadius: 12, objectFit: 'contain', display: 'block' }} />
         </div>
         <p className="mt-4 text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.06em' }}>
-          IVS INSTITUTO VIRTUAL SUPERIOR
+          {CONFIG.nombreCompleto.toUpperCase()}
         </p>
       </div>
 
@@ -277,10 +278,10 @@ export default function RegisterPage() {
       >
         {/* Mobile-only logo */}
         <div className="flex flex-col items-center mb-6 md:hidden">
-          <Image src="/logo-ivs.jpg" alt="IVS Virtual" width={60} height={60}
+          <Image src={CONFIG.logo} alt={CONFIG.nombre} width={60} height={60}
             style={{ borderRadius: 12, objectFit: 'contain', border: '1px solid #E2E8F0' }} />
           <p className="mt-2 text-xs font-semibold" style={{ color: '#6B8FA8', letterSpacing: '0.05em' }}>
-            IVS INSTITUTO VIRTUAL SUPERIOR
+            {CONFIG.nombreCompleto.toUpperCase()}
           </p>
         </div>
 
@@ -499,7 +500,7 @@ export default function RegisterPage() {
 
             {/* Legal */}
             <p className="text-xs text-center leading-relaxed" style={{ color: '#B0C4D4' }}>
-              Al registrarte aceptas que IVS Instituto Virtual Superior tratará tus datos
+              Al registrarte aceptas que {CONFIG.nombreCompleto} tratará tus datos
               conforme a su política de privacidad.
             </p>
 
@@ -528,7 +529,7 @@ export default function RegisterPage() {
             ¿Necesitas ayuda? WhatsApp
           </a>
           <p className="text-xs" style={{ color: '#C8D8E4' }}>
-            © {new Date().getFullYear()} IVS Instituto Virtual Superior
+            © {new Date().getFullYear()} {CONFIG.nombreCompleto}
           </p>
         </div>
       </div>

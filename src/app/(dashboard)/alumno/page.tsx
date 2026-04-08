@@ -9,6 +9,7 @@ import {
 import { useToast, ToastContainer } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import BadgesGrid from '@/components/alumno/BadgesGrid'
+import { CONFIG } from '@/lib/config'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Perfil {
@@ -97,8 +98,11 @@ export default function AlumnoDashboard() {
   const [meses,              setMeses]               = useState<Mes[]>([])
   const [demo,               setDemo]               = useState(false)
   const [materiasAcreditadas, setMateriasAcreditadas] = useState(0)
-  const [logros,             setLogros]             = useState<Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>>([])
+  const [logros,             setLogros]             = useState<Array<{ tipo_logro: string; fecha_obtenido: string }>>([])
+  const [diasRacha,          setDiasRacha]          = useState(0)
   const [loading,            setLoading]            = useState(true)
+  /** Primera materia del plan (orden) con acceso; IVS entra directo a materia, no a /mes/[n] */
+  const [primeraMateriaId,    setPrimeraMateriaId]   = useState<string | null>(null)
 
   // Toast on redirect
   useEffect(() => {
@@ -118,7 +122,8 @@ export default function AlumnoDashboard() {
       fetch('/api/alumno/perfil').then(r => r.json()),
       fetch('/api/alumno/meses').then(r => r.json()),
       fetch('/api/alumno/calificaciones').then(r => r.json()),
-    ]).then(([p, m, c]) => {
+      fetch('/api/alumno/materias').then(r => r.json()),
+    ]).then(([p, m, c, mat]) => {
       setPerfil(p)
       if (m?.demo === true) {
         setDemo(true); setMeses([])
@@ -126,20 +131,45 @@ export default function AlumnoDashboard() {
         setDemo(false); setMeses(Array.isArray(m) ? m : [])
       }
       setMateriasAcreditadas(c?.resumen?.materias_acreditadas ?? 0)
+
+      type MatRow = { id: string; orden?: number; disponible?: boolean }
+      const list = Array.isArray(mat?.materias) ? (mat.materias as MatRow[]) : []
+      const primera = [...list]
+        .filter(x => x.disponible)
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0]
+      setPrimeraMateriaId(primera?.id ?? null)
     }).finally(() => setLoading(false))
   }, [])
 
-  // Logros
+  // Logros + racha (y refresco al completar semana en otra vista vía evento)
   useEffect(() => {
     if (!perfil) return
-    const sb = createClient()
-    ;(async () => {
-      const { data } = await sb
+
+    const fetchLogrosYRacha = async () => {
+      const sb = createClient()
+      const { data, error: logrosErr } = await sb
         .from('logros_alumno')
-        .select('tipo, obtenido_en, metadata')
+        .select('tipo_logro, fecha_obtenido')
         .eq('alumno_id', perfil.id)
-      if (data) setLogros(data as Array<{ tipo: string; obtenido_en: string; metadata?: Record<string, unknown> }>)
-    })()
+      if (logrosErr) console.error('[alumno/dashboard] logros_alumno:', logrosErr)
+      if (data) setLogros(data as Array<{ tipo_logro: string; fecha_obtenido: string }>)
+
+      const { data: rachaData, error: rachaErr } = await sb
+        .from('racha_actividad')
+        .select('racha_actual')
+        .eq('alumno_id', perfil.id)
+        .maybeSingle()
+      if (rachaErr) console.error('[alumno/dashboard] racha_actividad:', rachaErr)
+      if (rachaData) setDiasRacha((rachaData as { racha_actual: number }).racha_actual ?? 0)
+    }
+
+    void fetchLogrosYRacha()
+
+    const onLogrosUpdate = () => {
+      void fetchLogrosYRacha()
+    }
+    window.addEventListener('ivs-logros-update', onLogrosUpdate)
+    return () => window.removeEventListener('ivs-logros-update', onLogrosUpdate)
   }, [perfil])
 
   // ── Loading skeletons ──────────────────────────────────────────────────────
@@ -175,9 +205,7 @@ export default function AlumnoDashboard() {
   const saludo        = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches'
   const primerNombre  = perfil?.nombre_completo?.split(' ')?.[0] ?? 'Alumno'
   const mesActivo     = perfil.meses_desbloqueados
-  const rachaLogro    = logros.find(l => l.tipo === 'racha_actual')
-  const diasRacha     = (rachaLogro?.metadata?.dias as number | undefined) ?? 0
-  const logrosCount   = logros.filter(l => l.tipo !== 'racha_actual').length
+  const logrosCount   = logros.length
   const nivelLabel    = perfil.nivel === 'preparatoria' ? 'Preparatoria'
                       : perfil.nivel === 'secundaria'   ? 'Secundaria'
                       : perfil.plan_nombre?.toLowerCase().includes('prepa') ? 'Preparatoria'
@@ -201,12 +229,13 @@ export default function AlumnoDashboard() {
               Explora la plataforma gratis. Para iniciar tu programa contacta a tu asesor.
             </p>
           </div>
-          <a href="https://wa.me/523328381405" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all"
-            style={{ background: '#3AAFA9', color: '#fff', boxShadow: '0 4px 14px rgba(58,175,169,0.3)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#3AAFA9' }}>
-            💬 Contactar por WhatsApp
+          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-xl font-semibold transition-colors whitespace-nowrap flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.121 1.532 5.853L0 24l6.338-1.51A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.001-1.368l-.36-.213-3.761.896.953-3.658-.234-.374A9.818 9.818 0 012.182 12C2.182 6.573 6.573 2.182 12 2.182S21.818 6.573 21.818 12 17.427 21.818 12 21.818z"/>
+            </svg>
+            Contactar por WhatsApp
           </a>
         </div>
       )}
@@ -225,10 +254,14 @@ export default function AlumnoDashboard() {
               Control Escolar te contactará por WhatsApp para darte la bienvenida y solicitarte tus documentos.
             </p>
           </div>
-          <a href="https://wa.me/523328381405" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0"
-            style={{ background: '#F59E0B', color: '#fff' }}>
-            💬 WhatsApp 33 2838 1405
+          <a href={`https://wa.me/${CONFIG.whatsapp}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap flex-shrink-0 bg-green-500 hover:bg-green-600 transition-colors"
+            style={{ color: '#fff' }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.121 1.532 5.853L0 24l6.338-1.51A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.001-1.368l-.36-.213-3.761.896.953-3.658-.234-.374A9.818 9.818 0 012.182 12C2.182 6.573 6.573 2.182 12 2.182S21.818 6.573 21.818 12 17.427 21.818 12 21.818z"/>
+            </svg>
+            {`WhatsApp ${CONFIG.whatsappDisplay}`}
           </a>
         </div>
       )}
@@ -261,7 +294,11 @@ export default function AlumnoDashboard() {
 
         {!demo && mesActivo > 0 && (
           <button
-            onClick={() => router.push(`/alumno/mes/${mesActivo}`)}
+            type="button"
+            onClick={() => {
+              if (primeraMateriaId) router.push(`/alumno/materia/${primeraMateriaId}`)
+              else router.push('/alumno/materias')
+            }}
             className="relative z-10 flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm flex-shrink-0 transition-all"
             style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)' }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
@@ -333,7 +370,7 @@ export default function AlumnoDashboard() {
               Familiarízate con la plataforma, tu plan de estudio y la metodología.
             </p>
           </div>
-          <Link href="/alumno/materia/e3f004d8-4451-4a65-9c91-bac3f87d2378"
+          <Link href="/alumno/materia/f0551b82-1c3e-4286-bfb4-878842bc6eff"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold flex-shrink-0 transition-all"
             style={{ background: '#3AAFA9', color: '#fff' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#2B7A77' }}
@@ -365,12 +402,14 @@ export default function AlumnoDashboard() {
                 const completado = mes.desbloqueado && mes.numero < mesActivo
                 const activo     = mes.desbloqueado && mes.numero === mesActivo
                 const bloqueado  = !mes.desbloqueado
+                const nMat       = mes.materias?.length ?? 0
+                const subMaterias = nMat === 1 ? '1 materia' : `${nMat} materias`
 
                 return (
                   <div
                     key={mes.id}
                     onClick={() => mes.desbloqueado && router.push(`/alumno/mes/${mes.numero}`)}
-                    className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-2"
+                    className="rounded-2xl p-4 transition-all duration-200 flex flex-col gap-1.5 min-h-[118px]"
                     style={{
                       background:  bloqueado  ? '#F8FAFB'
                                  : completado ? '#F0FDF4'
@@ -389,8 +428,8 @@ export default function AlumnoDashboard() {
                       (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
                     }}
                   >
-                    <div className="flex items-start justify-between">
-                      <span className="text-3xl font-bold leading-none"
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-3xl font-bold leading-none tabular-nums"
                         style={{ color: bloqueado ? '#C8D8E8' : completado ? '#16A34A' : '#3AAFA9' }}>
                         {mes.numero < 10 ? `0${mes.numero}` : mes.numero}
                       </span>
@@ -405,13 +444,13 @@ export default function AlumnoDashboard() {
                         )}
                       </div>
                     </div>
-                    <p className="text-sm font-semibold"
-                      style={{ color: bloqueado ? '#B0C4D4' : completado ? '#15803D' : '#1B3A57' }}>
-                      {mes.titulo || `Mes ${mes.numero}`}
+                    <p className="text-xs font-semibold mt-1"
+                      style={{ color: bloqueado ? '#94A3B8' : '#64748B' }}>
+                      {subMaterias}
                     </p>
-                    <p className="text-xs"
-                      style={{ color: bloqueado ? '#C8D8E8' : '#9DB0C0' }}>
-                      {bloqueado ? 'Bloqueado' : completado ? 'Completado ✓' : 'En progreso'}
+                    <p className="text-xs font-medium"
+                      style={{ color: bloqueado ? '#C8D8E8' : completado ? '#15803D' : '#1B3A57' }}>
+                      {bloqueado ? 'Bloqueado' : completado ? 'Completado' : 'En progreso'}
                     </p>
                   </div>
                 )
