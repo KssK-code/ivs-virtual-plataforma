@@ -32,6 +32,30 @@ export const CONFIG = {
     certificacion_preparatoria: 5590,
     certificacion_secundaria: 4750,
   },
+  landing: {
+    hero_badges: [
+      '✅ Incorporado a la SEP',
+      '🎓 +15 años de experiencia',
+      '🤝 Convenio IMSS y Ferrocarrileros',
+    ],
+    hero_titulo: 'Estudia Secundaria o Preparatoria desde casa',
+    hero_subtitulo: 'Sin ir a la escuela. Certificado oficial reconocido por la SEP.',
+    convenios: [
+      { emoji: '🏥', nombre: 'Sindicato IMSS', desc: 'Trabajadores del Instituto Mexicano del Seguro Social' },
+      { emoji: '🚂', nombre: 'Sindicato Ferrocarrileros', desc: 'Sindicato de Trabajadores Ferrocarrileros de la República Mexicana' },
+    ],
+    respaldo_titulo: 'Centro Oficial de Asesoría y Gestoría',
+    respaldo_badges: [
+      '📋 Registro No. 884 — DGB',
+      '🏛️ Oficio DGB/EMS/027/2025',
+      '📍 Guadalajara, Jalisco',
+      '✅ Acuerdo 445 — SEP',
+    ],
+    cct: '09GBD0002D',
+    años_experiencia: '+15',
+    certificacion_secundaria: 4750,
+    certificacion_preparatoria: 5590,
+  },
 } as const
 
 /** Compatibilidad con layout, footer y panel admin */

@@ -27,6 +27,12 @@ const WaButton = ({ className = '' }: { className?: string }) => (
 export default function LandingPage() {
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const landing = CONFIG.landing
+  const heroHighlight = 'Secundaria o Preparatoria'
+  const [heroPrefix, heroSuffix] = landing.hero_titulo.split(heroHighlight)
+  const convenioResumen = landing.convenios
+    .map((c) => c.nombre.replace('Sindicato ', ''))
+    .join(' y ')
 
   useEffect(() => {
     const prev = document.documentElement.style.scrollBehavior
@@ -74,18 +80,20 @@ export default function LandingPage() {
           {/* LEFT */}
           <div className="hero-left">
             <div className="hero-badges-row">
-              <span className="hero-badge-pill">✅ Incorporado a la SEP</span>
-              <span className="hero-badge-pill">🎓 +15 años de experiencia</span>
-              <span className="hero-badge-pill">🤝 Convenio IMSS y Ferrocarrileros</span>
+              {landing.hero_badges.map((badge) => (
+                <span key={badge} className="hero-badge-pill">{badge}</span>
+              ))}
             </div>
 
             <h1 className="hero-title">
-              Estudia <span className="grad">Secundaria o Preparatoria</span> desde casa
+              {heroPrefix || 'Estudia '}
+              <span className="grad">{heroHighlight}</span>
+              {heroSuffix || ' desde casa'}
             </h1>
 
             <p className="hero-sub">
-              Sin ir a la escuela. Certificado oficial reconocido por la SEP.<br />
-              <strong>Convenio con sindicatos IMSS y Ferrocarrileros.</strong>
+              {landing.hero_subtitulo}<br />
+              <strong>{`Convenio con sindicatos ${convenioResumen}.`}</strong>
             </p>
 
             <div className="hero-btns">
@@ -132,8 +140,8 @@ export default function LandingPage() {
       <div className="trust-bar">
         {[
           { num: '✅', label: 'Certificado SEP oficial' },
-          { num: '🎓', label: '+15 años formando alumnos' },
-          { num: '🤝', label: 'Convenio IMSS y Ferrocarrileros' },
+          { num: '🎓', label: `${landing.años_experiencia} años formando alumnos` },
+          { num: '🤝', label: landing.hero_badges[2].replace('🤝 ', '') },
           { num: '📱', label: '100% en línea, sin salón' },
         ].map((item, i) => (
           <div className="trust-item" key={i}>
@@ -241,24 +249,17 @@ export default function LandingPage() {
         </div>
 
         <div className="convenios-grid">
-          <div className="convenio-card">
-            <div className="convenio-emoji">🏥</div>
-            <div className="convenio-nombre">Sindicato IMSS</div>
-            <div className="convenio-desc">Trabajadores del Instituto Mexicano del Seguro Social</div>
-            <div className="convenio-precio">
-              <span className="desde">desde</span>
-              <strong>$850/mes</strong>
+          {landing.convenios.map((convenio) => (
+            <div className="convenio-card" key={convenio.nombre}>
+              <div className="convenio-emoji">{convenio.emoji}</div>
+              <div className="convenio-nombre">{convenio.nombre}</div>
+              <div className="convenio-desc">{convenio.desc}</div>
+              <div className="convenio-precio">
+                <span className="desde">desde</span>
+                <strong>$850/mes</strong>
+              </div>
             </div>
-          </div>
-          <div className="convenio-card">
-            <div className="convenio-emoji">🚂</div>
-            <div className="convenio-nombre">Sindicato Ferrocarrileros</div>
-            <div className="convenio-desc">Sindicato de Trabajadores Ferrocarrileros de la República Mexicana</div>
-            <div className="convenio-precio">
-              <span className="desde">desde</span>
-              <strong>$850/mes</strong>
-            </div>
-          </div>
+          ))}
         </div>
 
         <div className="convenios-cta">
@@ -273,16 +274,11 @@ export default function LandingPage() {
           {/* LEFT: texto */}
           <div className="respaldo-text">
             <div className="tag-line">Respaldo Oficial</div>
-            <h2 className="respaldo-title">Centro Oficial de Asesoría y Gestoría</h2>
+            <h2 className="respaldo-title">{landing.respaldo_titulo}</h2>
             <p className="respaldo-sub">Reconocido por la Dirección General del Bachillerato — SEP</p>
 
             <div className="respaldo-badges">
-              {[
-                '📋 Registro No. 884 — DGB',
-                '🏛️ Oficio DGB/EMS/027/2025',
-                '📍 Guadalajara, Jalisco',
-                '✅ Acuerdo 445 — SEP',
-              ].map(b => (
+              {landing.respaldo_badges.map(b => (
                 <span key={b} className="respaldo-badge">{b}</span>
               ))}
             </div>
@@ -367,8 +363,8 @@ export default function LandingPage() {
           {/* Certificación desglose */}
           <div className="certif-note">
             <strong>Costo de certificación (pago único al finalizar):</strong>
-            <span>Secundaria: $4,750 MXN</span>
-            <span>Preparatoria: $5,590 MXN</span>
+            <span>{`Secundaria: $${landing.certificacion_secundaria.toLocaleString('es-MX')} MXN`}</span>
+            <span>{`Preparatoria: $${landing.certificacion_preparatoria.toLocaleString('es-MX')} MXN`}</span>
           </div>
 
           <div className="billing-trust">
@@ -388,7 +384,7 @@ export default function LandingPage() {
             con validez oficial en toda la República Mexicana sin necesidad de trámites adicionales.
           </p>
           <div className="cert-badges-row">
-            <span className="cert-meta-badge">🏫 CCT: 09GBD0002D</span>
+            <span className="cert-meta-badge">{`🏫 CCT: ${landing.cct}`}</span>
             <span className="cert-meta-badge">🇲🇽 Validez Nacional</span>
             <span className="cert-meta-badge">✅ Firmado digitalmente por SEP</span>
           </div>
@@ -414,7 +410,8 @@ export default function LandingPage() {
               <div className="cert-card-title">Certificado de Terminación de Estudios</div>
               <p className="cert-card-desc">
                 Emitido por el Sistema Educativo Nacional (Secundaria) o Sistema Nacional de Educación Media Superior (Preparatoria).
-                Clave de Centro de Trabajo: <strong>09GBD0002D</strong>.
+                {' '}
+                Clave de Centro de Trabajo: <strong>{landing.cct}</strong>.
               </p>
               <p className="cert-card-note">
                 📌 Certificado válido para ingreso a universidades en toda la República Mexicana
@@ -544,7 +541,7 @@ export default function LandingPage() {
         <div className="cta-proof">
           {[
             { icon: '✅', label: 'Certificado SEP' },
-            { icon: '🎓', label: '+15 años' },
+            { icon: '🎓', label: `${landing.años_experiencia} años` },
             { icon: '🤝', label: 'Convenio sindical' },
             { icon: '📱', label: '100% en línea' },
             { icon: '🚫', label: 'Sin examen final' },
