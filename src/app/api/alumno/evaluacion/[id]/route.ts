@@ -21,10 +21,10 @@ export async function GET(
 
     const alumno = alumnoData as { id: string; meses_desbloqueados: number }
 
-    // Obtener evaluación
+    // FIX #4: usar nombres reales del schema IVS (no titulo_en/tipo/intentos_max)
     const { data: evaluacion, error: evalError } = await supabase
       .from('evaluaciones')
-      .select('id, titulo, titulo_en, tipo, intentos_max, activa, materia_id')
+      .select('id, titulo, intentos_permitidos, activa, materia_id')
       .eq('id', params.id)
       .single()
 
@@ -33,7 +33,7 @@ export async function GET(
     }
 
     const ev = evaluacion as {
-      id: string; titulo: string; titulo_en: string; tipo: string; intentos_max: number; activa: boolean; materia_id: string
+      id: string; titulo: string; intentos_permitidos: number; activa: boolean; materia_id: string
     }
 
     if (!ev.activa) {
@@ -59,25 +59,47 @@ export async function GET(
       .eq('alumno_id', alumno.id)
       .eq('evaluacion_id', params.id)
 
-    // Obtener preguntas SIN respuesta_correcta ni retroalimentacion
-    const { data: preguntas, error: pregError } = await supabase
+    // FIX #4: preguntas con schema IVS — opcion_a/b/c/d + orden + pregunta
+    const { data: rawPreguntas, error: pregError } = await supabase
       .from('preguntas')
-      .select('id, numero, texto, texto_en, tipo, opciones, opciones_en, puntos')
+      .select('id, orden, pregunta, opcion_a, opcion_b, opcion_c, opcion_d')
       .eq('evaluacion_id', params.id)
-      .order('numero')
+      .order('orden')
 
     if (pregError) return NextResponse.json({ error: pregError.message }, { status: 500 })
 
+    type PregRow = {
+      id: string; orden: number | null; pregunta: string
+      opcion_a: string; opcion_b: string; opcion_c: string; opcion_d: string | null
+    }
+
+    const pregs = (rawPreguntas ?? []) as unknown as PregRow[]
+
+    // Mapeo a formato legacy esperado por el frontend (sin exponer respuesta_correcta)
+    const preguntasLegacy = pregs.map(p => {
+      const opciones = [p.opcion_a, p.opcion_b, p.opcion_c, p.opcion_d].filter(Boolean) as string[]
+      return {
+        id:          p.id,
+        numero:      p.orden ?? 0,
+        texto:       p.pregunta,
+        texto_en:    p.pregunta,
+        tipo:        'opcion_multiple',
+        opciones,
+        opciones_en: opciones,
+        puntos:      1,
+      }
+    })
+
     return NextResponse.json({
       evaluacion: {
-        id: ev.id,
-        titulo: ev.titulo,
-        titulo_en: ev.titulo_en,
-        tipo: ev.tipo,
-        intentos_max: ev.intentos_max,
+        id:           ev.id,
+        titulo:       ev.titulo,
+        titulo_en:    ev.titulo,
+        tipo:         'opcion_multiple',
+        intentos_max: ev.intentos_permitidos,
       },
       intentos_usados: intentosUsados ?? 0,
-      preguntas: preguntas ?? [],
+      preguntas: preguntasLegacy,
     })
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
