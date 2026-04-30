@@ -12,12 +12,29 @@ export async function GET(
 
     const { semanaId } = params
 
-    // Obtener preguntas del quiz para esta semana
-    const { data: preguntas } = await supabase
+    // FIX: usar columnas reales del schema IVS (no opciones/explicacion)
+    const { data: rawPreguntas } = await supabase
       .from('quiz_semana')
-      .select('id, pregunta, opciones, respuesta_correcta, explicacion, orden')
+      .select('id, pregunta, opcion_a, opcion_b, opcion_c, respuesta_correcta, orden')
       .eq('semana_id', semanaId)
       .order('orden')
+
+    type PregRow = {
+      id: string; pregunta: string
+      opcion_a: string; opcion_b: string; opcion_c: string
+      respuesta_correcta: string; orden: number | null
+    }
+
+    const pregs = (rawPreguntas ?? []) as unknown as PregRow[]
+
+    // Mapeo al formato esperado por SemanaQuiz.tsx
+    const preguntas = pregs.map(p => ({
+      id:                 p.id,
+      pregunta:           p.pregunta,
+      opciones:           [p.opcion_a, p.opcion_b, p.opcion_c],
+      respuesta_correcta: ['a', 'b', 'c'].indexOf(p.respuesta_correcta),
+      orden:              p.orden ?? 0,
+    }))
 
     // Obtener alumno (schema nuevo: alumnos.id = user.id)
     const { data: alumnoData } = await supabase
@@ -39,7 +56,7 @@ export async function GET(
       .single()
 
     return NextResponse.json({
-      preguntas: preguntas ?? [],
+      preguntas,
       respuesta_previa: respuestaPrevia ?? null,
     })
   } catch {
