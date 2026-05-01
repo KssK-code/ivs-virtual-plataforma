@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET() {
   try {
@@ -10,7 +11,7 @@ export async function GET() {
     // ── Usuario ───────────────────────────────────────────────────────────────
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('nombre, apellidos, email, foto_url')
+      .select('nombre, apellidos, email')
       .eq('id', user.id)
       .single()
 
@@ -77,11 +78,35 @@ export async function GET() {
       ? Math.round((mesesDesbloqueados / duracionMeses) * 100)
       : 0
 
+    const admin = createAdminClient()
+
+    const { data: fotoDoc } = await admin
+      .from('documentos_alumno')
+      .select('url, nombre_archivo')
+      .eq('alumno_id', user.id)
+      .eq('tipo', 'foto_perfil_doc')
+      .order('subido_en', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    let avatarUrl: string | null = null
+
+    if (fotoDoc?.url) {
+      const urlParts = fotoDoc.url.split('/storage/v1/object/public/documentos/')
+      const filePath = urlParts[1]
+      if (filePath) {
+        const { data: signedData } = await admin.storage
+          .from('documentos')
+          .createSignedUrl(filePath, 60 * 60 * 24)
+        avatarUrl = signedData?.signedUrl ?? null
+      }
+    }
+
     return NextResponse.json({
       nombre_completo,
-      nombre:              usuario?.nombre   ?? '',
+      nombre:              usuario?.nombre    ?? '',
       apellidos:           usuario?.apellidos ?? '',
-      foto_url:            usuario?.foto_url  ?? null,
+      foto_url:            avatarUrl,
       matricula:           alumno.matricula   ?? 'IVS-0000',
       nivel:               alumno.nivel       ?? null,
       modalidad:           alumno.modalidad   ?? '6_meses',
@@ -90,7 +115,7 @@ export async function GET() {
       plan_nombre:         duracionMeses === 3 ? '3 Meses' : '6 Meses',
       porcentaje_avance,
       fecha_inscripcion:   alumno.created_at,
-      avatar_url:          usuario?.foto_url ?? null,
+      avatar_url:          avatarUrl,
       materias_cursadas,
     })
   } catch (err) {
