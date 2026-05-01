@@ -16,6 +16,14 @@ interface AlumnoDetalle {
   usuario: { id: string; nombre_completo: string; email: string; activo: boolean }
   plan: { id: string; nombre: string; duracion_meses: number; precio_mensual: number }
   calificaciones: { id: string; calificacion_final: number; aprobada: boolean; materias: { nombre: string; codigo: string } }[]
+  intentos: {
+    id: string
+    numero_intento: number
+    puntaje: number
+    acreditado: boolean
+    fecha_intento: string
+    evaluaciones: { id: string; titulo: string; materias: { nombre: string } | null } | null
+  }[]
 }
 
 type DocTipo =
@@ -497,6 +505,67 @@ export default function AlumnoDetallePage() {
                       >
                         {c.aprobada ? 'Aprobada' : 'Reprobada'}
                       </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Intentos de Evaluaciones */}
+      <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+        <div className="px-5 py-4" style={{ borderBottom: '1px solid #2A2F3E' }}>
+          <h3 className="text-sm font-semibold text-gray-100">Intentos de Evaluaciones</h3>
+          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+            {(alumno.intentos?.length ?? 0)} intento{(alumno.intentos?.length ?? 0) !== 1 ? 's' : ''} registrado{(alumno.intentos?.length ?? 0) !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {(alumno.intentos?.length ?? 0) === 0 ? (
+          <div className="px-5 py-8 text-center text-sm" style={{ color: '#94A3B8' }}>
+            Sin intentos registrados todavía
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: 'rgba(15,20,25,0.6)', borderBottom: '1px solid #2A2F3E' }}>
+                  {['Materia', 'Evaluación', 'Intento', 'Calificación', 'Estado', 'Fecha'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: '#94A3B8' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {alumno.intentos.map(intento => (
+                  <tr key={intento.id} style={{ borderBottom: '1px solid rgba(42,47,62,0.6)' }}>
+                    <td className="px-4 py-3" style={{ color: '#F1F5F9' }}>
+                      {intento.evaluaciones?.materias?.nombre ?? '—'}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: '#F1F5F9' }}>
+                      {intento.evaluaciones?.titulo ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center font-mono text-xs" style={{ color: '#94A3B8' }}>
+                      #{intento.numero_intento}
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold" style={{ color: intento.acreditado ? '#10B981' : '#EF4444' }}>
+                      {intento.puntaje}/100
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className="px-2 py-1 rounded text-xs font-semibold"
+                        style={intento.acreditado
+                          ? { background: 'rgba(16,185,129,0.15)', color: '#10B981' }
+                          : { background: 'rgba(239,68,68,0.15)', color: '#EF4444' }
+                        }
+                      >
+                        {intento.acreditado ? 'Acreditado' : 'No acreditado'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs" style={{ color: '#94A3B8' }}>
+                      {new Date(intento.fecha_intento).toLocaleDateString('es-MX', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                      })}
                     </td>
                   </tr>
                 ))}

@@ -64,6 +64,24 @@ export async function GET(
       .select('*')
       .eq('alumno_id', params.id)
 
+    // ── Paso 5: intentos de evaluación con join a evaluaciones y materias ─────
+    const { data: intentosRaw } = await admin
+      .from('intentos_evaluacion')
+      .select(`
+        id,
+        numero_intento,
+        puntaje,
+        acreditado,
+        fecha_intento,
+        evaluaciones (
+          id,
+          titulo,
+          materias ( nombre )
+        )
+      `)
+      .eq('alumno_id', params.id)
+      .order('fecha_intento', { ascending: false })
+
     const duracion = (a.modalidad as string) === '3_meses' ? 3 : 6
 
     return NextResponse.json({
@@ -96,6 +114,7 @@ export async function GET(
       calificaciones: calificaciones ?? [],
       documentos:     documentos ?? [],
       pagos:          [],
+      intentos:       intentosRaw ?? [],
     })
   } catch (err) {
     console.error('[GET /api/admin/alumnos/[id]] excepción:', err)
