@@ -2,10 +2,14 @@
  * Fuente única de verdad del acceso del alumno a materias.
  *
  * Ventana modality-aware extraída de /api/alumno/materias (Bug A + gating
- * modality-aware + "abrir mes = desbloquear siguientes pendientes"):
+ * modality-aware):
  *   materiasPorMes = ceil(materias regulares / duración del plan)
  *   límite         = meses_desbloqueados × materiasPorMes
- *   Las acreditadas y los tutoriales NO consumen lugares de la ventana.
+ *   La ventana se indexa por POSICIÓN ABSOLUTA entre las materias regulares:
+ *   las acreditadas siguen accesibles pero SÍ consumen su lugar (Bug 61 — si
+ *   no lo consumen, cada acreditación libera un lugar y revela la siguiente
+ *   pendiente: con 1 mes pagado se acredita el programa completo). Solo los
+ *   tutoriales no consumen lugar (tampoco cuentan para materiasPorMes).
  *   Orden canónico de la ventana: numero_mes, luego orden (en secundaria la
  *   columna `orden` agrupa por tipo de materia y NO sigue los meses).
  *
@@ -53,10 +57,14 @@ export function esTutorial(mat: Pick<MateriaVentana, 'nivel' | 'nombre'>): boole
 
 /**
  * Calcula `disponible` para cada materia del nivel del alumno.
- * Misma semántica que el gating de /api/alumno/materias: el límite
- * (meses_desbloqueados × materiasPorMes) aplica SOLO a materias pendientes,
- * de modo que abrir un mes nuevo siempre revela las SIGUIENTES pendientes,
- * incluso a alumnos que avanzaron durante la época "todo abierto".
+ * El límite (meses_desbloqueados × materiasPorMes) es un techo REAL sobre la
+ * posición absoluta de cada materia regular en el orden canónico:
+ *   - acreditada → siempre disponible (canon Bug 54: legible, constancia,
+ *     re-consulta), pero CONSUME su posición — acreditar no abre nada nuevo.
+ *   - pendiente  → disponible solo si su posición cae bajo el límite.
+ *   - tutorial   → siempre disponible y sin posición.
+ * Pagar el siguiente mes sube el límite y abre las siguientes posiciones,
+ * estén como estén (pendientes o ya acreditadas en la era del candado muerto).
  */
 export function calcularDisponibilidad(
   alumno: AlumnoAcceso,
@@ -78,14 +86,19 @@ export function calcularDisponibilidad(
   )
 
   const disponibilidad = new Map<string, boolean>()
-  let idxPendiente = 0
+  let idxRegular = 0
   for (const mat of sorted) {
-    if (esTutorial(mat) || acreditadas.has(mat.id)) {
+    if (esTutorial(mat)) {
       disponibilidad.set(mat.id, true)
       continue
     }
-    disponibilidad.set(mat.id, mesesDesbloqueados > 0 && idxPendiente < limiteMaterias)
-    idxPendiente++
+    // Bug 61: la acreditada sigue accesible (bypass del canon Bug 54) pero SÍ
+    // ocupa su posición en la ventana — antes hacía `continue` sin incrementar
+    // el índice y cada acreditación "liberaba" un lugar (ratchet: con 1 mes
+    // pagado se podía acreditar el programa completo).
+    const dentroDelLimite = mesesDesbloqueados > 0 && idxRegular < limiteMaterias
+    disponibilidad.set(mat.id, acreditadas.has(mat.id) || dentroDelLimite)
+    idxRegular++
   }
   return disponibilidad
 }
