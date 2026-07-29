@@ -11,7 +11,8 @@ import { CONFIG } from '@/lib/config'
  * La landing de marketing anterior (~450 lineas, 10 secciones) queda en el
  * historial de git: ver src/app/page.tsx en el commit e1c8855 y anteriores.
  *
- * Paleta y tipografias tomadas de src/lib/config.ts y src/app/landing.css:
+ * Paleta y tipografias tomadas de src/lib/config.ts y del antiguo landing.css
+ * (borrado; queda en el historial de git junto con la landing anterior):
  *   navy #1B3A57 / navy-light #2D5F8A / teal #3AAFA9 / teal-dark #2B7A77 / blanco #FFFFFF
  */
 

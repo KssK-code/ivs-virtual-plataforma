@@ -18,7 +18,10 @@ const geistMono = localFont({
 const description = "Estudia Secundaria o Preparatoria desde casa. Certificado oficial SEP. Convenio con sindicatos IMSS y Ferrocarrileros. 100% en línea."
 
 export const viewport: Viewport = {
-  themeColor: "#0B0D11",
+  // Fondo real del sitio (tema claro): landing blanca, auth bg-white y
+  // dashboards con theme="light" (#F8FAFB). El #0B0D11 anterior era herencia
+  // de la plantilla oscura y pintaba negra la barra del navegador en movil.
+  themeColor: "#F8FAFB",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -31,8 +34,10 @@ export const metadata: Metadata = {
   },
   description,
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    // Generado desde public/logo.png (recortado y centrado sobre blanco).
+    // src/app/favicon.ico lo sirve el App Router en /favicon.ico.
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
   },
   openGraph: {
     title: ESCUELA_CONFIG.nombre,
